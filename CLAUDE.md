@@ -167,6 +167,7 @@ Feature Flags werden über Umgebungsvariablen und die Datenbank gesteuert:
 | `ENABLE_BILLING` | `false` | Stripe Billing (erst aktivieren wenn Preise konfiguriert) |
 | `ENABLE_MULTI_TENANT` | `true` | Multi-Tenant-Isolation |
 | `ENABLE_WEBSOCKETS` | `true` | WebSocket-Verbindungen für Echtzeit-Features |
+| `ENABLE_AI_CODE_EDITOR` | `true/false` | AI-Code-Editor aktivieren |
 
 Flags immer vor Feature-Code prüfen:
 ```python
