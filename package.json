@@ -14,7 +14,7 @@
     "test": "turbo test",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
-    "clean": "turbo clean && find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +",
+    "clean": "turbo clean",
     "configure": "python scripts/configure.py",
     "prepare": "husky"
   },

@@ -35,6 +35,7 @@ dist/
 .env
 .env.*
 !.env.example
+project.config.local.yaml
 *.pem
 *.key
 *.p12

@@ -2,6 +2,10 @@
   - 'ruff check --fix'
   - 'ruff format'
 'apps/frontend/**/*.{ts,tsx}':
-  - 'pnpm --filter @kerapp/frontend lint:fix'
+  - 'eslint --fix'
+  - 'prettier --write'
 'packages/**/*.{ts,tsx}':
-  - 'pnpm turbo lint --filter=...'
+  - 'eslint --fix'
+  - 'prettier --write'
+'*.{json,yaml,yml,md}':
+  - 'prettier --write --ignore-unknown'
