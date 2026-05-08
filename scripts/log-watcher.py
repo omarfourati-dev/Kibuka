@@ -14,6 +14,8 @@ import json
 import argparse
 import signal
 import sys
+import tempfile
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -69,7 +71,7 @@ def in_cooldown() -> bool:
     global last_fix_time
     if last_fix_time is None:
         return False
-    return datetime.utcnow() - last_fix_time < timedelta(minutes=COOLDOWN_MINUTES)
+    return (datetime.utcnow() - last_fix_time).total_seconds() < timedelta(minutes=COOLDOWN_MINUTES).total_seconds()
 
 
 def attempt_fix(error_context: str, dry_run: bool) -> None:
@@ -77,7 +79,7 @@ def attempt_fix(error_context: str, dry_run: bool) -> None:
 
     if in_cooldown():
         assert last_fix_time is not None
-        remaining = COOLDOWN_MINUTES - (datetime.utcnow() - last_fix_time).seconds // 60
+        remaining = COOLDOWN_MINUTES - int((datetime.utcnow() - last_fix_time).total_seconds() // 60)
         print(f"[log-watcher] In cooldown, {remaining}m remaining. Skipping fix.")
         return
 
@@ -90,21 +92,26 @@ def attempt_fix(error_context: str, dry_run: bool) -> None:
         return
 
     try:
-        result = subprocess.run(
-            [
-                'claude', '--print',
-                f'@log-fixer A 5xx error or exception was detected in the backend logs. '
-                f'Context:\n{error_context}\n\n'
-                f'Investigate the error in the codebase, identify the root cause, and fix it. '
-                f'Run the tests to verify the fix. Create a commit with the fix.'
-            ],
-            capture_output=True,
-            text=True,
-            timeout=300,  # 5 min timeout
-        )
-        status = 'success' if result.returncode == 0 else 'error'
-        log_fix(error_context, status, dry_run)
-        print(f"[log-watcher] Fix attempt: {status}")
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp:
+            tmp.write(f"Error detected in backend logs:\n\n{error_context}")
+            tmp_path = tmp.name
+
+        try:
+            result = subprocess.run(
+                [
+                    'claude', '--print',
+                    f'@log-fixer Read the error context in {tmp_path} and fix the root cause. '
+                    f'Run tests to verify, then commit the fix.'
+                ],
+                capture_output=True,
+                text=True,
+                timeout=300,  # 5 min timeout
+            )
+            status = 'success' if result.returncode == 0 else 'error'
+            log_fix(error_context, status, dry_run)
+            print(f"[log-watcher] Fix attempt: {status}")
+        finally:
+            os.unlink(tmp_path)
     except subprocess.TimeoutExpired:
         log_fix(error_context, 'timeout', dry_run)
         print("[log-watcher] Fix attempt timed out")
@@ -115,7 +122,10 @@ def attempt_fix(error_context: str, dry_run: bool) -> None:
 def watch_logs(dry_run: bool) -> None:
     print(f"[log-watcher] Starting. Dry run: {dry_run}. Cooldown: {COOLDOWN_MINUTES}m")
 
-    error_buffer: list[str] = []
+    # Keep a rolling buffer of recent log lines for context
+    recent_lines: list[str] = []
+    in_traceback = False
+    traceback_lines: list[str] = []
 
     proc = subprocess.Popen(
         ['docker', 'compose', '-f', DOCKER_COMPOSE, 'logs', '-f', '--no-color', BACKEND_SERVICE],
@@ -130,18 +140,32 @@ def watch_logs(dry_run: bool) -> None:
             line = line.rstrip()
             print(f"[backend] {line}")
 
-            if should_trigger(line):
-                error_buffer.append(line)
-                # Collect a few lines for context
-                if len(error_buffer) >= 10 or 'Traceback' not in '\n'.join(error_buffer):
-                    context = '\n'.join(error_buffer[-20:])
-                    error_buffer.clear()
+            # Detect start of Python Traceback
+            if 'Traceback (most recent call last)' in line:
+                in_traceback = True
+                traceback_lines = recent_lines[-5:] + [line]  # include 5 lines of context
+                continue
+
+            if in_traceback:
+                traceback_lines.append(line)
+                # End of traceback: last line is the exception type (e.g. "ValueError: ...")
+                # Tracebacks end when we see a non-indented non-empty line that's not "Traceback"
+                if line and not line.startswith(' ') and not line.startswith('\t') and not line.startswith('Traceback'):
+                    in_traceback = False
+                    context = '\n'.join(traceback_lines)
+                    traceback_lines = []
                     attempt_fix(context, dry_run)
-            else:
-                # Keep a rolling buffer of recent non-error lines for context
-                error_buffer = error_buffer[-5:] + [line]
-                if len(error_buffer) > 20:
-                    error_buffer = error_buffer[-20:]
+                continue
+
+            # Check other trigger patterns (5xx, CRITICAL, ERROR Exception)
+            if should_trigger(line):
+                context = '\n'.join(recent_lines[-10:]) + '\n' + line
+                attempt_fix(context, dry_run)
+
+            # Rolling buffer
+            recent_lines.append(line)
+            if len(recent_lines) > 50:
+                recent_lines = recent_lines[-50:]
     finally:
         proc.terminate()
 
