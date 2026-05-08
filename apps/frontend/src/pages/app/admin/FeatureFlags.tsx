@@ -125,8 +125,11 @@ export default function FeatureFlags() {
     },
 
     onError: (_err, _vars, context) => {
-      if (context?.previous) {
+      if (context?.previous !== undefined) {
         queryClient.setQueryData(["admin", "feature-flags"], context.previous);
+      } else {
+        // Cache was empty when mutation started — force refetch to get real state
+        queryClient.invalidateQueries({ queryKey: ["admin", "feature-flags"] });
       }
     },
 

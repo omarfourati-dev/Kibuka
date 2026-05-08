@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiClient } from "@omarsapp/shared-api";
 import { Card } from "../../../components/ui/Card";
@@ -83,6 +83,7 @@ export default function MobileBuild() {
   const [selectedProfile, setSelectedProfile] =
     useState<BuildProfile>("development");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     data: buildsData,
@@ -99,9 +100,17 @@ export default function MobileBuild() {
       apiClient.post<TriggerResponse>("/admin/mobile/build", { profile }),
     onSuccess: (data) => {
       setSuccessMessage(data.message ?? `Build started (${data.buildId})`);
-      setTimeout(() => setSuccessMessage(null), 5000);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setSuccessMessage(null), 5000);
     },
   });
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">

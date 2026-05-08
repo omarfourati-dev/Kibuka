@@ -198,9 +198,9 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {placeholderActivity.map((row, i) => (
+                  {placeholderActivity.map((row) => (
                     <tr
-                      key={i}
+                      key={`${row.timestamp}-${row.userEmail}`}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       <td className="px-6 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap font-mono text-xs">

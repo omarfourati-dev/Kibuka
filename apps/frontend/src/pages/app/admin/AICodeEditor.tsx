@@ -54,7 +54,18 @@ export default function AICodeEditor() {
     outputEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [output]);
 
+  // Cleanup on unmount: abort fetch and stop voice recognition
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
   function startVoice() {
+    // Prevent double-start of voice recognition
+    if (recognitionRef.current) return;
     const SpeechRecognitionAPI =
       window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
@@ -132,7 +143,10 @@ export default function AICodeEditor() {
               setIsRunning(false);
               return;
             }
-            setOutput((prev) => [...prev, data]);
+            setOutput((prev) => {
+              const next = [...prev, data];
+              return next.length > 1000 ? next.slice(-1000) : next;
+            });
           }
         }
       }
