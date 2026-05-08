@@ -58,17 +58,16 @@ export default function App() {
                     </Suspense>
                   }
                 />
+                {/* Admin */}
+                <Route
+                  path="admin/*"
+                  element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                      <AdminPage />
+                    </Suspense>
+                  }
+                />
               </Route>
-
-              {/* Admin */}
-              <Route
-                path="/admin/*"
-                element={
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <AdminPage />
-                  </Suspense>
-                }
-              />
             </Route>
           </Routes>
         </Suspense>
