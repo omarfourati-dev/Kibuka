@@ -1,0 +1,80 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+    networks:
+      - app_network
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - app_network
+
+  backend:
+    image: ghcr.io/{{ docker.registry }}/{{ docker.backend_image }}:${TAG:-latest}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - app_network
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8000"
+      - "prometheus.path=/metrics"
+
+  worker:
+    image: ghcr.io/{{ docker.registry }}/{{ docker.backend_image }}:${TAG:-latest}
+    command: arq src.infrastructure.arq_worker.WorkerSettings
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - app_network
+
+  frontend:
+    image: ghcr.io/{{ docker.registry }}/{{ docker.frontend_image }}:${TAG:-latest}
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  db_data:
+  redis_data:
