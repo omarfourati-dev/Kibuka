@@ -120,7 +120,11 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, navigate]);
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery({
     queryKey: ["admin", "stats"],
     queryFn: () => apiClient.get<AdminStats>("/admin/stats"),
     enabled: isAuthenticated,
@@ -139,6 +143,13 @@ export default function Dashboard() {
           Here's what's happening in your workspace.
         </p>
       </div>
+
+      {/* Error state */}
+      {statsError && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-4 text-red-700 dark:text-red-400 text-sm mb-8">
+          Failed to load statistics. Please refresh the page.
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
