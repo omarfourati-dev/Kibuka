@@ -1,0 +1,7 @@
+'apps/backend/**/*.py':
+  - 'ruff check --fix'
+  - 'ruff format'
+'apps/frontend/**/*.{ts,tsx}':
+  - 'pnpm --filter @kerapp/frontend lint:fix'
+'packages/**/*.{ts,tsx}':
+  - 'pnpm turbo lint --filter=...'
