@@ -1,0 +1,27 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: { { kubernetes.cluster_name } }
+servers: 1
+agents: 2
+kubeAPI:
+  hostIP: "0.0.0.0"
+  hostPort: "6443"
+ports:
+  - port: "{{ ports.k3d_http }}:80"
+    nodeFilters:
+      - loadbalancer
+  - port: "{{ ports.k3d_https }}:443"
+    nodeFilters:
+      - loadbalancer
+registries:
+  create:
+    name: registry.localhost
+    host: "0.0.0.0"
+    hostPort: "5000"
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
