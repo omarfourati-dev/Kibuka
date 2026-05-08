@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const LandingPage = lazy(() => import("./pages/public/Landing"));
 const LoginPage = lazy(() => import("./pages/public/Login"));
@@ -19,25 +21,58 @@ const Fallback = () => (
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<Fallback />}>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
+      <ErrorBoundary>
+        <Suspense fallback={<Fallback />}>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
 
-          {/* App — layout route */}
-          <Route path="/app" element={<AppLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="spaces" element={<SpacesPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              {/* App — layout route */}
+              <Route path="/app" element={<AppLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route
+                  path="dashboard"
+                  element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                      <DashboardPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="spaces"
+                  element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                      <SpacesPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                      <SettingsPage />
+                    </Suspense>
+                  }
+                />
+              </Route>
 
-          {/* Admin */}
-          <Route path="/admin/*" element={<AdminPage />} />
-        </Routes>
-      </Suspense>
+              {/* Admin */}
+              <Route
+                path="/admin/*"
+                element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <AdminPage />
+                  </Suspense>
+                }
+              />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

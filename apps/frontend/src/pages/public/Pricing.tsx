@@ -115,6 +115,7 @@ export default function Pricing() {
           <div className="inline-flex items-center gap-3 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
             <button
               type="button"
+              aria-pressed={!annual}
               onClick={() => setAnnual(false)}
               className={cn(
                 "px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
@@ -127,6 +128,7 @@ export default function Pricing() {
             </button>
             <button
               type="button"
+              aria-pressed={annual}
               onClick={() => setAnnual(true)}
               className={cn(
                 "px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",

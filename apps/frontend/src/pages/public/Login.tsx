@@ -36,10 +36,19 @@ export default function Login() {
   }, [isAuthenticated, navigate]);
 
   const mutation = useMutation({
-    mutationFn: (payload: { email: string; password: string; name?: string }) =>
+    mutationFn: (payload: {
+      email: string;
+      password: string;
+      name?: string;
+      mode: "login" | "register";
+    }) =>
       apiClient.post<AuthResponse>(
-        mode === "login" ? "/auth/login" : "/auth/register",
-        payload,
+        payload.mode === "login" ? "/auth/login" : "/auth/register",
+        {
+          email: payload.email,
+          password: payload.password,
+          ...(payload.name ? { name: payload.name } : {}),
+        },
       ),
     onSuccess: (data) => {
       setUser(data.user);
@@ -61,6 +70,7 @@ export default function Login() {
       email,
       password,
       ...(mode === "register" ? { name } : {}),
+      mode,
     });
   };
 
@@ -171,6 +181,7 @@ export default function Login() {
               onClick={() => {
                 setMode(mode === "login" ? "register" : "login");
                 setError("");
+                mutation.reset();
               }}
             >
               {mode === "login" ? "Sign up" : "Sign in"}

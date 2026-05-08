@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@omarsapp/shared-stores";
@@ -16,10 +16,10 @@ import {
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, setUser, clearUser } = useAuthStore();
+  const { user, setUser, clearUser } = useAuthStore();
 
   const [name, setName] = useState(user?.name ?? "");
-  const [email] = useState(user?.email ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState("");
@@ -27,15 +27,24 @@ export default function Settings() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteError, setDeleteError] = useState("");
 
+  const profileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     document.title = "Settings — OmarsApp";
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true });
+    if (user) {
+      setName(user.name ?? "");
+      setEmail(user.email ?? "");
     }
-  }, [isAuthenticated, navigate]);
+  }, [user]);
+
+  useEffect(() => {
+    return () => {
+      if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
+    };
+  }, []);
 
   const updateProfile = useMutation({
     mutationFn: (data: { name: string; avatarUrl?: string }) =>
@@ -50,7 +59,8 @@ export default function Settings() {
       });
       setProfileSaved(true);
       setProfileError("");
-      setTimeout(() => setProfileSaved(false), 3000);
+      if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
+      profileTimerRef.current = setTimeout(() => setProfileSaved(false), 3000);
     },
     onError: (err: unknown) => {
       if (err instanceof Error) {
@@ -80,6 +90,10 @@ export default function Settings() {
     e.preventDefault();
     setProfileError("");
     setProfileSaved(false);
+    if (avatarUrl && !avatarUrl.startsWith("https://")) {
+      setProfileError("Avatar URL must use HTTPS.");
+      return;
+    }
     updateProfile.mutate({ name, ...(avatarUrl ? { avatarUrl } : {}) });
   };
 
@@ -87,8 +101,6 @@ export default function Settings() {
     setDeleteError("");
     deleteAccount.mutate();
   };
-
-  if (!isAuthenticated) return null;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -125,6 +137,7 @@ export default function Settings() {
             label="Email address"
             type="email"
             value={email}
+            onChange={() => undefined}
             disabled
             className="opacity-60 cursor-not-allowed"
           />

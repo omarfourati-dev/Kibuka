@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@omarsapp/shared-stores";
 import { useSpaces, useCreateSpace } from "@omarsapp/shared-api";
 import type { Space } from "@omarsapp/shared-types";
 import { Card } from "../../components/ui/Card";
@@ -37,9 +35,6 @@ function SpaceSkeleton() {
 }
 
 export default function Spaces() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
-
   const [showForm, setShowForm] = useState(false);
   const [spaceName, setSpaceName] = useState("");
   const [formError, setFormError] = useState("");
@@ -47,12 +42,6 @@ export default function Spaces() {
   useEffect(() => {
     document.title = "Spaces — OmarsApp";
   }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
 
   const { data: spaces, isLoading, error } = useSpaces();
 
@@ -90,8 +79,6 @@ export default function Spaces() {
       },
     );
   };
-
-  if (!isAuthenticated) return null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import { apiClient } from "@omarsapp/shared-api";
@@ -107,18 +107,11 @@ function StatCard({
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
     document.title = "Dashboard — OmarsApp";
   }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
 
   const {
     data: stats,
@@ -129,8 +122,6 @@ export default function Dashboard() {
     queryFn: () => apiClient.get<AdminStats>("/admin/stats"),
     enabled: isAuthenticated,
   });
-
-  if (!isAuthenticated) return null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
