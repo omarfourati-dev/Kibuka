@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "spaces": "Bereiche",
+    "settings": "Einstellungen",
+    "admin": "Admin",
+    "logout": "Abmelden"
+  },
+  "ai": {
+    "chat": "KI-Chat",
+    "rag": "Dokumente",
+    "agents": "Agenten",
+    "send": "Senden",
+    "upload": "Hochladen",
+    "run_agent": "Agent starten"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "logout": "Abmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "google_login": "Mit Google anmelden"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Erfolg"
+  }
+}

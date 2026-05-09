@@ -1,0 +1,49 @@
+name: Deploy (k3d/K8s)
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: self-hosted # k3d cluster runs on self-hosted runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get tag
+        id: tag
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Import images to local registry
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/{{ docker.backend_image }}:${{ steps.tag.outputs.version }}
+          docker pull ghcr.io/${{ github.repository_owner }}/{{ docker.frontend_image }}:${{ steps.tag.outputs.version }}
+          k3d image import \
+            ghcr.io/${{ github.repository_owner }}/{{ docker.backend_image }}:${{ steps.tag.outputs.version }} \
+            ghcr.io/${{ github.repository_owner }}/{{ docker.frontend_image }}:${{ steps.tag.outputs.version }} \
+            --cluster {{ kubernetes.cluster_name }}
+
+      - name: Deploy to k3d
+        run: |
+          kubectl apply -f deploy/k8s/namespace.yaml
+          kubectl apply -f deploy/k8s/backend/configmap.yaml
+          kubectl apply -f deploy/k8s/
+          kubectl set image deployment/backend \
+            backend=ghcr.io/${{ github.repository_owner }}/{{ docker.backend_image }}:${{ steps.tag.outputs.version }} \
+            -n {{ kubernetes.namespace }}
+          kubectl set image deployment/frontend \
+            frontend=ghcr.io/${{ github.repository_owner }}/{{ docker.frontend_image }}:${{ steps.tag.outputs.version }} \
+            -n {{ kubernetes.namespace }}
+          kubectl rollout status deployment/backend -n {{ kubernetes.namespace }} --timeout=120s
+          kubectl rollout status deployment/frontend -n {{ kubernetes.namespace }} --timeout=120s

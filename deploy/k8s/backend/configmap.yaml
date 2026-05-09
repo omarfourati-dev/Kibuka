@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: { { kubernetes.namespace } }
+  labels:
+    app: backend
+    app.kubernetes.io/name: backend
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  ENABLE_AI: "true"
+  ENABLE_RAG: "true"
+  ENABLE_AGENTS: "true"
+  ENABLE_BILLING: "false"
+  ENABLE_MULTI_TENANT: "true"
+  ENABLE_WEBSOCKETS: "true"

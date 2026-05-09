@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: { { kubernetes.namespace } }
+  labels:
+    app: backend
+    app.kubernetes.io/name: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: { { ports.backend } }
+      targetPort: { { ports.backend } }
+      protocol: TCP

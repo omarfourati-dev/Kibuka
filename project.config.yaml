@@ -1,0 +1,39 @@
+# ================================================
+# OMAR'S APP — Zentrale Konfiguration
+# Ändere hier, alles andere passt sich automatisch an.
+# Danach ausführen: python scripts/configure.py
+# ================================================
+
+app:
+  name: "MyApp"
+  slug: "myapp"
+  description: "Meine neue SaaS App"
+  domain: "myapp.example.com"
+
+docker:
+  registry: "ghcr.io/omar"
+  backend_image: "myapp-backend"
+  frontend_image: "myapp-frontend"
+
+kubernetes:
+  namespace: "myapp"
+  cluster_name: "myapp-dev"
+
+ports:
+  backend: 8000
+  frontend_dev: 5173
+  postgres: 5432
+  redis: 6379
+  k3d_http: 8080
+  k3d_https: 8443
+  grafana: 3000
+  prometheus: 9090
+
+database:
+  name: "myapp_dev"
+  user: "myapp"
+
+github:
+  org: "omar"
+  repo: "myapp"
+  eas_project_id: ""

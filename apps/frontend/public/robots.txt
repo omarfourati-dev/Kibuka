@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
+
+# AI Crawlers — allow public content, block authenticated areas
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
+
+Sitemap: https://{{ APP_DOMAIN }}/sitemap.xml
