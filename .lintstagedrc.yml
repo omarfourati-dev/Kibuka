@@ -1,11 +1,11 @@
-'apps/backend/**/*.py':
-  - 'ruff check --fix'
-  - 'ruff format'
-'apps/frontend/**/*.{ts,tsx}':
-  - 'eslint --fix'
-  - 'prettier --write'
-'packages/**/*.{ts,tsx}':
-  - 'eslint --fix'
-  - 'prettier --write'
-'*.{json,yaml,yml,md}':
-  - 'prettier --write --ignore-unknown'
+"apps/backend/**/*.py":
+  - "python -m ruff check --fix"
+  - "python -m ruff format"
+"apps/frontend/**/*.{ts,tsx}":
+  - "pnpm exec eslint --fix"
+  - "pnpm exec prettier --write"
+"packages/**/*.{ts,tsx}":
+  - "pnpm exec eslint --fix"
+  - "pnpm exec prettier --write"
+"*.{json,yaml,yml,md}":
+  - "pnpm exec prettier --write --ignore-unknown"

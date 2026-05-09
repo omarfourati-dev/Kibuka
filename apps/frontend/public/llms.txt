@@ -1,0 +1,33 @@
+# {{ APP_NAME }}
+
+> {{ APP_DESCRIPTION }}
+
+{{ APP_NAME }} ist ein AI-first SaaS-Starter-Template für schnelles Produktentwicklung.
+Es enthält AI-Chat, RAG (Retrieval-Augmented Generation), Agents, Multi-Tenant-Isolation,
+Stripe-Billing und vollständige Observability — out of the box, ohne Lock-in.
+
+## Kernfunktionen
+
+- **AI Chat**: Streaming-Chat mit OpenAI und Anthropic Claude
+- **RAG**: Dokumente hochladen, durchsuchen, in AI-Antworten einbinden
+- **Agents**: Autonome Agents mit Web-Suche, Code-Ausführung und Dokumenten-Zugriff
+- **Multi-Tenant**: Vollständige Isolation pro Space/Workspace
+- **Billing**: Stripe-Subscriptions mit Webhooks und idempotenter Verarbeitung
+
+## Tech Stack
+
+- Backend: FastAPI (Python 3.12), hexagonale Architektur, PostgreSQL + pgvector
+- Frontend: React 18, TypeScript, Tailwind CSS v4
+- Mobile: React Native (Expo SDK 52)
+- Deployment: Docker Compose, Kubernetes (k3d), GitHub Actions
+
+## Wichtige Seiten
+
+- [Startseite](https://{{ APP_DOMAIN }}/)
+- [Preise](https://{{ APP_DOMAIN }}/pricing)
+- [Registrierung](https://{{ APP_DOMAIN }}/register)
+
+## Verwendung
+
+Dieses Template ist für Entwickler die schnell eine AI-gestützte SaaS-Anwendung
+aufbauen möchten ohne von Null anzufangen. Einmal forken, konfigurieren, deployen.

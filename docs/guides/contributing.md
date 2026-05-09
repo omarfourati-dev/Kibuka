@@ -65,6 +65,48 @@ The scope identifies which part of the codebase the commit touches. Examples:
 
 ---
 
+## Test-Driven Development (TDD)
+
+**Every new behavior starts with a failing test.** This is non-negotiable.
+
+### Red-Green-Refactor Cycle
+
+```
+1. RED   — write a test that describes the behavior, run it, watch it fail
+2. GREEN — write the minimum code to make the test pass
+3. REFACTOR — clean up without breaking the test
+```
+
+### Two-Commit Rule
+
+Each TDD cycle produces two commits:
+
+```bash
+git commit -m "test(rag): RED — retriever returns empty list for unknown space"
+# Now implement
+git commit -m "feat(rag): GREEN — retriever filters chunks by space_id"
+```
+
+Reviewers can verify the test existed before the implementation by checking `git log`.
+
+### Test Anatomy (Backend)
+
+```python
+class TestRetrieverFiltering:
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_unknown_space(self, retriever, db):
+        # Arrange
+        chunks = await ChunkFactory.create_batch(3, space_id="space-A")
+        # Act
+        result = await retriever.retrieve("query", space_id="space-B", top_k=5)
+        # Assert
+        assert result == []
+```
+
+All unit tests mock I/O (DB, HTTP, filesystem). Integration tests use a real test DB.
+
+---
+
 ## Quality Gates
 
 All of the following must pass before a PR is merged.
@@ -127,16 +169,20 @@ pnpm turbo run lint typecheck
 
 ## New Feature Checklist
 
-Follow the 8-step checklist from `CLAUDE.md`:
+Follow the 12-step TDD checklist from `CLAUDE.md`:
 
 1. ADR in `docs/architecture/decisions/NNN-feature-name.md`
-2. Domain entity + port interface in `core/domain/`
-3. Use case in `core/application/use_cases/`
-4. Input adapter (FastAPI route) in `core/adapters/input/`
-5. Output adapter (repository / service) in `core/adapters/output/`
-6. Alembic migration if schema changes
-7. Tests: unit for domain/use-case, integration for adapters
-8. Feature doc in `docs/features/`, feature flag in `.env.example`
+2. **RED**: Write failing unit tests for the domain entity / value object
+3. Domain entity + port interface in `core/domain/` (GREEN)
+4. **RED**: Write failing unit tests for the use case
+5. Use case in `core/use_cases/` — zero framework imports (GREEN)
+6. **RED**: Write failing integration tests for the adapter
+7. Input adapter (FastAPI route) in `adapters/input/` (GREEN)
+8. Output adapter (repository / service) in `adapters/output/` (GREEN)
+9. Alembic migration if schema changes
+10. REFACTOR — clean up without breaking tests
+11. Feature doc in `docs/features/`
+12. Feature flag in `.env.example` + `CLAUDE.md` flag table
 
 ---
 
