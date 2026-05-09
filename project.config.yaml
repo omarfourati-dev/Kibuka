@@ -1,23 +1,23 @@
 # ================================================
-# OMAR'S APP — Zentrale Konfiguration
+# KIBUKA — Zentrale Konfiguration
 # Ändere hier, alles andere passt sich automatisch an.
 # Danach ausführen: python scripts/configure.py
 # ================================================
 
 app:
-  name: "MyApp"
-  slug: "myapp"
-  description: "Meine neue SaaS App"
-  domain: "myapp.example.com"
+  name: "Kibuka"
+  slug: "kibuka"
+  description: "Täglich neue KI-Kinderbücher in DE, AR, FR, EN"
+  domain: "kibuka.app"
 
 docker:
   registry: "ghcr.io/omar"
-  backend_image: "myapp-backend"
-  frontend_image: "myapp-frontend"
+  backend_image: "kibuka-backend"
+  frontend_image: "kibuka-frontend"
 
 kubernetes:
-  namespace: "myapp"
-  cluster_name: "myapp-dev"
+  namespace: "kibuka"
+  cluster_name: "kibuka-dev"
 
 ports:
   backend: 8000
@@ -30,10 +30,10 @@ ports:
   prometheus: 9090
 
 database:
-  name: "myapp_dev"
-  user: "myapp"
+  name: "kibuka_dev"
+  user: "kibuka"
 
 github:
   org: "omar"
-  repo: "myapp"
+  repo: "kibuka"
   eas_project_id: ""
