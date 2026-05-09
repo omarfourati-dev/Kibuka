@@ -47,7 +47,7 @@ class TestDallE3ImageServiceGenerateIllustration:
             return_value=_make_openai_image_response("https://dalle.openai.com/tmp/img.png")
         )
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)
@@ -82,7 +82,7 @@ class TestDallE3ImageServiceGenerateIllustration:
             return_value=_make_openai_image_response("https://dalle.openai.com/tmp/img.png")
         )
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)
@@ -119,7 +119,7 @@ class TestDallE3ImageServiceGenerateIllustration:
             return_value=_make_openai_image_response("https://dalle.openai.com/img.png")
         )
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)
@@ -155,7 +155,7 @@ class TestDallE3ImageServiceGenerateIllustration:
         mock_openai.images = AsyncMock()
         mock_openai.images.generate = AsyncMock(return_value=_make_openai_image_response(dalle_url))
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)
@@ -277,7 +277,7 @@ class TestDallE3ImageServiceGenerateCover:
             return_value=_make_openai_image_response("https://dalle.openai.com/tmp/cover.png")
         )
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)
@@ -311,7 +311,7 @@ class TestDallE3ImageServiceGenerateCover:
             return_value=_make_openai_image_response("https://dalle.openai.com/tmp/cover.png")
         )
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)
@@ -400,7 +400,7 @@ class TestDallE3ImageServiceGenerateCover:
         mock_openai.images = AsyncMock()
         mock_openai.images.generate = AsyncMock(return_value=_make_openai_image_response(dalle_url))
 
-        with patch("httpx.AsyncClient") as mock_httpx_cls:
+        with patch("src.adapters.output.ai.image_service.httpx.AsyncClient") as mock_httpx_cls:
             mock_http_client = AsyncMock()
             mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
             mock_http_client.__aexit__ = AsyncMock(return_value=None)

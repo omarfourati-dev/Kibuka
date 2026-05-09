@@ -119,6 +119,7 @@ async def _download_image(url: str) -> bytes:
     """
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
+        response.raise_for_status()
         return response.content
 
 
@@ -195,10 +196,12 @@ class DallE3ImageService(IImageService):
             n=1,
         )
 
-        image_data = (response.data or [])[0]
+        if not response.data:
+            raise ValueError("DALL-E returned no image data")
+        image_data = response.data[0]
+        if not image_data.url:
+            raise ValueError(f"DALL-E returned no URL for book_id={book_id}")
         dalle_url = image_data.url
-        if not dalle_url:
-            raise ValueError(f"DALL-E 3 returned no URL for illustration page {page_number}")
         logger.debug("DALL-E 3 returned URL for page {}: {}", page_number, dalle_url)
 
         image_bytes = await _download_image(dalle_url)
@@ -251,10 +254,12 @@ class DallE3ImageService(IImageService):
             n=1,
         )
 
-        image_data = (response.data or [])[0]
+        if not response.data:
+            raise ValueError("DALL-E returned no image data")
+        image_data = response.data[0]
+        if not image_data.url:
+            raise ValueError(f"DALL-E returned no URL for book_id={book_id}")
         dalle_url = image_data.url
-        if not dalle_url:
-            raise ValueError(f"DALL-E 3 returned no URL for cover of book '{book_id}'")
         logger.debug("DALL-E 3 returned cover URL for book {}: {}", book_id, dalle_url)
 
         image_bytes = await _download_image(dalle_url)
