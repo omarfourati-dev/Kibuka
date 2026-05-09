@@ -4,3 +4,6 @@ export * from './ai';
 export * from './billing';
 export * from './notification';
 export * from './api';
+export * from './book';
+export * from './purchase';
+export * from './profile';
