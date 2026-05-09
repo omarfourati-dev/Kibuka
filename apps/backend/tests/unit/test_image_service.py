@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -213,7 +214,9 @@ class TestDallE3ImageServiceGenerateIllustration:
         ]
         prompt_lower = prompt.lower()
         for keyword in forbidden_keywords:
-            assert keyword not in prompt_lower, (
+            # Use word-boundary matching to avoid false positives like
+            # "war" inside "watercolor" or "warm".
+            assert not re.search(rf"\b{re.escape(keyword)}\b", prompt_lower), (
                 f"Prompt contains forbidden keyword '{keyword}': {prompt}"
             )
 
@@ -376,7 +379,9 @@ class TestDallE3ImageServiceGenerateCover:
         ]
         prompt_lower = prompt.lower()
         for keyword in forbidden_keywords:
-            assert keyword not in prompt_lower, (
+            # Use word-boundary matching to avoid false positives like
+            # "war" inside "watercolor" or "warm".
+            assert not re.search(rf"\b{re.escape(keyword)}\b", prompt_lower), (
                 f"Cover prompt contains forbidden keyword '{keyword}': {prompt}"
             )
 
