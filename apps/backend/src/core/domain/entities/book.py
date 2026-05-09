@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..value_objects.language import AgeRange, BookTheme, Language
 
@@ -54,7 +54,7 @@ class Book:
     translations: list[BookTranslation] = field(default_factory=list)
     pages: list[BookPage] = field(default_factory=list)
     deleted_at: datetime | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def is_active(self) -> bool:

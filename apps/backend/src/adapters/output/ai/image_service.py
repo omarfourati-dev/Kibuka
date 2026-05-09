@@ -154,7 +154,7 @@ class DallE3ImageService(IImageService):
         self,
         page_text: str,
         theme: BookTheme,
-        age_range: str,
+        age_range: AgeRange,
         page_number: int,
         book_id: str,
     ) -> str:
@@ -170,13 +170,10 @@ class DallE3ImageService(IImageService):
         Returns:
             Public URL of the uploaded illustration PNG.
         """
-        # Normalise age_range — accept both str and AgeRange instances
-        age_range_enum = AgeRange(age_range) if not isinstance(age_range, AgeRange) else age_range
-
         prompt = _build_illustration_prompt(
             page_text=page_text,
             theme=theme,
-            age_range=age_range_enum,
+            age_range=age_range,
             page_number=page_number,
         )
 
@@ -216,7 +213,7 @@ class DallE3ImageService(IImageService):
         self,
         title: str,
         theme: BookTheme,
-        age_range: str,
+        age_range: AgeRange,
         book_id: str,
     ) -> str:
         """Generate a book cover illustration and return its permanent public URL.
@@ -230,12 +227,10 @@ class DallE3ImageService(IImageService):
         Returns:
             Public URL of the uploaded cover PNG.
         """
-        age_range_enum = AgeRange(age_range) if not isinstance(age_range, AgeRange) else age_range
-
         prompt = _build_cover_prompt(
             title=title,
             theme=theme,
-            age_range=age_range_enum,
+            age_range=age_range,
         )
 
         logger.info(

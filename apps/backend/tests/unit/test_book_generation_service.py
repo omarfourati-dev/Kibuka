@@ -6,10 +6,10 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from src.adapters.services.book_generation_service import BookGenerationService
 
+from src.adapters.services.book_generation_service import BookGenerationService
 from src.core.domain.entities.book import Book
-from src.core.domain.value_objects.language import Language
+from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_tts_service import TTSResult
 
 # ---------------------------------------------------------------------------
@@ -101,6 +101,20 @@ def service(mock_anthropic_client, mock_book_repository, mock_tts_service, mock_
         tts_service=mock_tts_service,
         image_service=mock_image_service,
     )
+
+
+@pytest.fixture()
+def service_with_mocks(mock_book_repository, mock_tts_service, mock_image_service):
+    """Return (service, mocks_dict) for tests that need to customise the Anthropic client."""
+    client = MagicMock()
+    client.messages = MagicMock()
+    svc = BookGenerationService(
+        anthropic_client=client,
+        book_repository=mock_book_repository,
+        tts_service=mock_tts_service,
+        image_service=mock_image_service,
+    )
+    return svc, {"anthropic": client}
 
 
 # ---------------------------------------------------------------------------
@@ -235,8 +249,6 @@ class TestStoryGeneration:
             return_value=_make_claude_message(_STORY_JSON)
         )
 
-        from src.core.domain.value_objects.language import AgeRange, BookTheme
-
         result = await service._generate_story_german(BookTheme.ANIMALS, AgeRange.YOUNG)
 
         assert result["title"] == "Der neugierige Fuchs"
@@ -253,9 +265,43 @@ class TestStoryGeneration:
             return_value=_make_claude_message(wrapped)
         )
 
-        from src.core.domain.value_objects.language import AgeRange, BookTheme
-
         result = await service._generate_story_german(BookTheme.FRIENDSHIP, AgeRange.MIDDLE)
 
         assert result["title"] == "Der neugierige Fuchs"
         assert len(result["pages"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_story_generation_retries_on_invalid_json(self, service_with_mocks):
+        """On first invalid JSON, it retries and succeeds on second attempt."""
+        service, mocks = service_with_mocks
+        anthropic = mocks["anthropic"]
+
+        call_count = 0
+
+        async def side_effect(*args, **kwargs):  # noqa: ARG001
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return _make_claude_message("not valid json at all")
+            return _make_claude_message(_STORY_JSON)
+
+        anthropic.messages.create = AsyncMock(side_effect=side_effect)
+
+        result = await service._generate_story_german(BookTheme.ANIMALS, AgeRange.YOUNG)
+
+        assert result["title"] == "Der neugierige Fuchs"
+        assert len(result["pages"]) == 3
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_story_generation_raises_after_two_json_failures(self, service_with_mocks):
+        """Raises ValueError after two consecutive JSON parse failures."""
+        service, mocks = service_with_mocks
+        anthropic = mocks["anthropic"]
+
+        anthropic.messages.create = AsyncMock(
+            return_value=_make_claude_message("this is not json either")
+        )
+
+        with pytest.raises(ValueError):
+            await service._generate_story_german(BookTheme.ANIMALS, AgeRange.YOUNG)

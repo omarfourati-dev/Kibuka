@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ...domain.value_objects.language import BookTheme
+from ...domain.value_objects.language import AgeRange, BookTheme
 
 
 class IImageService(ABC):
@@ -11,7 +11,7 @@ class IImageService(ABC):
         self,
         page_text: str,
         theme: BookTheme,
-        age_range: str,
+        age_range: AgeRange,
         page_number: int,
         book_id: str,
     ) -> str:
@@ -23,7 +23,7 @@ class IImageService(ABC):
         self,
         title: str,
         theme: BookTheme,
-        age_range: str,
+        age_range: AgeRange,
         book_id: str,
     ) -> str:
         """Generate cover image and return S3 URL."""

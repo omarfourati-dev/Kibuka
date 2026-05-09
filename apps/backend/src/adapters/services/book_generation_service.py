@@ -51,8 +51,8 @@ STRENGE REGELN:
 """
 
 SAFETY_CHECK_PROMPT = """Prüfe ob folgender Text kindgerecht ist (für Kinder 3-8 Jahre).
-Antworte NUR mit "SAFE" oder "UNSAFE".
-Text: {text}"""
+<story>{text}</story>
+Antworte NUR mit "SAFE" oder "UNSAFE"."""
 
 TRANSLATION_SYSTEM_PROMPT = """Du bist ein professioneller Übersetzer für Kinderbücher.
 Übersetze den deutschen Text ins {language_name}.
@@ -270,7 +270,9 @@ class BookGenerationService:
 
     async def _translate_page(self, german_text: str, target_language: Language) -> str:
         """Translate a single page (or title) from German to target_language."""
-        language_name = _LANGUAGE_NAMES[target_language]
+        language_name = _LANGUAGE_NAMES.get(target_language)
+        if language_name is None:
+            raise ValueError(f"Cannot translate to source language: {target_language}")
         system_prompt = TRANSLATION_SYSTEM_PROMPT.format(language_name=language_name)
 
         response = await self._claude.messages.create(
