@@ -134,7 +134,7 @@ export default function ReaderScreen() {
       {/* Illustration */}
       <Image
         testID="page-illustration"
-        source={page?.illustrationUrl ? { uri: page.illustrationUrl } : require('../../../assets/icon.png')}
+        source={page?.illustrationUrl != null ? { uri: page.illustrationUrl } : { uri: '' }}
         style={styles.illustration}
         resizeMode="cover"
       />

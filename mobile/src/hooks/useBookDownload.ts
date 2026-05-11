@@ -124,10 +124,10 @@ export function useBookDownload(bookId: string): UseBookDownloadReturn {
 
         setProgress(1)
         setStatus('downloaded')
-      } catch (err) {
+      } catch (_err) {
+        // Download failed — set error state; callers can observe status === 'error'
         setStatus('error')
         setProgress(0)
-        // Re-throw so callers can handle if needed, but don't crash
       }
     },
     [bookId],
