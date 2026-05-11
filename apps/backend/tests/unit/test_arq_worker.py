@@ -64,15 +64,40 @@ for _mod in [
     sys.modules.setdefault(_mod, types.ModuleType(_mod))
 
 # ---------------------------------------------------------------------------
-# Now we can safely import the module under test
+# Stub Settings so that missing env vars (e.g. SECRET_KEY) don't blow up
+# at import time — the worker only uses settings at startup(), which we mock.
 # ---------------------------------------------------------------------------
 
-from src.workers.arq_worker import WorkerSettings, shutdown, startup  # noqa: E402
+_fake_settings = MagicMock()
+_fake_settings.anthropic_api_key = ""
+_fake_settings.openai_api_key = ""
+_fake_settings.google_tts_credentials_json = ""
+_fake_settings.redis_host = "localhost"
+_fake_settings.redis_port = 6379
+_fake_settings.s3_bucket = "kibuka-books"
+_fake_settings.s3_region = "eu-central-1"
+_fake_settings.s3_access_key_id = ""
+_fake_settings.s3_secret_access_key = ""
+_fake_settings.s3_endpoint_url = ""
+
+_config_stub = types.ModuleType("src.infrastructure.config")
+_config_stub.settings = _fake_settings  # type: ignore[attr-defined]
+sys.modules["src.infrastructure.config"] = _config_stub
+
+# Also patch the database module to avoid real DB connection at import time
+_db_stub = types.ModuleType("src.infrastructure.database")
+_db_stub.async_session_maker = MagicMock()  # type: ignore[attr-defined]
+sys.modules["src.infrastructure.database"] = _db_stub
+
+# ---------------------------------------------------------------------------
+# Now we can safely import the module under test
+# ---------------------------------------------------------------------------
 
 from src.adapters.services.book_generation_service import (  # noqa: E402
     BookGenerationService,
     generate_daily_book_job,
 )
+from src.workers.arq_worker import WorkerSettings, shutdown, startup  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # WorkerSettings structural tests
