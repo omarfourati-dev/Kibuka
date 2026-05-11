@@ -20,9 +20,14 @@ export default function AppLayout() {
       }}
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: () => null }} />
+      <Tabs.Screen name="library" options={{ title: 'Bibliothek', tabBarIcon: () => null }} />
       <Tabs.Screen name="ai" options={{ title: 'AI', tabBarIcon: () => null }} />
-      <Tabs.Screen name="spaces" options={{ title: 'Spaces', tabBarIcon: () => null }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: () => null }} />
+      {/* reader is a stack screen, not shown in tab bar */}
+      <Tabs.Screen
+        name="reader"
+        options={{ href: null, tabBarStyle: { display: 'none' } }}
+      />
     </Tabs>
   )
 }

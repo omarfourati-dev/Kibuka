@@ -1,4 +1,4 @@
 packages:
-  - 'apps/*'
-  - 'mobile'
-  - 'packages/*'
+  - "apps/*"
+  - "mobile" # re-enabled for test setup
+  - "packages/*"

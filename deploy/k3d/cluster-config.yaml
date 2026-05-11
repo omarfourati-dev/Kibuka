@@ -8,10 +8,10 @@ kubeAPI:
   hostIP: "0.0.0.0"
   hostPort: "6443"
 ports:
-  - port: "{{ ports.k3d_http }}:80"
+  - port: "8080:80"
     nodeFilters:
       - loadbalancer
-  - port: "{{ ports.k3d_https }}:443"
+  - port: "8443:443"
     nodeFilters:
       - loadbalancer
 registries:

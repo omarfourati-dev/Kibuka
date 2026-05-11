@@ -32,7 +32,7 @@ services:
       - app_network
 
   backend:
-    image: ghcr.io/{{ docker.registry }}/{{ docker.backend_image }}:${TAG:-latest}
+    image: ghcr.io/ghcr.io/omar/kibuka-backend:${TAG:-latest}
     depends_on:
       db:
         condition: service_healthy
@@ -49,7 +49,7 @@ services:
       - "prometheus.path=/metrics"
 
   worker:
-    image: ghcr.io/{{ docker.registry }}/{{ docker.backend_image }}:${TAG:-latest}
+    image: ghcr.io/ghcr.io/omar/kibuka-backend:${TAG:-latest}
     command: arq src.infrastructure.arq_worker.WorkerSettings
     depends_on:
       redis:
@@ -61,7 +61,7 @@ services:
       - app_network
 
   frontend:
-    image: ghcr.io/{{ docker.registry }}/{{ docker.frontend_image }}:${TAG:-latest}
+    image: ghcr.io/ghcr.io/omar/kibuka-frontend:${TAG:-latest}
     ports:
       - "80:80"
       - "443:443"

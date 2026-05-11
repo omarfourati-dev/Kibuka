@@ -1,33 +1,39 @@
-# {{ APP_NAME }}
+# Kibuka
 
-> {{ APP_DESCRIPTION }}
+Kibuka ist eine App für täglich KI-generierte Kinderbücher in vier Sprachen: Deutsch, Arabisch, Französisch und Englisch.
 
-{{ APP_NAME }} ist ein AI-first SaaS-Starter-Template für schnelles Produktentwicklung.
-Es enthält AI-Chat, RAG (Retrieval-Augmented Generation), Agents, Multi-Tenant-Isolation,
-Stripe-Billing und vollständige Observability — out of the box, ohne Lock-in.
+## Was ist Kibuka?
+- Täglich ein neues KI-generiertes Kinderbuch
+- Verfügbar in 4 Sprachen: Deutsch, Arabisch, Französisch, Englisch
+- Für Kinder von 3–8 Jahren
+- Audio-Vorlese-Funktion mit Wort-Highlighting (Karaoke-Effekt)
+- Offline verfügbar (Mobile App)
+- Freemium-Modell: 1 Buch gratis täglich, Einzelbücher ab €1,99
 
-## Kernfunktionen
+## Kernfeatures
+- KI-Text: Anthropic Claude (kindgerecht, COPPA-konform)
+- KI-Bilder: DALL-E 3 (kindgerechter Illustrationsstil)
+- Text-to-Speech: Google Cloud TTS mit Wort-Timing
+- RTL-Support für Arabisch
+- Web + iOS + Android
 
-- **AI Chat**: Streaming-Chat mit OpenAI und Anthropic Claude
-- **RAG**: Dokumente hochladen, durchsuchen, in AI-Antworten einbinden
-- **Agents**: Autonome Agents mit Web-Suche, Code-Ausführung und Dokumenten-Zugriff
-- **Multi-Tenant**: Vollständige Isolation pro Space/Workspace
-- **Billing**: Stripe-Subscriptions mit Webhooks und idempotenter Verarbeitung
+## Zielgruppe
+- Mehrsprachige Familien in Deutschland, Österreich, Schweiz
+- Arabisch-sprechende Familien in DACH
+- Familien die ihren Kindern mehrere Sprachen beibringen möchten
 
-## Tech Stack
+## Preise
+- Einzelbuch: €1,99
+- Wochenpaket: €7,99 (7 Bücher)
+- Monatsabo: €14,99/Monat
+- Jahresabo: €99/Jahr (2 Monate gratis)
 
-- Backend: FastAPI (Python 3.12), hexagonale Architektur, PostgreSQL + pgvector
-- Frontend: React 18, TypeScript, Tailwind CSS v4
-- Mobile: React Native (Expo SDK 52)
-- Deployment: Docker Compose, Kubernetes (k3d), GitHub Actions
+## Technologie
+- Stack: React, React Native, FastAPI, PostgreSQL
+- KI: Anthropic Claude, OpenAI DALL-E 3, Google TTS
+- Deployment: kibuka.app
 
 ## Wichtige Seiten
-
-- [Startseite](https://{{ APP_DOMAIN }}/)
-- [Preise](https://{{ APP_DOMAIN }}/pricing)
-- [Registrierung](https://{{ APP_DOMAIN }}/register)
-
-## Verwendung
-
-Dieses Template ist für Entwickler die schnell eine AI-gestützte SaaS-Anwendung
-aufbauen möchten ohne von Null anzufangen. Einmal forken, konfigurieren, deployen.
+- [Startseite](https://kibuka.app/)
+- [Bibliothek](https://kibuka.app/library)
+- [Preise](https://kibuka.app/pricing)

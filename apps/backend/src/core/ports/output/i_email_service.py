@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 
@@ -9,5 +10,5 @@ class IEmailService(ABC):
         to: str,
         subject: str,
         template: str,
-        context: dict,
+        context: dict[str, object],
     ) -> None: ...

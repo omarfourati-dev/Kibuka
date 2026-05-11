@@ -1,8 +1,10 @@
 from __future__ import annotations
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_activity_log_repository import IActivityLogRepository
+
 from .....core.domain.entities.activity_log import ActivityLog
+from .....core.ports.output.i_activity_log_repository import IActivityLogRepository
 from ..models import ActivityLogModel
 
 
@@ -18,7 +20,7 @@ class SqlActivityLogRepository(IActivityLogRepository):
             action=log.action,
             resource_type=log.resource_type,
             resource_id=log.resource_id,
-            metadata=log.metadata,
+            extra_metadata=log.metadata,
             ip_address=log.ip_address,
             user_agent=log.user_agent,
             created_at=log.created_at,
@@ -50,7 +52,7 @@ class SqlActivityLogRepository(IActivityLogRepository):
             action=model.action,
             resource_type=model.resource_type,
             resource_id=model.resource_id,
-            metadata=model.metadata,
+            metadata=model.extra_metadata,
             ip_address=model.ip_address,
             user_agent=model.user_agent,
             created_at=model.created_at,

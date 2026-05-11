@@ -1,15 +1,21 @@
-from .i_user_repository import IUserRepository
-from .i_space_repository import ISpaceRepository
-from .i_document_repository import IDocumentRepository
-from .i_conversation_repository import IConversationRepository
-from .i_agent_repository import IAgentRepository
-from .i_subscription_repository import ISubscriptionRepository
-from .i_notification_repository import INotificationRepository
-from .i_api_key_repository import IApiKeyRepository
-from .i_webhook_repository import IWebhookRepository
-from .i_activity_log_repository import IActivityLogRepository
-from .i_vector_store import IVectorStore
-from .i_ai_client import IAIClient
-from .i_email_service import IEmailService
-from .i_cache import ICache
-from .i_queue import IQueue
+from .i_activity_log_repository import IActivityLogRepository as IActivityLogRepository
+from .i_agent_repository import IAgentRepository as IAgentRepository
+from .i_ai_client import IAIClient as IAIClient
+from .i_api_key_repository import IApiKeyRepository as IApiKeyRepository
+from .i_book_generation_service import IBookGenerationService as IBookGenerationService
+from .i_book_repository import IBookRepository as IBookRepository
+from .i_cache import ICache as ICache
+from .i_conversation_repository import IConversationRepository as IConversationRepository
+from .i_document_repository import IDocumentRepository as IDocumentRepository
+from .i_email_service import IEmailService as IEmailService
+from .i_image_service import IImageService as IImageService
+from .i_notification_repository import INotificationRepository as INotificationRepository
+from .i_queue import IQueue as IQueue
+from .i_space_repository import ISpaceRepository as ISpaceRepository
+from .i_storage_service import IStorageService as IStorageService
+from .i_subscription_repository import ISubscriptionRepository as ISubscriptionRepository
+from .i_tts_service import ITTSService as ITTSService
+from .i_tts_service import TTSResult as TTSResult
+from .i_user_repository import IUserRepository as IUserRepository
+from .i_vector_store import IVectorStore as IVectorStore
+from .i_webhook_repository import IWebhookRepository as IWebhookRepository

@@ -1,6 +1,7 @@
 from __future__ import annotations
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -23,6 +24,8 @@ class Settings(BaseSettings):
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
+    redis_host: str = "localhost"
+    redis_port: int = 6379
 
     # Auth
     access_token_expire_minutes: int = 15
@@ -41,9 +44,17 @@ class Settings(BaseSettings):
     # AI
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    google_tts_credentials_json: str = ""
     default_chat_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
     ai_cost_limit_usd_per_day: float = 10.0
+
+    # Storage (S3-compatible)
+    s3_bucket: str = "kibuka-books"
+    s3_region: str = "eu-central-1"
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_endpoint_url: str = ""  # Non-empty for S3-compatible services (e.g. MinIO)
 
     # Billing
     stripe_secret_key: str = ""

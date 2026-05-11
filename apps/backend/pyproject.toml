@@ -1,5 +1,5 @@
 [project]
-name = "omars-app-backend"
+name = "kibuka-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
@@ -31,6 +31,8 @@ dependencies = [
   # AI
   "openai>=1.58",
   "anthropic>=0.42",
+  "google-cloud-texttospeech>=2.18",
+  "boto3>=1.35",
   "tiktoken>=0.8",
   # Billing
   "stripe>=11.0",
