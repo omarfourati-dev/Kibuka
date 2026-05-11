@@ -6,7 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const LandingPage = lazy(() => import("./pages/public/Landing"));
 const LoginPage = lazy(() => import("./pages/public/Login"));
-const PricingPage = lazy(() => import("./pages/public/Pricing"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 const DashboardPage = lazy(() => import("./pages/app/Dashboard"));
 const SpacesPage = lazy(() => import("./pages/app/Spaces"));
 const SettingsPage = lazy(() => import("./pages/app/Settings"));
