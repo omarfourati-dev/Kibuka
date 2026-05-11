@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,7 +69,7 @@ class SqlConversationRepository(IConversationRepository):
         await self._session.execute(
             update(ConversationModel)
             .where(ConversationModel.id == conversation_id)
-            .values(deleted_at=datetime.utcnow())
+            .values(deleted_at=datetime.now(UTC))
         )
 
     async def _load_messages(self, conversation_id: str) -> list[ChatMessage]:

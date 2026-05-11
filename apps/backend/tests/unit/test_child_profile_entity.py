@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -21,7 +21,7 @@ class TestChildProfile:
         assert profile.is_active is True
 
     def test_soft_deleted_profile_is_not_active(self):
-        profile = self._make_profile(deleted_at=datetime.utcnow())
+        profile = self._make_profile(deleted_at=datetime.now(UTC))
         assert profile.is_active is False
 
     def test_age_validation_minimum(self):
@@ -44,6 +44,6 @@ class TestReadingProgress:
 
     def test_completed_when_completed_at_set(self):
         progress = ReadingProgress(
-            id="rp1", child_profile_id="cp1", book_id="b1", completed_at=datetime.utcnow()
+            id="rp1", child_profile_id="cp1", book_id="b1", completed_at=datetime.now(UTC)
         )
         assert progress.is_completed is True

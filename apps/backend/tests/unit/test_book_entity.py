@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.core.domain.entities.book import (
     Book,
@@ -22,7 +22,7 @@ class TestBookEntity:
             age_range=AgeRange.YOUNG,
             page_count=10,
             price_single=1.99,
-            published_at=datetime.utcnow(),
+            published_at=datetime.now(UTC),
         )
         defaults.update(kwargs)
         return Book(**defaults)
@@ -32,7 +32,7 @@ class TestBookEntity:
         assert book.is_active is True
 
     def test_soft_deleted_book_is_not_active(self):
-        book = self._make_book(deleted_at=datetime.utcnow())
+        book = self._make_book(deleted_at=datetime.now(UTC))
         assert book.is_active is False
 
     def test_get_title_returns_correct_translation(self):

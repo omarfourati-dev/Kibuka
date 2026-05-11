@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,7 +68,7 @@ class SqlUserRepository(IUserRepository):
 
     async def delete(self, user_id: str) -> None:
         await self._session.execute(
-            update(UserModel).where(UserModel.id == user_id).values(deleted_at=datetime.utcnow())
+            update(UserModel).where(UserModel.id == user_id).values(deleted_at=datetime.now(UTC))
         )
 
     async def anonymize(self, user_id: str) -> None:
@@ -82,7 +82,7 @@ class SqlUserRepository(IUserRepository):
                 google_id=None,
                 hashed_password=None,
                 avatar_url=None,
-                deleted_at=datetime.utcnow(),
+                deleted_at=datetime.now(UTC),
             )
         )
 

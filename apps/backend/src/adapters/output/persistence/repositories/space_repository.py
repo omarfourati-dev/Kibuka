@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,7 +51,7 @@ class SqlSpaceRepository(ISpaceRepository):
 
     async def delete(self, space_id: str) -> None:
         await self._session.execute(
-            update(SpaceModel).where(SpaceModel.id == space_id).values(deleted_at=datetime.utcnow())
+            update(SpaceModel).where(SpaceModel.id == space_id).values(deleted_at=datetime.now(UTC))
         )
 
     def _to_entity(self, model: SpaceModel) -> Space:

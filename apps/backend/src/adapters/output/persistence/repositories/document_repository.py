@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +49,7 @@ class SqlDocumentRepository(IDocumentRepository):
         await self._session.execute(
             update(DocumentModel)
             .where(DocumentModel.id == document_id)
-            .values(deleted_at=datetime.utcnow())
+            .values(deleted_at=datetime.now(UTC))
         )
 
     def _to_entity(self, model: DocumentModel) -> Document:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 
@@ -28,7 +28,7 @@ class BookPurchase:
     amount: float
     currency: str = "EUR"
     stripe_payment_intent_id: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -40,7 +40,7 @@ class BookSubscription:
     stripe_subscription_id: str | None = None
     current_period_end: datetime | None = None
     cancel_at_period_end: bool = False
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def is_active(self) -> bool:

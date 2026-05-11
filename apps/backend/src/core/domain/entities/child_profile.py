@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..value_objects.language import Language
 
@@ -15,7 +15,7 @@ class ChildProfile:
     preferred_languages: list[Language] = field(default_factory=lambda: [Language.DE])
     avatar_emoji: str = "🧒"
     deleted_at: datetime | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def is_active(self) -> bool:
@@ -33,7 +33,7 @@ class ReadingProgress:
     book_id: str
     current_page: int = 0
     completed_at: datetime | None = None
-    last_read_at: datetime = field(default_factory=datetime.utcnow)
+    last_read_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def is_completed(self) -> bool:

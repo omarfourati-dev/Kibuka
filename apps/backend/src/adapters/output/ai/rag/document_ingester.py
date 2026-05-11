@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import io
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import tiktoken
 from docx import Document as DocxDocument
@@ -63,7 +63,7 @@ async def ingest_document(
         return 0
     embeddings = await embed_texts(chunks)
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     chunk_models = [
         DocumentChunkModel(
             id=str(uuid.uuid4()),

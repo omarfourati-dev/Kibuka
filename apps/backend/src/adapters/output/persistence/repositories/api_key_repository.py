@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,7 @@ class SqlApiKeyRepository(IApiKeyRepository):
         await self._session.execute(
             update(ApiKeyModel)
             .where(ApiKeyModel.id == api_key_id)
-            .values(deleted_at=datetime.utcnow())
+            .values(deleted_at=datetime.now(UTC))
         )
 
     def _to_entity(self, model: ApiKeyModel) -> ApiKey:
