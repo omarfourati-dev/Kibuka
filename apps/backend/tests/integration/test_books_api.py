@@ -409,6 +409,29 @@ class TestProgress:
         response = c.put("/api/v1/books/book-1/progress", json={"current_page": 2})
         assert response.status_code == 401
 
+    def test_get_progress_without_auth_returns_401(self, client: TestClient) -> None:
+        from src.adapters.input.api.v1.books import get_book_repository, get_optional_current_user
+        from src.adapters.input.api.v1.books import router as books_router
+
+        app = FastAPI()
+        app.include_router(books_router, prefix="/api/v1")
+
+        book_repo_local = MockBookRepository()
+        book_repo_local.add_book(_make_book(book_id="book-1"))
+
+        async def _repo() -> MockBookRepository:
+            return book_repo_local
+
+        async def _no_user() -> str | None:
+            return None
+
+        app.dependency_overrides[get_book_repository] = _repo
+        app.dependency_overrides[get_optional_current_user] = _no_user
+
+        c = TestClient(app, raise_server_exceptions=False)
+        response = c.get("/api/v1/books/book-1/progress")
+        assert response.status_code == 401
+
     def test_update_progress_with_auth_returns_200(self, authed_client: TestClient) -> None:
         response = authed_client.put("/api/v1/books/book-1/progress", json={"current_page": 2})
         assert response.status_code == 200
