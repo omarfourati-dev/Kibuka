@@ -60,10 +60,10 @@ describe("BookHero", () => {
 
   it("renders language selector buttons", () => {
     render(<BookHero book={defaultBook} />);
-    expect(screen.getByRole("button", { name: /DE/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /AR/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /FR/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /EN/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "DE" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "AR" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "FR" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "EN" })).toBeInTheDocument();
   });
 
   it("renders Vorschau lesen secondary CTA", () => {
