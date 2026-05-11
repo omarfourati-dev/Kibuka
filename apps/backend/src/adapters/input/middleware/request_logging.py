@@ -1,13 +1,18 @@
 from __future__ import annotations
+
 import time
+from collections.abc import Awaitable, Callable
+
 from fastapi import Request
+from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from loguru import logger
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         start = time.perf_counter()
         correlation_id = getattr(request.state, "correlation_id", "-")
 

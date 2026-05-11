@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Optional
-from datetime import datetime
+
 import uuid
-from sqlalchemy import select, func, update
+from datetime import datetime
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_user_repository import IUserRepository
+
 from .....core.domain.entities.user import User, UserRole, UserStatus
+from .....core.ports.output.i_user_repository import IUserRepository
 from ..models import UserModel
 
 
@@ -13,28 +15,30 @@ class SqlUserRepository(IUserRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_id(self, user_id: str) -> Optional[User]:
+    async def get_by_id(self, user_id: str) -> User | None:
         result = await self._session.execute(
             select(UserModel).where(UserModel.id == user_id, UserModel.deleted_at.is_(None))
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         result = await self._session.execute(
             select(UserModel).where(UserModel.email == email, UserModel.deleted_at.is_(None))
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_by_google_id(self, google_id: str) -> Optional[User]:
+    async def get_by_google_id(self, google_id: str) -> User | None:
         result = await self._session.execute(
             select(UserModel).where(UserModel.google_id == google_id)
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def list_by_space(self, space_id: str, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
+    async def list_by_space(
+        self, space_id: str, page: int = 1, page_size: int = 20
+    ) -> tuple[list[User], int]:
         query = select(UserModel).where(UserModel.deleted_at.is_(None))
         if space_id:
             query = query.where(UserModel.space_id == space_id)
@@ -42,9 +46,7 @@ class SqlUserRepository(IUserRepository):
             select(func.count()).select_from(query.subquery())
         )
         total = count_result.scalar_one()
-        result = await self._session.execute(
-            query.offset((page - 1) * page_size).limit(page_size)
-        )
+        result = await self._session.execute(query.offset((page - 1) * page_size).limit(page_size))
         return [self._to_entity(m) for m in result.scalars().all()], total
 
     async def save(self, user: User) -> User:
@@ -72,7 +74,9 @@ class SqlUserRepository(IUserRepository):
     async def anonymize(self, user_id: str) -> None:
         anon_id = str(uuid.uuid4())[:8]
         await self._session.execute(
-            update(UserModel).where(UserModel.id == user_id).values(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(
                 email=f"deleted_{anon_id}@deleted.invalid",
                 name="Deleted User",
                 google_id=None,

@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from ...domain.entities.document import Document, DocumentStatus
+
+from ...domain.entities.document import DocumentStatus
 from ...domain.exceptions.ai import AIFeatureDisabledError, DocumentProcessingError
+from ...ports.output.i_ai_client import IAIClient
 from ...ports.output.i_document_repository import IDocumentRepository
 from ...ports.output.i_vector_store import IVectorStore
-from ...ports.output.i_ai_client import IAIClient
 
 
 @dataclass

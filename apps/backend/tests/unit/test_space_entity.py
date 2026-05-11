@@ -1,6 +1,6 @@
 """Unit tests for Space domain entity."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.core.domain.entities.space import PlanType
 from tests.fixtures.factory import SpaceFactory
@@ -12,7 +12,7 @@ class TestSpaceIsActive:
         assert space.is_active is True
 
     def test_soft_deleted_space_is_not_active(self):
-        space = SpaceFactory(deleted_at=datetime.utcnow())
+        space = SpaceFactory(deleted_at=datetime.now(UTC))
         assert space.is_active is False
 
 

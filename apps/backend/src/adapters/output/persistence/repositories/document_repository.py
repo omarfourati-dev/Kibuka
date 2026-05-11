@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Optional
+
 from datetime import datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_document_repository import IDocumentRepository
+
 from .....core.domain.entities.document import Document, DocumentStatus
+from .....core.ports.output.i_document_repository import IDocumentRepository
 from ..models import DocumentModel
 
 
@@ -12,7 +14,7 @@ class SqlDocumentRepository(IDocumentRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_id(self, document_id: str) -> Optional[Document]:
+    async def get_by_id(self, document_id: str) -> Document | None:
         result = await self._session.execute(
             select(DocumentModel).where(
                 DocumentModel.id == document_id,

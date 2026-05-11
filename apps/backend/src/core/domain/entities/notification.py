@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class NotificationType(str, Enum):
+class NotificationType(StrEnum):
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
@@ -20,5 +20,5 @@ class Notification:
     title: str
     message: str
     read: bool = False
-    action_url: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    action_url: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

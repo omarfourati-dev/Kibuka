@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
@@ -115,7 +116,7 @@ class AgentRunModel(Base, TimestampMixin):
     )
     user_id: Mapped[str] = mapped_column(sa.String(36), sa.ForeignKey("users.id"), nullable=False)
     task: Mapped[str] = mapped_column(sa.Text, nullable=False)
-    available_tools: Mapped[list] = mapped_column(sa.JSON, nullable=False, default=list)
+    available_tools: Mapped[list[str]] = mapped_column(sa.JSON, nullable=False, default=list)
     status: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="idle")
     result: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
 
@@ -137,7 +138,7 @@ class AgentStepModel(Base):
     step_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
     tool_name: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
-    tool_args: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
+    tool_args: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
     tool_result: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
 
@@ -187,7 +188,7 @@ class ApiKeyModel(Base, TimestampMixin, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     key_hash: Mapped[str] = mapped_column(sa.String(64), unique=True, nullable=False, index=True)
     prefix: Mapped[str] = mapped_column(sa.String(10), nullable=False)
-    scopes: Mapped[list] = mapped_column(sa.JSON, nullable=False, default=list)
+    scopes: Mapped[list[str]] = mapped_column(sa.JSON, nullable=False, default=list)
     last_used_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
 
@@ -201,7 +202,7 @@ class OutgoingWebhookModel(Base, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     url: Mapped[str] = mapped_column(sa.String(500), nullable=False)
-    events: Mapped[list] = mapped_column(sa.JSON, nullable=False, default=list)
+    events: Mapped[list[str]] = mapped_column(sa.JSON, nullable=False, default=list)
     secret: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     failure_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
@@ -221,7 +222,9 @@ class ActivityLogModel(Base):
     action: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     resource_type: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     resource_id: Mapped[str] = mapped_column(sa.String(36), nullable=False)
-    extra_metadata: Mapped[dict | None] = mapped_column("metadata", sa.JSON, nullable=True)
+    extra_metadata: Mapped[dict[str, Any] | None] = mapped_column(
+        "metadata", sa.JSON, nullable=True
+    )
     ip_address: Mapped[str | None] = mapped_column(sa.String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
@@ -319,7 +322,7 @@ class PageContentModel(Base):
     language: Mapped[str] = mapped_column(sa.String(5), nullable=False)
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
     audio_url: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
-    word_timestamps: Mapped[list | None] = mapped_column(sa.JSON, nullable=True)
+    word_timestamps: Mapped[list[Any] | None] = mapped_column(sa.JSON, nullable=True)
 
     page: Mapped[BookPageModel] = relationship("BookPageModel", back_populates="contents")
 
@@ -376,7 +379,7 @@ class ChildProfileModel(Base, SoftDeleteMixin):
     )
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     age: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    preferred_languages: Mapped[list] = mapped_column(
+    preferred_languages: Mapped[list[str]] = mapped_column(
         sa.JSON, nullable=False, default=lambda: ["de"]
     )
     avatar_emoji: Mapped[str] = mapped_column(sa.String(10), nullable=False, default="🧒")

@@ -1,18 +1,18 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
     VIEWER = "viewer"
 
 
-class UserStatus(str, Enum):
+class UserStatus(StrEnum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
@@ -25,13 +25,13 @@ class User:
     name: str
     role: UserRole
     status: UserStatus
-    hashed_password: Optional[str] = None
-    avatar_url: Optional[str] = None
-    space_id: Optional[str] = None
-    google_id: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
-    deleted_at: Optional[datetime] = None
+    hashed_password: str | None = None
+    avatar_url: str | None = None
+    space_id: str | None = None
+    google_id: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    deleted_at: datetime | None = None
 
     @property
     def is_active(self) -> bool:

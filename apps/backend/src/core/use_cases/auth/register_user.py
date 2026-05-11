@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
+
 from ...domain.entities.user import User, UserRole, UserStatus
-from ...domain.exceptions.user import UserAlreadyExistsError, InvalidEmailError
+from ...domain.exceptions.user import InvalidEmailError, UserAlreadyExistsError
 from ...domain.value_objects.email import Email
-from ...ports.output.i_user_repository import IUserRepository
 from ...ports.output.i_email_service import IEmailService
+from ...ports.output.i_user_repository import IUserRepository
 
 
 @dataclass
@@ -24,7 +26,7 @@ class RegisterUserUseCase:
         try:
             email = Email(command.email.lower().strip())
         except ValueError as e:
-            raise InvalidEmailError(str(e))
+            raise InvalidEmailError(str(e)) from e
 
         existing = await self._user_repo.get_by_email(str(email))
         if existing:

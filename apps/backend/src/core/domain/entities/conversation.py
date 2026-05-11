@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class MessageRole(str, Enum):
+class MessageRole(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
@@ -18,7 +18,7 @@ class ChatMessage:
     role: MessageRole
     content: str
     tokens_used: int = 0
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -28,6 +28,6 @@ class Conversation:
     user_id: str
     title: str = "New Conversation"
     messages: list[ChatMessage] = field(default_factory=list)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
-    deleted_at: Optional[datetime] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    deleted_at: datetime | None = None

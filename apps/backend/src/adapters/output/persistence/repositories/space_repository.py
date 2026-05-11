@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Optional
+
 from datetime import datetime
-from sqlalchemy import select, func, update
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from .....core.domain.entities.space import PlanType, Space
 from .....core.ports.output.i_space_repository import ISpaceRepository
-from .....core.domain.entities.space import Space, PlanType
 from ..models import SpaceModel
 
 
@@ -12,14 +14,14 @@ class SqlSpaceRepository(ISpaceRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_id(self, space_id: str) -> Optional[Space]:
+    async def get_by_id(self, space_id: str) -> Space | None:
         result = await self._session.execute(
             select(SpaceModel).where(SpaceModel.id == space_id, SpaceModel.deleted_at.is_(None))
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_by_slug(self, slug: str) -> Optional[Space]:
+    async def get_by_slug(self, slug: str) -> Space | None:
         result = await self._session.execute(
             select(SpaceModel).where(SpaceModel.slug == slug, SpaceModel.deleted_at.is_(None))
         )
@@ -28,7 +30,9 @@ class SqlSpaceRepository(ISpaceRepository):
 
     async def list_all(self, page: int = 1, page_size: int = 20) -> tuple[list[Space], int]:
         query = select(SpaceModel).where(SpaceModel.deleted_at.is_(None))
-        count_result = await self._session.execute(select(func.count()).select_from(query.subquery()))
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
         total = count_result.scalar_one()
         result = await self._session.execute(query.offset((page - 1) * page_size).limit(page_size))
         return [self._to_entity(m) for m in result.scalars().all()], total

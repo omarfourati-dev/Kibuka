@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
-from typing import Optional
+
 from ...domain.entities.user import User, UserRole, UserStatus
 from ...ports.output.i_user_repository import IUserRepository
 
@@ -11,7 +12,7 @@ class OAuthUserInfo:
     google_id: str
     email: str
     name: str
-    avatar_url: Optional[str] = None
+    avatar_url: str | None = None
 
 
 class OAuthLoginUseCase:

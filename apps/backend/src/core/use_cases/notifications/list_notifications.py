@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...domain.entities.notification import Notification
 from ...ports.output.i_notification_repository import INotificationRepository
 

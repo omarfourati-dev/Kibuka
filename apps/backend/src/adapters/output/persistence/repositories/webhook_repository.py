@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Optional
-from sqlalchemy import select, delete
+
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_webhook_repository import IWebhookRepository
+
 from .....core.domain.entities.outgoing_webhook import OutgoingWebhook
+from .....core.ports.output.i_webhook_repository import IWebhookRepository
 from ..models import OutgoingWebhookModel
 
 
@@ -11,7 +12,7 @@ class SqlWebhookRepository(IWebhookRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_id(self, webhook_id: str) -> Optional[OutgoingWebhook]:
+    async def get_by_id(self, webhook_id: str) -> OutgoingWebhook | None:
         result = await self._session.execute(
             select(OutgoingWebhookModel).where(OutgoingWebhookModel.id == webhook_id)
         )

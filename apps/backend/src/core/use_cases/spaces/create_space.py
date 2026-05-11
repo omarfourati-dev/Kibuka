@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
-from ...domain.entities.space import Space, PlanType
-from ...domain.entities.user import User, UserRole
+
+from ...domain.entities.space import PlanType, Space
+from ...domain.entities.user import UserRole
 from ...domain.exceptions.space import SpaceAlreadyExistsError
 from ...ports.output.i_space_repository import ISpaceRepository
 from ...ports.output.i_user_repository import IUserRepository

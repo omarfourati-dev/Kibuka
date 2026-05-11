@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import hashlib
+
 from ...domain.entities.api_key import ApiKey
 from ...domain.exceptions.auth import TokenInvalidError
 from ...ports.output.i_api_key_repository import IApiKeyRepository

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from .config import settings
 
 
@@ -7,10 +8,10 @@ def configure_telemetry() -> None:
         return
 
     from opentelemetry import trace
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
     provider = TracerProvider()
     provider.add_span_processor(
@@ -21,6 +22,7 @@ def configure_telemetry() -> None:
 
     if settings.sentry_dsn:
         import sentry_sdk
+
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
             environment=settings.environment,

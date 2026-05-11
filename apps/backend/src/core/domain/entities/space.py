@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class PlanType(str, Enum):
+class PlanType(StrEnum):
     FREE = "free"
     STARTER = "starter"
     PRO = "pro"
@@ -20,9 +20,9 @@ class Space:
     owner_id: str
     plan: PlanType = PlanType.FREE
     member_count: int = 0
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
-    deleted_at: Optional[datetime] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    deleted_at: datetime | None = None
 
     @property
     def is_active(self) -> bool:

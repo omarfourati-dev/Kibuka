@@ -2,15 +2,19 @@
 RAG Step 1: Document → Text extraction → Token chunks → OpenAI embeddings → pgvector
 Supports PDF, Word (.docx), plain text.
 """
+
 from __future__ import annotations
+
 import io
 import uuid
 from datetime import datetime
-from pypdf import PdfReader
-from docx import Document as DocxDocument
-from sqlalchemy.ext.asyncio import AsyncSession
-from openai import AsyncOpenAI
+
 import tiktoken
+from docx import Document as DocxDocument
+from openai import AsyncOpenAI
+from pypdf import PdfReader
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from ....adapters.output.persistence.models import DocumentChunkModel
 
 CHUNK_SIZE = 500
@@ -69,7 +73,7 @@ async def ingest_document(
             embedding=embedding,
             created_at=now,
         )
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False))
     ]
     db.add_all(chunk_models)
     await db.flush()

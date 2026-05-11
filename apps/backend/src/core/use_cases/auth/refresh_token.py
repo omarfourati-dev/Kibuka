@@ -1,6 +1,7 @@
 from __future__ import annotations
-from ...domain.exceptions.auth import TokenInvalidError
+
 from ...domain.entities.user import User
+from ...domain.exceptions.auth import TokenInvalidError
 from ...ports.output.i_user_repository import IUserRepository
 
 

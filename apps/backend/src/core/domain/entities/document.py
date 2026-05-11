@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class DocumentStatus(str, Enum):
+class DocumentStatus(StrEnum):
     PENDING = "pending"
     PROCESSING = "processing"
     READY = "ready"
@@ -20,10 +20,10 @@ class Document:
     content_type: str
     status: DocumentStatus = DocumentStatus.PENDING
     chunk_count: int = 0
-    error_message: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
-    deleted_at: Optional[datetime] = None
+    error_message: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    deleted_at: datetime | None = None
 
     @property
     def is_ready(self) -> bool:

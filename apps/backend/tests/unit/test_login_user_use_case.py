@@ -1,6 +1,6 @@
 """Unit tests for LoginUserUseCase."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -81,7 +81,7 @@ class TestLoginFailure:
         user = UserFactory(
             email="user@example.com",
             hashed_password="$2b$12$hash",
-            deleted_at=datetime.utcnow(),
+            deleted_at=datetime.now(UTC),
         )
         user_repo.get_by_email.return_value = user
         cmd = LoginCommand(email="user@example.com", password="correct")

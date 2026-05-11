@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Optional
+
 from datetime import datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_api_key_repository import IApiKeyRepository
+
 from .....core.domain.entities.api_key import ApiKey
+from .....core.ports.output.i_api_key_repository import IApiKeyRepository
 from ..models import ApiKeyModel
 
 
@@ -12,7 +14,7 @@ class SqlApiKeyRepository(IApiKeyRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_hash(self, key_hash: str) -> Optional[ApiKey]:
+    async def get_by_hash(self, key_hash: str) -> ApiKey | None:
         result = await self._session.execute(
             select(ApiKeyModel).where(
                 ApiKeyModel.key_hash == key_hash,

@@ -1,8 +1,11 @@
 from __future__ import annotations
-import aiosmtplib
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+import aiosmtplib
 from jinja2 import Environment, PackageLoader, select_autoescape
+
 from ....core.ports.output.i_email_service import IEmailService
 
 
@@ -25,7 +28,7 @@ class SmtpEmailService(IEmailService):
             autoescape=select_autoescape(["html"]),
         )
 
-    async def send(self, to: str, subject: str, template: str, context: dict) -> None:
+    async def send(self, to: str, subject: str, template: str, context: dict[str, object]) -> None:
         try:
             tmpl = self._jinja.get_template(f"{template}.html")
             html_content = tmpl.render(**context)

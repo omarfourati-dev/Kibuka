@@ -2,16 +2,20 @@
 Outgoing webhook delivery with exponential backoff + jitter + circuit breaker.
 Called from ARQ background job queue.
 """
+
 from __future__ import annotations
+
 import asyncio
 import hashlib
 import hmac
 import json
 import random
-from datetime import datetime, timedelta
-import httpx
-from ....adapters.output.persistence.models import OutgoingWebhookModel
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
+import httpx
+
+from ....adapters.output.persistence.models import OutgoingWebhookModel
 
 CIRCUIT_OPEN_DURATION_MINUTES = 30
 MAX_RETRIES = 5
@@ -25,14 +29,15 @@ def _sign_payload(payload: bytes, secret: str) -> str:
 async def deliver_webhook(
     webhook_id: str,
     event_type: str,
-    payload: dict,
-    session,
+    payload: dict[str, Any],
+    session: Any,
 ) -> bool:
     """
     Delivers one webhook event. Returns True on success.
     On repeated failures, opens the circuit breaker.
     """
     from sqlalchemy import select
+
     result = await session.execute(
         select(OutgoingWebhookModel).where(OutgoingWebhookModel.id == webhook_id)
     )
@@ -40,7 +45,7 @@ async def deliver_webhook(
     if not webhook or not webhook.is_active:
         return False
 
-    if webhook.circuit_open_until and webhook.circuit_open_until > datetime.utcnow():
+    if webhook.circuit_open_until and webhook.circuit_open_until > datetime.now(UTC):
         return False
 
     payload_bytes = json.dumps({"event": event_type, "data": payload}).encode()
@@ -63,12 +68,14 @@ async def deliver_webhook(
         except Exception:
             pass
 
-        delay = BASE_DELAY_SECONDS * (2 ** attempt) + random.uniform(0, 1)
+        delay = BASE_DELAY_SECONDS * (2**attempt) + random.uniform(0, 1)
         await asyncio.sleep(delay)
 
     webhook.failure_count = (webhook.failure_count or 0) + 1
     if webhook.failure_count >= 5:
-        webhook.circuit_open_until = datetime.utcnow() + timedelta(minutes=CIRCUIT_OPEN_DURATION_MINUTES)
+        webhook.circuit_open_until = datetime.now(UTC) + timedelta(
+            minutes=CIRCUIT_OPEN_DURATION_MINUTES
+        )
 
     await session.flush()
     return False

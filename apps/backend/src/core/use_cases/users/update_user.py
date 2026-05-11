@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional
+
 from ...domain.entities.user import User
 from ...domain.exceptions.user import UserNotFoundError
 from ...ports.output.i_user_repository import IUserRepository
@@ -9,8 +10,8 @@ from ...ports.output.i_user_repository import IUserRepository
 @dataclass
 class UpdateUserCommand:
     user_id: str
-    name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    name: str | None = None
+    avatar_url: str | None = None
 
 
 class UpdateUserUseCase:

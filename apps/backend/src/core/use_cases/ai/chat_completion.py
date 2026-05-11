@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import uuid
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import AsyncGenerator
-from ...domain.entities.conversation import Conversation, ChatMessage, MessageRole
+
+from ...domain.entities.conversation import ChatMessage, Conversation, MessageRole
 from ...domain.exceptions.ai import AIFeatureDisabledError, ConversationNotFoundError
-from ...ports.output.i_conversation_repository import IConversationRepository
 from ...ports.output.i_ai_client import IAIClient
+from ...ports.output.i_conversation_repository import IConversationRepository
 
 
 @dataclass
@@ -54,8 +56,7 @@ class ChatCompletionUseCase:
         await self._conversation_repo.add_message(user_message)
 
         messages = [
-            {"role": msg.role.value, "content": msg.content}
-            for msg in conversation.messages
+            {"role": msg.role.value, "content": msg.content} for msg in conversation.messages
         ] + [{"role": "user", "content": command.message}]
 
-        return self._ai_client.chat_completion(messages, command.model, stream=True)
+        return await self._ai_client.chat_completion(messages, command.model, stream=True)

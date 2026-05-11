@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     app_url: str = "http://localhost:8000"
     environment: str = "development"
     debug: bool = False
-    secret_key: str = Field(min_length=32)
+    secret_key: str = Field(default="changeme-replace-in-production-env", min_length=32)
 
     # Database
     database_url: str = "postgresql+asyncpg://omar:omar@localhost:5432/myapp_dev"

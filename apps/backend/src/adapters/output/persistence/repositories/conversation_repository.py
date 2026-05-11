@@ -1,18 +1,20 @@
 from __future__ import annotations
-from typing import Optional
+
 from datetime import datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from .....core.domain.entities.conversation import ChatMessage, Conversation, MessageRole
 from .....core.ports.output.i_conversation_repository import IConversationRepository
-from .....core.domain.entities.conversation import Conversation, ChatMessage, MessageRole
-from ..models import ConversationModel, ChatMessageModel
+from ..models import ChatMessageModel, ConversationModel
 
 
 class SqlConversationRepository(IConversationRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_id(self, conversation_id: str) -> Optional[Conversation]:
+    async def get_by_id(self, conversation_id: str) -> Conversation | None:
         result = await self._session.execute(
             select(ConversationModel).where(
                 ConversationModel.id == conversation_id,

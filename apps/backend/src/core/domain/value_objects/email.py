@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 
-_EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+_EMAIL_PATTERN = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
 
 
 @dataclass(frozen=True)
@@ -18,4 +19,4 @@ class Email:
 
     @property
     def domain(self) -> str:
-        return self.value.split('@')[1]
+        return self.value.split("@")[1]

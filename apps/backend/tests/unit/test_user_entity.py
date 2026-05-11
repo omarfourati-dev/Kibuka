@@ -1,6 +1,6 @@
 """Unit tests for User domain entity."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.core.domain.entities.user import UserRole, UserStatus
 from tests.fixtures.factory import UserFactory
@@ -20,11 +20,11 @@ class TestUserIsActive:
         assert user.is_active is False
 
     def test_soft_deleted_user_is_not_active(self):
-        user = UserFactory(status=UserStatus.ACTIVE, deleted_at=datetime.utcnow())
+        user = UserFactory(status=UserStatus.ACTIVE, deleted_at=datetime.now(UTC))
         assert user.is_active is False
 
     def test_soft_deleted_inactive_user_is_not_active(self):
-        user = UserFactory(status=UserStatus.INACTIVE, deleted_at=datetime.utcnow())
+        user = UserFactory(status=UserStatus.INACTIVE, deleted_at=datetime.now(UTC))
         assert user.is_active is False
 
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
+
 from ...domain.exceptions.auth import InsufficientPermissionsError
 
 
@@ -14,7 +16,8 @@ class AdminStats:
 
 class GetAdminStatsUseCase:
     """Aggregates admin dashboard statistics."""
-    def __init__(self, user_repo, space_repo, subscription_repo) -> None:
+
+    def __init__(self, user_repo: Any, space_repo: Any, subscription_repo: Any) -> None:
         self._user_repo = user_repo
         self._space_repo = space_repo
         self._subscription_repo = subscription_repo

@@ -1,5 +1,7 @@
 from __future__ import annotations
-import asyncio
+
+import contextlib
+
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 
@@ -16,22 +18,14 @@ class ConnectionManager:
         logger.info("WebSocket connected: user={}", user_id)
 
     def disconnect(self, user_id: str, websocket: WebSocket) -> None:
-        if user_id in self._connections:
-            self._connections[user_id].discard(websocket) if isinstance(
-                self._connections[user_id], set
-            ) else (
-                self._connections[user_id].remove(websocket)
-                if websocket in self._connections[user_id]
-                else None
-            )
+        if user_id in self._connections and websocket in self._connections[user_id]:
+            self._connections[user_id].remove(websocket)
         logger.info("WebSocket disconnected: user={}", user_id)
 
-    async def send_to_user(self, user_id: str, message: dict) -> None:
+    async def send_to_user(self, user_id: str, message: dict[str, object]) -> None:
         for ws in self._connections.get(user_id, []):
-            try:
+            with contextlib.suppress(Exception):
                 await ws.send_json(message)
-            except Exception:
-                pass
 
 
 manager = ConnectionManager()

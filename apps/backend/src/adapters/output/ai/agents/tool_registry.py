@@ -1,11 +1,14 @@
 """Tool registry — add new tools here, add execution case in execute_tool()."""
-from __future__ import annotations
-from typing import Any
-from .tools.web_search import web_search
-from .tools.rag_tool import rag_search
-from .tools.code_executor import execute_code
 
-TOOL_DEFINITIONS: dict[str, dict] = {
+from __future__ import annotations
+
+from typing import Any
+
+from .tools.code_executor import execute_code
+from .tools.rag_tool import rag_search
+from .tools.web_search import web_search
+
+TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
     "web_search": {
         "type": "function",
         "function": {
@@ -48,7 +51,7 @@ TOOL_DEFINITIONS: dict[str, dict] = {
 }
 
 
-def get_tools(names: list[str]) -> list[dict]:
+def get_tools(names: list[str]) -> list[dict[str, Any]]:
     return [TOOL_DEFINITIONS[name] for name in names if name in TOOL_DEFINITIONS]
 
 

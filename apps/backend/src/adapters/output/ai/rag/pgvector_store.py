@@ -1,14 +1,18 @@
 """Implements IVectorStore using PostgreSQL + pgvector."""
+
 from __future__ import annotations
+
 import uuid
-from datetime import datetime
-from sqlalchemy import select, delete
+from datetime import UTC, datetime
+
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ....core.ports.output.i_vector_store import IVectorStore
+
 from ....adapters.output.persistence.models import DocumentChunkModel, DocumentModel
+from ....core.ports.output.i_vector_store import IVectorStore
 
 
-class PgVectorStore(IVectorStore):
+class PgVectorStore(IVectorStore):  # type: ignore[misc]
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -18,7 +22,7 @@ class PgVectorStore(IVectorStore):
         chunks: list[str],
         embeddings: list[list[float]],
     ) -> int:
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         models = [
             DocumentChunkModel(
                 id=str(uuid.uuid4()),
@@ -28,7 +32,7 @@ class PgVectorStore(IVectorStore):
                 embedding=embedding,
                 created_at=now,
             )
-            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False))
         ]
         self._session.add_all(models)
         await self._session.flush()

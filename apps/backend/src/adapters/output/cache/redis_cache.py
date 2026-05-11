@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import json
-from typing import Any, Optional
+from typing import Any
+
 import redis.asyncio as redis_async
+
 from ....core.ports.output.i_cache import ICache
 
 
@@ -9,7 +12,7 @@ class RedisCache(ICache):
     def __init__(self, client: redis_async.Redis) -> None:
         self._client = client
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         value = await self._client.get(key)
         if value is None:
             return None

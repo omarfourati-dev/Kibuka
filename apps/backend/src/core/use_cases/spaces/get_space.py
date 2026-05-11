@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from ...domain.entities.space import Space
 from ...domain.exceptions.space import SpaceNotFoundError
 from ...ports.output.i_space_repository import ISpaceRepository

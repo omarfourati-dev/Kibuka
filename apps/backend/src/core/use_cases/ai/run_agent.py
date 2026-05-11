@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
 from typing import Any
+
 from ...domain.entities.agent_run import AgentRun, AgentStatus
 from ...domain.exceptions.ai import AIFeatureDisabledError
 from ...ports.output.i_agent_repository import IAgentRepository

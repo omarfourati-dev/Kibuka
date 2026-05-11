@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -13,7 +14,7 @@ class Money:
         if len(self.currency) != 3:
             raise ValueError("Currency must be a 3-letter ISO code")
 
-    def __add__(self, other: "Money") -> "Money":
+    def __add__(self, other: Money) -> Money:
         if self.currency != other.currency:
             raise ValueError(f"Cannot add {self.currency} and {other.currency}")
         return Money(self.amount_cents + other.amount_cents, self.currency)

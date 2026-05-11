@@ -1,1 +1,2 @@
-from . import input, output
+from . import input as input
+from . import output as output

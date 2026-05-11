@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_subscription_repository import ISubscriptionRepository
+
 from .....core.domain.entities.subscription import Subscription, SubscriptionStatus
+from .....core.ports.output.i_subscription_repository import ISubscriptionRepository
 from ..models import SubscriptionModel
 
 
@@ -11,14 +12,14 @@ class SqlSubscriptionRepository(ISubscriptionRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_space_id(self, space_id: str) -> Optional[Subscription]:
+    async def get_by_space_id(self, space_id: str) -> Subscription | None:
         result = await self._session.execute(
             select(SubscriptionModel).where(SubscriptionModel.space_id == space_id)
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_by_stripe_id(self, stripe_subscription_id: str) -> Optional[Subscription]:
+    async def get_by_stripe_id(self, stripe_subscription_id: str) -> Subscription | None:
         result = await self._session.execute(
             select(SubscriptionModel).where(
                 SubscriptionModel.stripe_subscription_id == stripe_subscription_id

@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
-from ...domain.entities.subscription import Subscription, SubscriptionStatus
+
+from ...domain.entities.subscription import SubscriptionStatus
 from ...ports.output.i_subscription_repository import ISubscriptionRepository
 
 
@@ -14,6 +15,7 @@ class StripeWebhookEvent:
 
 class HandleStripeWebhookUseCase:
     """Idempotent Stripe webhook handler. Called from ARQ background job."""
+
     def __init__(self, subscription_repo: ISubscriptionRepository) -> None:
         self._subscription_repo = subscription_repo
 

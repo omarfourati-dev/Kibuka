@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 
 @dataclass
@@ -12,7 +13,7 @@ class ActivityLog:
     action: str
     resource_type: str
     resource_id: str
-    metadata: Optional[dict[str, Any]] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    metadata: dict[str, Any] | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

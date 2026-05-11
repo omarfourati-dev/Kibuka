@@ -1,22 +1,30 @@
 from __future__ import annotations
+
+from typing import Any
+
 from arq.connections import RedisSettings
+
 from .config import settings
 
 
-async def send_welcome_email(ctx, user_id: str, email: str, name: str) -> None:
+async def send_welcome_email(ctx: dict[str, Any], user_id: str, email: str, name: str) -> None:
     pass
 
 
-async def process_stripe_webhook(ctx, event_type: str, data: dict) -> None:
+async def process_stripe_webhook(
+    ctx: dict[str, Any], event_type: str, data: dict[str, Any]
+) -> None:
     pass
 
 
-async def deliver_webhook(ctx, webhook_id: str, event_type: str, payload: dict) -> None:
+async def deliver_webhook(
+    ctx: dict[str, Any], webhook_id: str, event_type: str, payload: dict[str, Any]
+) -> None:
     pass
 
 
 async def ingest_document_background(
-    ctx, document_id: str, space_id: str, content_b64: str, content_type: str
+    ctx: dict[str, Any], document_id: str, space_id: str, content_b64: str, content_type: str
 ) -> None:
     pass
 

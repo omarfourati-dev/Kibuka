@@ -1,6 +1,11 @@
 from __future__ import annotations
-from typing import AsyncGenerator
+
+from collections.abc import AsyncGenerator
+from typing import cast
+
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
+
 from ....core.ports.output.i_ai_client import IAIClient
 
 
@@ -15,10 +20,10 @@ class OpenAIAdapter(IAIClient):
         model: str,
         stream: bool = False,
     ) -> AsyncGenerator[str, None]:
-        async def _stream():
+        async def _stream() -> AsyncGenerator[str, None]:
             response = await self._client.chat.completions.create(
                 model=model or self._default_model,
-                messages=messages,
+                messages=cast(list[ChatCompletionMessageParam], messages),
                 stream=True,
             )
             async for chunk in response:
@@ -26,22 +31,25 @@ class OpenAIAdapter(IAIClient):
                 if delta:
                     yield delta
 
-        async def _no_stream():
+        async def _no_stream() -> AsyncGenerator[str, None]:
             response = await self._client.chat.completions.create(
                 model=model or self._default_model,
-                messages=messages,
+                messages=cast(list[ChatCompletionMessageParam], messages),
                 stream=False,
             )
             yield response.choices[0].message.content or ""
 
         return _stream() if stream else _no_stream()
 
-    async def embed(self, texts: list[str], model: str = "text-embedding-3-small") -> list[list[float]]:
+    async def embed(
+        self, texts: list[str], model: str = "text-embedding-3-small"
+    ) -> list[list[float]]:
         response = await self._client.embeddings.create(input=texts, model=model)
         return [item.embedding for item in response.data]
 
     async def count_tokens(self, text: str, model: str) -> int:
         import tiktoken
+
         try:
             enc = tiktoken.encoding_for_model(model)
         except KeyError:

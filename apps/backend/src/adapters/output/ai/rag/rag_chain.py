@@ -1,9 +1,15 @@
 """RAG Step 3: Retrieved chunks + query → prompt → streaming LLM response."""
+
 from __future__ import annotations
-from typing import AsyncGenerator
+
+from collections.abc import AsyncGenerator
+from typing import cast
+
 from openai import AsyncOpenAI
-from .retriever import retrieve
+from openai.types.chat import ChatCompletionMessageParam
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from .retriever import retrieve
 
 _openai = AsyncOpenAI()
 
@@ -26,7 +32,7 @@ async def ask(
         {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"},
     ]
     response = await _openai.chat.completions.create(
-        model=model, messages=messages, stream=True
+        model=model, messages=cast(list[ChatCompletionMessageParam], messages), stream=True
     )
     async for chunk in response:
         if chunk.choices[0].delta.content:

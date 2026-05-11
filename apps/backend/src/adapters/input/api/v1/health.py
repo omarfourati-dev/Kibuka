@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from typing import Any
+
+from fastapi import APIRouter
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> Any:
     return {"status": "ok", "service": "omars-app-backend"}

@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Optional
+
 from ...domain.entities.agent_run import AgentRun, AgentStep
 
 
 class IAgentRepository(ABC):
     @abstractmethod
-    async def get_by_id(self, run_id: str) -> Optional[AgentRun]: ...
+    async def get_by_id(self, run_id: str) -> AgentRun | None: ...
 
     @abstractmethod
     async def list_by_space(self, space_id: str) -> list[AgentRun]: ...

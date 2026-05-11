@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
+
 from ...domain.entities.user import User
 from ...domain.exceptions.auth import InsufficientPermissionsError
 from ...ports.output.i_user_repository import IUserRepository

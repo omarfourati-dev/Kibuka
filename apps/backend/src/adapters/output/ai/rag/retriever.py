@@ -1,8 +1,11 @@
 """RAG Step 2: Query → embedding → cosine similarity search → top-K chunks."""
+
 from __future__ import annotations
+
+from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from openai import AsyncOpenAI
+
 from ....adapters.output.persistence.models import DocumentChunkModel, DocumentModel
 
 _openai = AsyncOpenAI()

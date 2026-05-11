@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Optional
-from ...domain.entities.conversation import Conversation, ChatMessage
+
+from ...domain.entities.conversation import ChatMessage, Conversation
 
 
 class IConversationRepository(ABC):
     @abstractmethod
-    async def get_by_id(self, conversation_id: str) -> Optional[Conversation]: ...
+    async def get_by_id(self, conversation_id: str) -> Conversation | None: ...
 
     @abstractmethod
     async def list_by_space(self, space_id: str, user_id: str) -> list[Conversation]: ...

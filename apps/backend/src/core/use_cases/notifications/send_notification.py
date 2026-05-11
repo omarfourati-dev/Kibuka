@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
+
 from ...domain.entities.notification import Notification, NotificationType
 from ...ports.output.i_notification_repository import INotificationRepository
 

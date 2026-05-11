@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from typing import Any
+
 from arq import create_pool
 from arq.connections import RedisSettings
+
 from ....core.ports.output.i_queue import IQueue
 
 

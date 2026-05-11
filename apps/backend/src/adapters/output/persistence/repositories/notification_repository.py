@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from .....core.ports.output.i_notification_repository import INotificationRepository
+
 from .....core.domain.entities.notification import Notification, NotificationType
+from .....core.ports.output.i_notification_repository import INotificationRepository
 from ..models import NotificationModel
 
 
@@ -43,9 +45,7 @@ class SqlNotificationRepository(INotificationRepository):
 
     async def mark_all_read(self, user_id: str) -> None:
         await self._session.execute(
-            update(NotificationModel)
-            .where(NotificationModel.user_id == user_id)
-            .values(read=True)
+            update(NotificationModel).where(NotificationModel.user_id == user_id).values(read=True)
         )
 
     def _to_entity(self, model: NotificationModel) -> Notification:

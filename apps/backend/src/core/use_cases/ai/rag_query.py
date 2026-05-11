@@ -1,9 +1,11 @@
 from __future__ import annotations
+
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import AsyncGenerator
+
 from ...domain.exceptions.ai import AIFeatureDisabledError
-from ...ports.output.i_vector_store import IVectorStore
 from ...ports.output.i_ai_client import IAIClient
+from ...ports.output.i_vector_store import IVectorStore
 
 
 @dataclass
@@ -42,4 +44,4 @@ class RagQueryUseCase:
             {"role": "system", "content": RAG_SYSTEM_PROMPT},
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {command.query}"},
         ]
-        return self._ai_client.chat_completion(messages, command.model, stream=True)
+        return await self._ai_client.chat_completion(messages, command.model, stream=True)

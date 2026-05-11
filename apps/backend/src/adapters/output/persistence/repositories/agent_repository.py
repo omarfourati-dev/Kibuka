@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from .....core.domain.entities.agent_run import AgentRun, AgentStatus, AgentStep
 from .....core.ports.output.i_agent_repository import IAgentRepository
-from .....core.domain.entities.agent_run import AgentRun, AgentStep, AgentStatus
 from ..models import AgentRunModel, AgentStepModel
 
 
@@ -11,7 +12,7 @@ class SqlAgentRepository(IAgentRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_id(self, run_id: str) -> Optional[AgentRun]:
+    async def get_by_id(self, run_id: str) -> AgentRun | None:
         result = await self._session.execute(
             select(AgentRunModel).where(AgentRunModel.id == run_id)
         )

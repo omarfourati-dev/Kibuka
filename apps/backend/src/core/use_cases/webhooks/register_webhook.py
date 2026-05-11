@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
-from typing import Optional
+
 from ...domain.entities.outgoing_webhook import OutgoingWebhook
 from ...ports.output.i_webhook_repository import IWebhookRepository
 
@@ -12,7 +13,7 @@ class RegisterWebhookCommand:
     name: str
     url: str
     events: list[str]
-    secret: Optional[str] = None
+    secret: str | None = None
 
 
 class RegisterWebhookUseCase:

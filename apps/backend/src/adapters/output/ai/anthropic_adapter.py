@@ -1,6 +1,12 @@
 from __future__ import annotations
-from typing import AsyncGenerator
+
+from collections.abc import AsyncGenerator
+from typing import cast
+
 from anthropic import AsyncAnthropic
+from anthropic._types import Omit
+from anthropic.types import MessageParam
+
 from ....core.ports.output.i_ai_client import IAIClient
 
 
@@ -17,26 +23,30 @@ class AnthropicAdapter(IAIClient):
     ) -> AsyncGenerator[str, None]:
         system_messages = [m["content"] for m in messages if m["role"] == "system"]
         user_messages = [m for m in messages if m["role"] != "system"]
-        system = system_messages[0] if system_messages else None
+        _omit = Omit()
+        system: str | Omit = system_messages[0] if system_messages else _omit
 
-        async def _stream():
+        async def _stream() -> AsyncGenerator[str, None]:
             async with self._client.messages.stream(
                 model=model or self._default_model,
                 max_tokens=4096,
                 system=system,
-                messages=user_messages,
+                messages=cast(list[MessageParam], user_messages),
             ) as stream_obj:
                 async for text in stream_obj.text_stream:
                     yield text
 
-        async def _no_stream():
+        async def _no_stream() -> AsyncGenerator[str, None]:
             response = await self._client.messages.create(
                 model=model or self._default_model,
                 max_tokens=4096,
                 system=system,
-                messages=user_messages,
+                messages=cast(list[MessageParam], user_messages),
             )
-            yield response.content[0].text
+            for block in response.content:
+                if hasattr(block, "text"):
+                    yield block.text
+                    break
 
         return _stream() if stream else _no_stream()
 

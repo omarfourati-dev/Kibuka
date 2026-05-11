@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import hashlib
 import secrets
 import uuid
 from dataclasses import dataclass
-from typing import Optional
 from datetime import datetime
+
 from ...domain.entities.api_key import ApiKey
 from ...ports.output.i_api_key_repository import IApiKeyRepository
 
@@ -15,7 +16,7 @@ class CreateApiKeyCommand:
     space_id: str
     name: str
     scopes: list[str]
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
 
 @dataclass
