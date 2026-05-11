@@ -12,6 +12,12 @@ const SpacesPage = lazy(() => import("./pages/app/Spaces"));
 const SettingsPage = lazy(() => import("./pages/app/Settings"));
 const AdminPage = lazy(() => import("./pages/app/Admin"));
 
+// Kibuka book routes
+const HomePageKibuka = lazy(() => import("./pages/HomePage"));
+const LibraryPage = lazy(() => import("./pages/LibraryPage"));
+const BookDetailPage = lazy(() => import("./pages/BookDetailPage"));
+const ReaderPage = lazy(() => import("./pages/ReaderPage"));
+
 const Fallback = () => (
   <div className="flex h-screen items-center justify-center text-slate-500 dark:text-slate-400">
     Loading...
@@ -24,8 +30,50 @@ export default function App() {
       <ErrorBoundary>
         <Suspense fallback={<Fallback />}>
           <Routes>
+            {/* Kibuka book routes */}
+            <Route
+              path="/books"
+              element={
+                <Suspense fallback={<Fallback />}>
+                  <LibraryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/library"
+              element={
+                <Suspense fallback={<Fallback />}>
+                  <LibraryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/books/:bookId/read"
+              element={
+                <Suspense fallback={<Fallback />}>
+                  <ReaderPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/books/:bookId"
+              element={
+                <Suspense fallback={<Fallback />}>
+                  <BookDetailPage />
+                </Suspense>
+              }
+            />
+
             {/* Public */}
-            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/"
+              element={
+                <Suspense fallback={<Fallback />}>
+                  <HomePageKibuka />
+                </Suspense>
+              }
+            />
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/pricing" element={<PricingPage />} />
 

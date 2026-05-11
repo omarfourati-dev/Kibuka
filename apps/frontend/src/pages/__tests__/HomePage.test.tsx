@@ -5,8 +5,8 @@ import HomePage from "../HomePage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
 vi.mock("../../components/book/BookHero", () => ({
-  BookHero: ({ book }: { book: { titles: { de: string } } }) => (
-    <div data-testid="book-hero">{book.titles.de}</div>
+  BookHero: ({ book }: { book: { title: string } }) => (
+    <div data-testid="book-hero">{book.title}</div>
   ),
 }));
 

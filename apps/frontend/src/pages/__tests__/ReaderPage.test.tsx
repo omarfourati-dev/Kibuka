@@ -115,7 +115,7 @@ describe("ReaderPage", () => {
     vi.mocked(fetch).mockRejectedValue(new Error("Network error"));
     renderReaderPage();
     await waitFor(() => {
-      expect(screen.getByText(/fehler|error/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/fehler|error/i).length).toBeGreaterThan(0);
     });
   });
 
