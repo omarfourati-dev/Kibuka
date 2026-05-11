@@ -1,4 +1,4 @@
 packages:
   - "apps/*"
-  # - 'mobile'  # temporarily disabled: babel-plugin-nativewind not on npm registry
+  - "mobile" # re-enabled for test setup
   - "packages/*"
