@@ -1,0 +1,86 @@
+:root {
+  /* Primary — warm orange (sun, warmth) */
+  --color-primary: #ff6b35;
+  --color-primary-light: #ff8c5a;
+  --color-primary-dark: #e55520;
+
+  /* Secondary — sky blue (dreams, adventure) */
+  --color-secondary: #4ecdc4;
+  --color-secondary-light: #7eddd6;
+  --color-secondary-dark: #2eb5ac;
+
+  /* Accent — sunshine yellow */
+  --color-accent: #ffd93d;
+  --color-accent-dark: #f0c020;
+
+  /* Neutral */
+  --color-background: #fffdf7;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fff8ee;
+  --color-text-primary: #2d2d2d;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #a0a0a0;
+  --color-border: #e8e0d5;
+
+  /* Semantic */
+  --color-success: #6bcb77;
+  --color-error: #ff6b6b;
+  --color-warning: #ffd93d;
+
+  /* Typography scale (children-friendly, slightly larger) */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+
+  /* Spacing (4px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Border radius — rounded for children's app */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #1a1a2e;
+    --color-surface: #16213e;
+    --color-surface-raised: #1f2a4a;
+    --color-text-primary: #f0f0f0;
+    --color-text-secondary: #b0b0b0;
+    --color-text-muted: #707070;
+    --color-border: #2a3550;
+  }
+}
+
+/* RTL support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* Arabic font */
+[lang="ar"],
+[dir="rtl"] {
+  font-family: "Noto Naskh Arabic", "Scheherazade New", serif;
+  line-height: 1.8; /* Arabic needs more line height */
+}
