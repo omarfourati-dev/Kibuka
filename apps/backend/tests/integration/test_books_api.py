@@ -494,3 +494,24 @@ class TestAdminAccess:
         response = authed_client.get("/api/v1/books/book-1/read")
 
         assert response.status_code == 403
+
+
+class TestPageResponseShape:
+    """Pages must be serialized as per-language maps — the shape the web
+    reader consumes (texts/audio_urls/word_timestamps keyed by language)."""
+
+    def test_preview_pages_use_language_maps(self, client: TestClient) -> None:
+        response = client.get("/api/v1/books/book-1")
+
+        page = response.json()["preview_pages"][0]
+        assert page["texts"]["de"] == "Der kleine Löwe geht auf Abenteuer."
+        assert page["audio_urls"]["de"] == "https://cdn.example.com/audio-de.mp3"
+        ts = page["word_timestamps"]["de"]
+        assert ts[0] == {"word": "Der", "startTime": 0, "endTime": 200}
+
+    def test_full_read_uses_language_maps(self, admin_client: TestClient) -> None:
+        response = admin_client.get("/api/v1/books/book-1/read")
+
+        page = response.json()["pages"][0]
+        assert "texts" in page and "audio_urls" in page and "word_timestamps" in page
+        assert "contents" not in page
