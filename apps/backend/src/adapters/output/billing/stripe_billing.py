@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 import stripe
 
@@ -23,20 +23,21 @@ class StripeBillingAdapter:
         cancel_url: str,
         metadata: dict[str, str] | None = None,
     ) -> str:
+        # Keine payment_method_types mehr — Stripe wählt die Methoden über die
+        # Dashboard-Konfiguration (neue SDK-Signatur kennt den Parameter nicht).
         session = await stripe.checkout.Session.create_async(
             customer_email=customer_email,
-            payment_method_types=["card"],
             line_items=[{"price": price_id, "quantity": 1}],
             mode="subscription",
             success_url=success_url,
             cancel_url=cancel_url,
             metadata=metadata or {},
         )
-        return cast(str, session.url or "")
+        return session.url or ""
 
     async def create_customer_portal_session(self, customer_id: str, return_url: str) -> str:
         session = await stripe.billing_portal.Session.create_async(
             customer=customer_id,
             return_url=return_url,
         )
-        return cast(str, session.url)
+        return session.url
