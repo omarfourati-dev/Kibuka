@@ -1,4 +1,8 @@
-"""Unit tests for BookGenerationService — written BEFORE implementation (TDD RED phase)."""
+"""Unit tests for BookGenerationService — written BEFORE implementation (TDD RED phase).
+
+Pipeline under test uses OpenAI (GPT for story/translations/safety verdict,
+Moderation API as a hard safety gate) — Anthropic is intentionally NOT used here.
+"""
 
 from __future__ import annotations
 
@@ -24,13 +28,24 @@ _STORY_JSON = json.dumps(
 )
 
 
-def _make_claude_message(text: str) -> MagicMock:
-    """Build a minimal Anthropic message mock whose content[0].text == text."""
-    content_block = MagicMock()
-    content_block.text = text
-    msg = MagicMock()
-    msg.content = [content_block]
-    return msg
+def _make_chat_completion(text: str) -> MagicMock:
+    """Build a minimal OpenAI ChatCompletion mock whose choices[0].message.content == text."""
+    message = MagicMock()
+    message.content = text
+    choice = MagicMock()
+    choice.message = message
+    completion = MagicMock()
+    completion.choices = [choice]
+    return completion
+
+
+def _make_moderation_response(flagged: bool) -> MagicMock:
+    """Build a minimal OpenAI Moderation response mock."""
+    result = MagicMock()
+    result.flagged = flagged
+    response = MagicMock()
+    response.results = [result]
+    return response
 
 
 def _make_tts_result(language: Language) -> TTSResult:
@@ -42,13 +57,21 @@ def _make_tts_result(language: Language) -> TTSResult:
     )
 
 
-@pytest.fixture()
-def mock_anthropic_client():
-    """AsyncAnthropic client whose messages.create is an AsyncMock."""
+def _make_openai_client(chat_side_effect, flagged: bool = False) -> MagicMock:
+    """AsyncOpenAI client mock with chat.completions.create + moderations.create."""
     client = MagicMock()
-    client.messages = MagicMock()
-    # Default: story generation returns valid JSON; safety returns "SAFE";
-    # translations return translated text.
+    client.chat = MagicMock()
+    client.chat.completions = MagicMock()
+    client.chat.completions.create = AsyncMock(side_effect=chat_side_effect)
+    client.moderations = MagicMock()
+    client.moderations.create = AsyncMock(return_value=_make_moderation_response(flagged))
+    return client
+
+
+@pytest.fixture()
+def mock_openai_client():
+    """AsyncOpenAI client: story returns valid JSON; safety returns "SAFE";
+    translations return translated text; moderation never flags."""
     call_count = 0
 
     async def create_side_effect(*args, **kwargs):  # noqa: ARG001
@@ -56,15 +79,14 @@ def mock_anthropic_client():
         call_count += 1
         # First call: story generation
         if call_count == 1:
-            return _make_claude_message(_STORY_JSON)
-        # Second call: safety check
+            return _make_chat_completion(_STORY_JSON)
+        # Second call: safety verdict
         if call_count == 2:
-            return _make_claude_message("SAFE")
+            return _make_chat_completion("SAFE")
         # All subsequent calls: translations
-        return _make_claude_message("Translated text")
+        return _make_chat_completion("Translated text")
 
-    client.messages.create = AsyncMock(side_effect=create_side_effect)
-    return client
+    return _make_openai_client(create_side_effect)
 
 
 @pytest.fixture()
@@ -94,9 +116,9 @@ def mock_image_service():
 
 
 @pytest.fixture()
-def service(mock_anthropic_client, mock_book_repository, mock_tts_service, mock_image_service):
+def service(mock_openai_client, mock_book_repository, mock_tts_service, mock_image_service):
     return BookGenerationService(
-        anthropic_client=mock_anthropic_client,
+        openai_client=mock_openai_client,
         book_repository=mock_book_repository,
         tts_service=mock_tts_service,
         image_service=mock_image_service,
@@ -105,16 +127,15 @@ def service(mock_anthropic_client, mock_book_repository, mock_tts_service, mock_
 
 @pytest.fixture()
 def service_with_mocks(mock_book_repository, mock_tts_service, mock_image_service):
-    """Return (service, mocks_dict) for tests that need to customise the Anthropic client."""
-    client = MagicMock()
-    client.messages = MagicMock()
+    """Return (service, mocks_dict) for tests that need to customise the OpenAI client."""
+    client = _make_openai_client(chat_side_effect=None)
     svc = BookGenerationService(
-        anthropic_client=client,
+        openai_client=client,
         book_repository=mock_book_repository,
         tts_service=mock_tts_service,
         image_service=mock_image_service,
     )
-    return svc, {"anthropic": client}
+    return svc, {"openai": client}
 
 
 # ---------------------------------------------------------------------------
@@ -166,26 +187,51 @@ class TestGenerateDailyBook:
         assert book.cover_image_url == "https://s3.example.com/cover.png"
 
     @pytest.mark.asyncio
-    async def test_generate_daily_book_raises_if_content_safety_fails(
+    async def test_generate_daily_book_runs_moderation_gate(self, service, mock_openai_client):
+        """The free OpenAI Moderation API must be called as a hard safety gate."""
+        await service.generate_daily_book()
+
+        mock_openai_client.moderations.create.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_generate_daily_book_raises_if_moderation_flags_content(
         self, mock_book_repository, mock_tts_service, mock_image_service
     ):
-        """When safety check returns UNSAFE the service must raise ValueError."""
-        unsafe_client = MagicMock()
-        unsafe_client.messages = MagicMock()
+        """When the Moderation API flags the story the service must raise ValueError."""
 
+        async def chat_side_effect(*args, **kwargs):  # noqa: ARG001
+            return _make_chat_completion(_STORY_JSON)
+
+        flagged_client = _make_openai_client(chat_side_effect, flagged=True)
+
+        svc = BookGenerationService(
+            openai_client=flagged_client,
+            book_repository=mock_book_repository,
+            tts_service=mock_tts_service,
+            image_service=mock_image_service,
+        )
+
+        with pytest.raises(ValueError, match="Content safety check failed"):
+            await svc.generate_daily_book()
+
+    @pytest.mark.asyncio
+    async def test_generate_daily_book_raises_if_llm_verdict_is_unsafe(
+        self, mock_book_repository, mock_tts_service, mock_image_service
+    ):
+        """When the GPT child-suitability verdict is UNSAFE the service must raise."""
         call_count = 0
 
         async def unsafe_side_effect(*args, **kwargs):  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return _make_claude_message(_STORY_JSON)
-            return _make_claude_message("UNSAFE")
+                return _make_chat_completion(_STORY_JSON)
+            return _make_chat_completion("UNSAFE")
 
-        unsafe_client.messages.create = AsyncMock(side_effect=unsafe_side_effect)
+        unsafe_client = _make_openai_client(unsafe_side_effect, flagged=False)
 
         svc = BookGenerationService(
-            anthropic_client=unsafe_client,
+            openai_client=unsafe_client,
             book_repository=mock_book_repository,
             tts_service=mock_tts_service,
             image_service=mock_image_service,
@@ -207,46 +253,42 @@ class TestGenerateDailyBook:
 
 class TestTranslatePage:
     @pytest.mark.asyncio
-    async def test_translate_page_calls_claude_with_correct_language(
-        self, service, mock_anthropic_client
+    async def test_translate_page_calls_gpt_with_correct_language(
+        self, service, mock_openai_client
     ):
-        """_translate_page must include the target language name in the system prompt."""
-        # Reset call count so we control the mock directly
-        mock_anthropic_client.messages.create = AsyncMock(
-            return_value=_make_claude_message("Hola mundo")
+        """_translate_page must include the target language name in the system message."""
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=_make_chat_completion("Hola mundo")
         )
 
         result = await service._translate_page("Hallo Welt", Language.EN)
 
         assert result == "Hola mundo"
-        call_kwargs = mock_anthropic_client.messages.create.call_args[1]
-        # The system prompt must mention the English language name
-        system_prompt = call_kwargs.get("system", "")
-        assert "Englische" in system_prompt
+        call_kwargs = mock_openai_client.chat.completions.create.call_args[1]
+        messages = call_kwargs["messages"]
+        system_message = next(m["content"] for m in messages if m["role"] == "system")
+        assert "Englische" in system_message
 
     @pytest.mark.asyncio
-    async def test_translate_page_arabic_prompt_mentions_arabic(
-        self, service, mock_anthropic_client
-    ):
-        mock_anthropic_client.messages.create = AsyncMock(
-            return_value=_make_claude_message("مرحبا")
+    async def test_translate_page_arabic_prompt_mentions_arabic(self, service, mock_openai_client):
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=_make_chat_completion("مرحبا")
         )
 
         await service._translate_page("Hallo", Language.AR)
 
-        call_kwargs = mock_anthropic_client.messages.create.call_args[1]
-        system_prompt = call_kwargs.get("system", "")
-        assert "Arabische" in system_prompt
+        call_kwargs = mock_openai_client.chat.completions.create.call_args[1]
+        messages = call_kwargs["messages"]
+        system_message = next(m["content"] for m in messages if m["role"] == "system")
+        assert "Arabische" in system_message
 
 
 class TestStoryGeneration:
     @pytest.mark.asyncio
-    async def test_story_generation_parses_claude_json_response(
-        self, service, mock_anthropic_client
-    ):
-        """_generate_story_german must correctly parse the JSON Claude returns."""
-        mock_anthropic_client.messages.create = AsyncMock(
-            return_value=_make_claude_message(_STORY_JSON)
+    async def test_story_generation_parses_gpt_json_response(self, service, mock_openai_client):
+        """_generate_story_german must correctly parse the JSON GPT returns."""
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=_make_chat_completion(_STORY_JSON)
         )
 
         result = await service._generate_story_german(BookTheme.ANIMALS, AgeRange.YOUNG)
@@ -257,12 +299,12 @@ class TestStoryGeneration:
 
     @pytest.mark.asyncio
     async def test_story_generation_handles_json_wrapped_in_extra_text(
-        self, service, mock_anthropic_client
+        self, service, mock_openai_client
     ):
-        """Claude sometimes wraps JSON in markdown code fences; we must strip them."""
+        """The model sometimes wraps JSON in markdown code fences; we must strip them."""
         wrapped = f"Sure, here is the story:\n```json\n{_STORY_JSON}\n```"
-        mock_anthropic_client.messages.create = AsyncMock(
-            return_value=_make_claude_message(wrapped)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=_make_chat_completion(wrapped)
         )
 
         result = await service._generate_story_german(BookTheme.FRIENDSHIP, AgeRange.MIDDLE)
@@ -274,7 +316,7 @@ class TestStoryGeneration:
     async def test_story_generation_retries_on_invalid_json(self, service_with_mocks):
         """On first invalid JSON, it retries and succeeds on second attempt."""
         service, mocks = service_with_mocks
-        anthropic = mocks["anthropic"]
+        openai_client = mocks["openai"]
 
         call_count = 0
 
@@ -282,10 +324,10 @@ class TestStoryGeneration:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return _make_claude_message("not valid json at all")
-            return _make_claude_message(_STORY_JSON)
+                return _make_chat_completion("not valid json at all")
+            return _make_chat_completion(_STORY_JSON)
 
-        anthropic.messages.create = AsyncMock(side_effect=side_effect)
+        openai_client.chat.completions.create = AsyncMock(side_effect=side_effect)
 
         result = await service._generate_story_german(BookTheme.ANIMALS, AgeRange.YOUNG)
 
@@ -297,10 +339,10 @@ class TestStoryGeneration:
     async def test_story_generation_raises_after_two_json_failures(self, service_with_mocks):
         """Raises ValueError after two consecutive JSON parse failures."""
         service, mocks = service_with_mocks
-        anthropic = mocks["anthropic"]
+        openai_client = mocks["openai"]
 
-        anthropic.messages.create = AsyncMock(
-            return_value=_make_claude_message("this is not json either")
+        openai_client.chat.completions.create = AsyncMock(
+            return_value=_make_chat_completion("this is not json either")
         )
 
         with pytest.raises(ValueError):
