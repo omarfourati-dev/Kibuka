@@ -1,7 +1,8 @@
 """Integration tests for the /ai/chat endpoint — written FIRST (TDD RED phase).
 
 The template chat must stream real OpenAI deltas as SSE instead of the old
-placeholder, behind the ENABLE_AI feature flag.
+placeholder — authenticated, with a server-side model allowlist and a message
+length cap, gated by the ENABLE_AI feature flag.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.adapters.input.api.v1.ai import get_ai_client
+from src.adapters.input.api.v1.ai import get_ai_client, get_current_user
 from src.adapters.input.api.v1.ai import router as ai_router
 from src.infrastructure.config import settings
 
@@ -49,10 +50,12 @@ class FakeAIClient:
         raise NotImplementedError
 
 
-def _make_client(fake: FakeAIClient) -> TestClient:
+def _make_client(fake: FakeAIClient, authenticated: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(ai_router, prefix="/api/v1")
     app.dependency_overrides[get_ai_client] = lambda: fake
+    if authenticated:
+        app.dependency_overrides[get_current_user] = lambda: "user-1"
     return TestClient(app)
 
 
@@ -103,4 +106,45 @@ class TestChatEndpoint:
         )
 
         assert response.status_code == 404
+        assert fake.calls == []
+
+    def test_chat_requires_authentication(self) -> None:
+        """Without a bearer token the endpoint must reject with 401 — paid
+        OpenAI calls must never be reachable anonymously."""
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        client = _make_client(fake, authenticated=False)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-1"},
+        )
+
+        assert response.status_code == 401
+        assert fake.calls == []
+
+    def test_chat_rejects_model_outside_allowlist(self) -> None:
+        """Client-controlled model ids must be checked against a server-side
+        allowlist — otherwise callers escalate to arbitrary expensive models."""
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        client = _make_client(fake)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-1", "model": "gpt-999-ultra"},
+        )
+
+        assert response.status_code == 400
+        assert fake.calls == []
+
+    def test_chat_rejects_overlong_message(self) -> None:
+        """Message length is capped to bound per-request token spend."""
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        client = _make_client(fake)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "x" * 4001, "space_id": "space-1"},
+        )
+
+        assert response.status_code == 422
         assert fake.calls == []
