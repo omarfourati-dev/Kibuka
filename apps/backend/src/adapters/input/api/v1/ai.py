@@ -12,12 +12,13 @@ from pydantic import BaseModel, Field
 
 from .....adapters.output.ai.openai_adapter import OpenAIAdapter
 from .....adapters.output.persistence.repositories.ai_usage_repository import (
-    InMemoryAIUsageRepository,
+    SessionScopedAIUsageRepository,
 )
 from .....core.domain.entities.ai_usage import AIUsage
 from .....core.ports.output.i_ai_client import IAIClient
 from .....core.ports.output.i_ai_usage_repository import IAIUsageRepository
 from .....infrastructure.config import settings
+from .....infrastructure.database import async_session_maker
 from ..dependencies import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -84,10 +85,10 @@ def get_ai_client() -> IAIClient:
 def get_ai_usage_repository() -> IAIUsageRepository:
     """Provide the AI usage store for daily cost-limit enforcement.
 
-    Defaults to the process-local in-memory store so the limit works without
-    DB wiring; production deployments override this with SqlAIUsageRepository.
+    Session-per-operation SQL store: the chat stream records usage after the
+    request-scoped session would already be closed. Tests override this.
     """
-    return InMemoryAIUsageRepository()
+    return SessionScopedAIUsageRepository(async_session_maker)
 
 
 class ChatRequest(BaseModel):

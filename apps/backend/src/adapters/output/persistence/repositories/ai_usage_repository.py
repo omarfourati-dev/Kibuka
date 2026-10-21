@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, time
 
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .....core.domain.entities.ai_usage import AIUsage
 from .....core.ports.output.i_ai_usage_repository import IAIUsageRepository
@@ -44,6 +44,27 @@ class SqlAIUsageRepository(IAIUsageRepository):
             )
         )
         return float(result.scalar_one())
+
+
+class SessionScopedAIUsageRepository(IAIUsageRepository):
+    """Opens a fresh session per operation and commits writes itself.
+
+    Needed for the chat SSE stream: usage is recorded after the route
+    handler returned, when request-scoped sessions are already closed.
+    """
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    async def save(self, usage: AIUsage) -> AIUsage:
+        async with self._session_factory() as session:
+            saved = await SqlAIUsageRepository(session).save(usage)
+            await session.commit()
+            return saved
+
+    async def get_daily_cost_usd(self, user_id: str) -> float:
+        async with self._session_factory() as session:
+            return await SqlAIUsageRepository(session).get_daily_cost_usd(user_id)
 
 
 class InMemoryAIUsageRepository(IAIUsageRepository):

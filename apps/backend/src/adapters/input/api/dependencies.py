@@ -6,16 +6,21 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ....adapters.output.persistence.repositories.user_repository import SqlUserRepository
 from ....core.ports.output.i_user_repository import IUserRepository
+from ....infrastructure.database import get_db
 from ....infrastructure.security import InvalidTokenError, decode_access_token
 
 _bearer = HTTPBearer(auto_error=False)
 
 
-async def get_user_repository() -> IUserRepository:
-    """Override this dependency in the DI container or tests."""
-    raise NotImplementedError("Wire IUserRepository via dependency override")
+async def get_user_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> IUserRepository:
+    """Real SQL wiring; tests replace this via dependency override."""
+    return SqlUserRepository(session=session)
 
 
 async def get_current_user(

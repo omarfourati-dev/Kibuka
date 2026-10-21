@@ -6,11 +6,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.input.api.dependencies import get_current_user, get_optional_current_user
+from src.adapters.output.persistence.repositories.book_repository import SqlBookRepository
 from src.core.domain.entities.book import Book, BookPage
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
+from src.infrastructure.database import get_db
 
 __all__ = ["get_current_user", "get_optional_current_user", "router"]
 
@@ -28,9 +31,11 @@ _progress_store: dict[tuple[str, str], int] = {}
 # ---------------------------------------------------------------------------
 
 
-async def get_book_repository() -> IBookRepository:
-    """Override this dependency in the DI container or tests."""
-    raise NotImplementedError("Wire IBookRepository via dependency override")
+async def get_book_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> IBookRepository:
+    """Real SQL wiring; tests replace this via dependency override."""
+    return SqlBookRepository(session=session)
 
 
 # ---------------------------------------------------------------------------
