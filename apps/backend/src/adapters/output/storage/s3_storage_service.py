@@ -96,12 +96,14 @@ class S3StorageService(IStorageService):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             None,
+            # Kein ACL-Header: Public-Read regelt die Storage-Seite (SeaweedFS
+            # anonymous-Read-Identity bzw. Bucket-Policy); manche S3-kompatiblen
+            # Stores lehnen x-amz-acl ab.
             lambda: self._client.put_object(
                 Bucket=self._bucket,
                 Key=key,
                 Body=data,
                 ContentType=content_type,
-                ACL="public-read",
             ),
         )
         return await self.get_public_url(key)
