@@ -43,9 +43,8 @@ class Settings(BaseSettings):
 
     # AI
     openai_api_key: str = ""
-    anthropic_api_key: str = ""
     google_tts_credentials_json: str = ""
-    default_chat_model: str = "gpt-4o-mini"
+    default_chat_model: str = "gpt-4.1-mini"
     embedding_model: str = "text-embedding-3-small"
     ai_cost_limit_usd_per_day: float = 10.0
 

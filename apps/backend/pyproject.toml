@@ -30,7 +30,6 @@ dependencies = [
   "arq>=0.26",
   # AI
   "openai>=1.58",
-  "anthropic>=0.42",
   "google-cloud-texttospeech>=2.18",
   "boto3>=1.35",
   "tiktoken>=0.8",

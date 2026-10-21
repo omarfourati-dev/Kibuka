@@ -1,26 +1,42 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+from functools import cache
 from typing import Any
 
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from .....adapters.output.ai.openai_adapter import OpenAIAdapter
+from .....core.ports.output.i_ai_client import IAIClient
+from .....infrastructure.config import settings
+
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+
+@cache
+def get_ai_client() -> IAIClient:
+    """Provide the chat AI client — OpenAI is the template's LLM provider.
+
+    Cached so all requests share one adapter (and its HTTP connection pool);
+    tests bypass the cache via FastAPI dependency_overrides.
+    """
+    return OpenAIAdapter(api_key=settings.openai_api_key)
 
 
 class ChatRequest(BaseModel):
     message: str
     space_id: str
     conversation_id: str | None = None
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
 
 
 class RagRequest(BaseModel):
     query: str
     space_id: str
     top_k: int = 5
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
 
 
 class AgentRequest(BaseModel):
@@ -30,15 +46,23 @@ class AgentRequest(BaseModel):
 
 
 @router.post("/chat")
-async def chat(body: ChatRequest) -> Any:
-    """Streaming chat completion."""
-    from collections.abc import AsyncGenerator as AG
+async def chat(body: ChatRequest, ai_client: IAIClient = Depends(get_ai_client)) -> Any:  # noqa: B008
+    """Streaming chat completion via OpenAI, emitted as server-sent events."""
+    if not settings.enable_ai:
+        raise HTTPException(status_code=404, detail="Feature not available")
 
-    async def stream_placeholder() -> AG[bytes, None]:
-        yield b"data: Hello from AI chat\n\n"
+    deltas = await ai_client.chat_completion(
+        [{"role": "user", "content": body.message}],
+        body.model,
+        stream=True,
+    )
+
+    async def sse_stream() -> AsyncGenerator[bytes, None]:
+        async for delta in deltas:
+            yield f"data: {delta}\n\n".encode()
         yield b"data: [DONE]\n\n"
 
-    return StreamingResponse(stream_placeholder(), media_type="text/event-stream")
+    return StreamingResponse(sse_stream(), media_type="text/event-stream")
 
 
 @router.post("/rag")

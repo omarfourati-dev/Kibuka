@@ -1,10 +1,14 @@
 """factory_boy factories for test data generation."""
+
 from __future__ import annotations
-import factory
+
 import uuid
+
+import factory
 from factory import Factory
+
+from src.core.domain.entities.space import PlanType, Space
 from src.core.domain.entities.user import User, UserRole, UserStatus
-from src.core.domain.entities.space import Space, PlanType
 
 
 class UserFactory(Factory):

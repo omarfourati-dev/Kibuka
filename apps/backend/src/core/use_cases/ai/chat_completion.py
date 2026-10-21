@@ -16,7 +16,7 @@ class ChatCommand:
     user_id: str
     message: str
     conversation_id: str | None = None
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
 
 
 class ChatCompletionUseCase:

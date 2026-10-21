@@ -13,7 +13,7 @@ class RagQueryCommand:
     space_id: str
     query: str
     top_k: int = 5
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
 
 
 RAG_SYSTEM_PROMPT = """You are a helpful assistant. Answer the question ONLY based on the provided context.

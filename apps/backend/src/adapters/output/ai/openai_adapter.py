@@ -10,7 +10,7 @@ from ....core.ports.output.i_ai_client import IAIClient
 
 
 class OpenAIAdapter(IAIClient):
-    def __init__(self, api_key: str, default_model: str = "gpt-4o-mini") -> None:
+    def __init__(self, api_key: str, default_model: str = "gpt-4.1-mini") -> None:
         self._client = AsyncOpenAI(api_key=api_key)
         self._default_model = default_model
 

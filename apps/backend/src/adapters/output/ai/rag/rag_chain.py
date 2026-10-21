@@ -22,7 +22,7 @@ async def ask(
     query: str,
     space_id: str,
     db: AsyncSession,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-4.1-mini",
     top_k: int = 5,
 ) -> AsyncGenerator[str, None]:
     chunks = await retrieve(query, space_id, db, top_k)

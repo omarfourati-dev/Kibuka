@@ -69,7 +69,6 @@ for _mod in [
 # ---------------------------------------------------------------------------
 
 _fake_settings = MagicMock()
-_fake_settings.anthropic_api_key = ""
 _fake_settings.openai_api_key = ""
 _fake_settings.google_tts_credentials_json = ""
 _fake_settings.redis_host = "localhost"
