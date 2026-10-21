@@ -54,6 +54,7 @@ async def startup(ctx: dict) -> None:  # type: ignore[type-arg]
         access_key_id=settings.s3_access_key_id,
         secret_access_key=settings.s3_secret_access_key,
         endpoint_url=settings.s3_endpoint_url,
+        public_url_base=settings.s3_public_url_base,
     )
 
     # TTS (Google Cloud) — credentials_json may be empty; GoogleTTSService falls back to ADC

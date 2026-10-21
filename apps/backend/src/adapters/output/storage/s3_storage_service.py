@@ -28,6 +28,9 @@ class S3StorageService(IStorageService):
             is empty.
         endpoint_url: Override endpoint for S3-compatible services (MinIO,
             Cloudflare R2, …).  Leave empty for AWS S3.
+        public_url_base: Externally reachable base URL for public links when
+            uploads go through an internal endpoint (e.g. SeaweedFS inside the
+            compose network, assets served via the public domain).
     """
 
     def __init__(
@@ -37,10 +40,12 @@ class S3StorageService(IStorageService):
         access_key_id: str = "",
         secret_access_key: str = "",
         endpoint_url: str = "",
+        public_url_base: str = "",
     ) -> None:
         self._bucket = bucket
         self._region = region
         self._endpoint_url = endpoint_url or None
+        self._public_url_base = public_url_base.rstrip("/") or None
 
         # Lazy import — boto3 may not be present in unit-test environments.
         try:
@@ -76,6 +81,8 @@ class S3StorageService(IStorageService):
 
     async def get_public_url(self, key: str) -> str:
         """Return the public HTTPS URL for an existing object."""
+        if self._public_url_base:
+            return f"{self._public_url_base}/{self._bucket}/{key}"
         if self._endpoint_url:
             return f"{self._endpoint_url}/{self._bucket}/{key}"
         return f"https://{self._bucket}.s3.{self._region}.amazonaws.com/{key}"

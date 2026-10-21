@@ -53,20 +53,21 @@ services:
     volumes:
       - s3_data:/data
     healthcheck:
+      # weed bindet an die Container-IP, nicht an localhost
       test:
         [
           "CMD-SHELL",
-          "wget -q -O /dev/null http://localhost:9333/cluster/status || exit 1",
+          "wget -q -O /dev/null http://$(hostname -i):9333/cluster/status || exit 1",
         ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
     restart: unless-stopped
+    # Bewusst NUR app_network: Master/Filer/S3 sind von web-Netz-Nachbarn
+    # nicht erreichbar; öffentliche Downloads proxyt das Frontend-nginx.
     networks:
       - app_network
-      # Caddy routet kibuka.omarfourati.de/kibuka-assets/* hierher
-      - web
 
   s3-init:
     image: kibuka-backend:latest
@@ -142,6 +143,8 @@ services:
     container_name: kibuka-frontend
     depends_on:
       - backend
+      # nginx proxyt /kibuka-assets/ an s3 — der Name muss auflösbar sein
+      - s3
     restart: unless-stopped
     networks:
       - app_network
@@ -174,7 +177,7 @@ configs:
           },
           {
             "name": "anonymous",
-            "actions": ["Read"]
+            "actions": ["Read:kibuka-assets"]
           }
         ]
       }

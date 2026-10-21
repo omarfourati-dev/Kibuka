@@ -67,7 +67,10 @@ class Settings(BaseSettings):
     s3_region: str = "eu-central-1"
     s3_access_key_id: str = ""
     s3_secret_access_key: str = ""
-    s3_endpoint_url: str = ""  # Non-empty for S3-compatible services (e.g. MinIO)
+    s3_endpoint_url: str = ""
+    # Externe Basis-URL für öffentliche Asset-Links, wenn Uploads über einen
+    # internen Endpoint laufen (z. B. SeaweedFS im Compose-Netz)
+    s3_public_url_base: str = ""  # Non-empty for S3-compatible services (e.g. MinIO)
 
     # Billing
     stripe_secret_key: str = ""
