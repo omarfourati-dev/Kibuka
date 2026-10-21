@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation, useHistory } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
+import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { AudioPlayer } from "../components/reader/AudioPlayer";
 import { WordHighlighter } from "../components/reader/WordHighlighter";
 import { LanguagePicker } from "../components/reader/LanguagePicker";
@@ -65,7 +66,7 @@ export default function ReaderPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/v1/books/${bookId}/read`)
+    fetch(`/api/v1/books/${bookId}/read`, { headers: getAuthHeaders() })
       .then((res) => {
         if (!res.ok) {
           if (res.status === 403) {

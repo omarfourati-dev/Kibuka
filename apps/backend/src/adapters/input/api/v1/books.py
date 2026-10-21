@@ -8,11 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.adapters.input.api.dependencies import get_current_user, get_optional_current_user
+from src.adapters.input.api.dependencies import (
+    get_current_user,
+    get_optional_current_user,
+    get_user_repository,
+)
 from src.adapters.output.persistence.repositories.book_repository import SqlBookRepository
 from src.core.domain.entities.book import Book, BookPage
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
+from src.core.ports.output.i_user_repository import IUserRepository
 from src.infrastructure.database import get_db
 
 __all__ = ["get_current_user", "get_optional_current_user", "router"]
@@ -188,10 +193,17 @@ async def list_books(
     )
 
 
+async def _is_active_admin(user_repo: IUserRepository, user_id: str) -> bool:
+    """Admins read every book without purchase."""
+    user = await user_repo.get_by_id(user_id)
+    return user is not None and user.is_active and user.is_admin
+
+
 @router.get("/{book_id}", response_model=BookDetailResponse)
 async def get_book_detail(
     book_id: str,
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
+    user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
     user_id: Annotated[str | None, Depends(get_optional_current_user)] = None,
 ) -> BookDetailResponse:
     """Return book detail with first 2 preview pages. Public endpoint."""
@@ -201,7 +213,9 @@ async def get_book_detail(
 
     is_purchased = False
     if user_id:
-        is_purchased = await repo.is_purchased_by_user(book_id, user_id)
+        is_purchased = await _is_active_admin(user_repo, user_id) or (
+            await repo.is_purchased_by_user(book_id, user_id)
+        )
 
     # Sort pages by page_number and return first 2 as preview
     sorted_pages = sorted(book.pages, key=lambda p: p.page_number)
@@ -220,13 +234,16 @@ async def read_book(
     book_id: str,
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
     user_id: Annotated[str, Depends(get_current_user)],
+    user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
 ) -> BookFullResponse:
-    """Return full book content. Requires auth + purchase or active subscription."""
+    """Return full book content. Requires auth + purchase, subscription or admin."""
     book = await repo.get_by_id(book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    has_access = await repo.is_purchased_by_user(book_id, user_id)
+    has_access = await _is_active_admin(user_repo, user_id) or (
+        await repo.is_purchased_by_user(book_id, user_id)
+    )
     if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

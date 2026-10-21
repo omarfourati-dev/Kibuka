@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from src.infrastructure.seed_admin import ensure_admin
 
 from src.core.domain.entities.user import User, UserRole, UserStatus
 from src.infrastructure.security import verify_password
+from src.infrastructure.seed_admin import ensure_admin
 
 
 class FakeUserRepo:

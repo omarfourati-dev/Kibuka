@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useHistory } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
+import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookPreview } from "../components/book/BookPreview";
 import { LanguagePicker } from "../components/reader/LanguagePicker";
 
@@ -46,7 +47,7 @@ export default function BookDetailPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/v1/books/${bookId}`)
+    fetch(`/api/v1/books/${bookId}`, { headers: getAuthHeaders() })
       .then((res) => {
         if (!res.ok) throw new Error(`API ${res.status}`);
         return res.json() as Promise<BookDetail>;

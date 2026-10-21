@@ -16,7 +16,7 @@ interface AuthResponse {
 
 export default function Login() {
   const history = useHistory();
-  const { isAuthenticated, setUser } = useAuthStore();
+  const { isAuthenticated, setUser, setToken } = useAuthStore();
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -31,7 +31,7 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      history.replace("/app/dashboard");
+      history.replace("/");
     }
   }, [isAuthenticated, history]);
 
@@ -52,7 +52,8 @@ export default function Login() {
       ),
     onSuccess: (data) => {
       setUser(data.user);
-      history.replace("/app/dashboard");
+      setToken(data.accessToken);
+      history.replace("/");
     },
     onError: (err: unknown) => {
       if (err instanceof Error) {
