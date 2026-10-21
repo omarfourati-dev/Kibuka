@@ -47,3 +47,19 @@ class TestCustomEndpoint:
         url = await svc.get_public_url("books/b1/cover.png")
 
         assert url == "https://kibuka.omarfourati.de/kibuka-assets/books/b1/cover.png"
+
+    @pytest.mark.asyncio
+    async def test_public_url_base_overrides_internal_endpoint(self) -> None:
+        """Uploads go to the internal endpoint; public links must use the
+        externally reachable base so browsers can load the assets."""
+        svc = S3StorageService(
+            bucket="kibuka-assets",
+            endpoint_url="http://s3:8333",
+            public_url_base="https://kibuka.omarfourati.de",
+            access_key_id="key",
+            secret_access_key="secret",
+        )
+
+        url = await svc.get_public_url("books/b1/cover.png")
+
+        assert url == "https://kibuka.omarfourati.de/kibuka-assets/books/b1/cover.png"
