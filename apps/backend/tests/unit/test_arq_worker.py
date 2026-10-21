@@ -177,7 +177,7 @@ class TestStartupShutdown:
                 return_value=MagicMock(),
             ),
             patch(
-                "src.workers.arq_worker.DallE3ImageService",
+                "src.workers.arq_worker.OpenAIImageService",
                 return_value=MagicMock(),
             ),
             patch(
@@ -220,7 +220,7 @@ class TestStartupShutdown:
         with (
             patch("src.workers.arq_worker.AsyncOpenAI", mock_openai_cls),
             patch("src.workers.arq_worker.GoogleTTSService", return_value=MagicMock()),
-            patch("src.workers.arq_worker.DallE3ImageService", return_value=MagicMock()),
+            patch("src.workers.arq_worker.OpenAIImageService", return_value=MagicMock()),
             patch("src.workers.arq_worker.S3StorageService", return_value=MagicMock()),
             patch("src.workers.arq_worker.SqlBookRepository", return_value=MagicMock()),
             patch("src.workers.arq_worker.async_session_maker", mock_session_maker),

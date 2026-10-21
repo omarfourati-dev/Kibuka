@@ -1,8 +1,13 @@
-"""DALL-E 3 image generation adapter for children's book illustrations and covers."""
+"""OpenAI image generation adapter for children's book illustrations and covers.
+
+Uses gpt-image-1 (dall-e-3 was retired by OpenAI); the model returns base64
+payloads directly, so no temporary-URL download is involved.
+"""
 
 from __future__ import annotations
 
-import httpx
+import base64
+
 from loguru import logger
 from openai import AsyncOpenAI
 
@@ -47,7 +52,7 @@ def _build_illustration_prompt(
     age_range: AgeRange,
     page_number: int,
 ) -> str:
-    """Build a safe, age-appropriate DALL-E 3 prompt for a book page illustration.
+    """Build a safe, age-appropriate prompt for a book page illustration.
 
     Args:
         page_text: The text content of the page (truncated to 200 chars).
@@ -80,7 +85,7 @@ def _build_cover_prompt(
     theme: BookTheme,
     age_range: AgeRange,
 ) -> str:
-    """Build a safe, age-appropriate DALL-E 3 prompt for a book cover.
+    """Build a safe, age-appropriate prompt for a book cover.
 
     Args:
         title: The book title — must appear prominently in the visual concept.
@@ -108,43 +113,27 @@ def _build_cover_prompt(
     return prompt
 
 
-async def _download_image(url: str) -> bytes:
-    """Download image bytes from a URL using httpx.
-
-    Args:
-        url: Public URL to download.
-
-    Returns:
-        Raw image bytes.
-    """
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        response.raise_for_status()
-        return response.content
-
-
-class DallE3ImageService(IImageService):
-    """DALL-E 3 adapter for generating children's book illustrations and covers.
+class OpenAIImageService(IImageService):
+    """gpt-image-1 adapter for generating children's book illustrations and covers.
 
     Workflow for each generation:
     1. Build a safe, age-appropriate prompt.
-    2. Call DALL-E 3 via the OpenAI images.generate endpoint.
-    3. Download the temporary image URL returned by DALL-E 3.
-    4. Upload the bytes to permanent storage via IStorageService.
-    5. Return the public URL from storage.
+    2. Call the OpenAI images.generate endpoint (returns base64).
+    3. Decode the payload and upload the bytes via IStorageService.
+    4. Return the public URL from storage.
     """
 
     def __init__(
         self,
         openai_client: AsyncOpenAI,
         storage: IStorageService,
-        model: str = "dall-e-3",
+        model: str = "gpt-image-1",
     ) -> None:
         """
         Args:
             openai_client: Configured AsyncOpenAI client instance.
             storage: Adapter for uploading images to persistent object storage.
-            model: OpenAI image model to use (default: ``"dall-e-3"``).
+            model: OpenAI image model to use (default: ``"gpt-image-1"``).
         """
         self._client = openai_client
         self._storage = storage
@@ -158,18 +147,7 @@ class DallE3ImageService(IImageService):
         page_number: int,
         book_id: str,
     ) -> str:
-        """Generate a page illustration and return its permanent public URL.
-
-        Args:
-            page_text: The text displayed on this book page.
-            theme: Visual/thematic style of the book.
-            age_range: Target age group (influences visual complexity).
-            page_number: Zero-based page index; zero-padded to 3 digits in S3 key.
-            book_id: Unique book identifier used to build the S3 key.
-
-        Returns:
-            Public URL of the uploaded illustration PNG.
-        """
+        """Generate a page illustration and return its permanent public URL."""
         prompt = _build_illustration_prompt(
             page_text=page_text,
             theme=theme,
@@ -185,23 +163,7 @@ class DallE3ImageService(IImageService):
             age_range,
         )
 
-        response = await self._client.images.generate(
-            model=self._model,
-            prompt=prompt,
-            size="1024x1024",
-            quality="standard",
-            n=1,
-        )
-
-        if not response.data:
-            raise ValueError("DALL-E returned no image data")
-        image_data = response.data[0]
-        if not image_data.url:
-            raise ValueError(f"DALL-E returned no URL for book_id={book_id}")
-        dalle_url = image_data.url
-        logger.debug("DALL-E 3 returned URL for page {}: {}", page_number, dalle_url)
-
-        image_bytes = await _download_image(dalle_url)
+        image_bytes = await self._generate_image_bytes(prompt, book_id)
 
         s3_key = f"books/{book_id}/illustrations/page_{page_number:03d}.png"
         public_url = await self._storage.upload_image(image_bytes, s3_key, "image/png")
@@ -216,17 +178,7 @@ class DallE3ImageService(IImageService):
         age_range: AgeRange,
         book_id: str,
     ) -> str:
-        """Generate a book cover illustration and return its permanent public URL.
-
-        Args:
-            title: The book title — featured prominently in the cover concept.
-            theme: Visual/thematic style of the book.
-            age_range: Target age group (influences visual complexity).
-            book_id: Unique book identifier used to build the S3 key.
-
-        Returns:
-            Public URL of the uploaded cover PNG.
-        """
+        """Generate a book cover illustration and return its permanent public URL."""
         prompt = _build_cover_prompt(
             title=title,
             theme=theme,
@@ -241,26 +193,31 @@ class DallE3ImageService(IImageService):
             age_range,
         )
 
-        response = await self._client.images.generate(
-            model=self._model,
-            prompt=prompt,
-            size="1024x1024",
-            quality="standard",
-            n=1,
-        )
-
-        if not response.data:
-            raise ValueError("DALL-E returned no image data")
-        image_data = response.data[0]
-        if not image_data.url:
-            raise ValueError(f"DALL-E returned no URL for book_id={book_id}")
-        dalle_url = image_data.url
-        logger.debug("DALL-E 3 returned cover URL for book {}: {}", book_id, dalle_url)
-
-        image_bytes = await _download_image(dalle_url)
+        image_bytes = await self._generate_image_bytes(prompt, book_id)
 
         s3_key = f"books/{book_id}/cover.png"
         public_url = await self._storage.upload_image(image_bytes, s3_key, "image/png")
 
         logger.info("Cover uploaded to {}", public_url)
         return public_url
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    async def _generate_image_bytes(self, prompt: str, book_id: str) -> bytes:
+        """Call the image model and return the decoded PNG bytes."""
+        response = await self._client.images.generate(
+            model=self._model,
+            prompt=prompt,
+            size="1024x1024",
+            quality="medium",
+            n=1,
+        )
+
+        if not response.data:
+            raise ValueError("Image model returned no image data")
+        payload = response.data[0].b64_json
+        if not payload:
+            raise ValueError(f"Image model returned no b64_json for book_id={book_id}")
+        return base64.b64decode(payload)

@@ -16,7 +16,7 @@ from arq import cron
 from arq.connections import RedisSettings
 from openai import AsyncOpenAI
 
-from ..adapters.output.ai.image_service import DallE3ImageService
+from ..adapters.output.ai.image_service import OpenAIImageService
 from ..adapters.output.ai.tts_service import GoogleTTSService
 from ..adapters.output.persistence.repositories.book_repository import SqlBookRepository
 from ..adapters.output.storage.s3_storage_service import S3StorageService
@@ -63,8 +63,8 @@ async def startup(ctx: dict) -> None:  # type: ignore[type-arg]
         credentials_json=settings.google_tts_credentials_json or None,
     )
 
-    # Image generation (DALL-E 3)
-    image_service = DallE3ImageService(
+    # Image generation (gpt-image-1)
+    image_service = OpenAIImageService(
         openai_client=openai_client,
         storage=storage_service,
     )
