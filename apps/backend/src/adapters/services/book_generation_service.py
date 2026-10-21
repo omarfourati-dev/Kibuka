@@ -360,8 +360,16 @@ async def generate_daily_book_job(ctx: dict) -> None:  # type: ignore[type-arg]
     """ARQ job entry point.
 
     The ARQ worker must populate ctx['book_generation_service'] with a
-    fully-initialised BookGenerationService instance before enqueueing this job.
+    fully-initialised BookGenerationService instance and ctx['_db_session']
+    with the worker session before enqueueing this job.
     """
     service: BookGenerationService = ctx["book_generation_service"]
-    book = await service.generate_daily_book()
+    session = ctx["_db_session"]
+    # Repositories only flush — the job owns the transaction boundary.
+    try:
+        book = await service.generate_daily_book()
+        await session.commit()
+    except BaseException:
+        await session.rollback()
+        raise
     logger.info("Daily book generated: %s", book.id)
