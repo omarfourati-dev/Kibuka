@@ -12,9 +12,15 @@ from collections.abc import AsyncGenerator
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from src.infrastructure.security import create_access_token
 
-from src.adapters.input.api.v1.ai import get_ai_client, get_current_user
+from src.adapters.input.api.v1.ai import (
+    get_ai_client,
+    get_ai_usage_repository,
+    get_current_user,
+)
 from src.adapters.input.api.v1.ai import router as ai_router
+from src.core.domain.entities.ai_usage import AIUsage
 from src.infrastructure.config import settings
 
 # ---------------------------------------------------------------------------
@@ -47,13 +53,33 @@ class FakeAIClient:
         raise NotImplementedError
 
     async def count_tokens(self, text: str, model: str) -> int:
-        raise NotImplementedError
+        return max(1, len(text) // 4)
 
 
-def _make_client(fake: FakeAIClient, authenticated: bool = True) -> TestClient:
+class FakeUsageRepository:
+    def __init__(self, daily_cost_usd: float = 0.0) -> None:
+        self._daily_cost_usd = daily_cost_usd
+        self.saved: list[AIUsage] = []
+
+    async def save(self, usage: AIUsage) -> AIUsage:
+        self.saved.append(usage)
+        return usage
+
+    async def get_daily_cost_usd(self, user_id: str) -> float:
+        return self._daily_cost_usd
+
+
+def _make_client(
+    fake: FakeAIClient,
+    authenticated: bool = True,
+    usage_repo: FakeUsageRepository | None = None,
+) -> TestClient:
     app = FastAPI()
     app.include_router(ai_router, prefix="/api/v1")
     app.dependency_overrides[get_ai_client] = lambda: fake
+    app.dependency_overrides[get_ai_usage_repository] = lambda: (
+        usage_repo if usage_repo is not None else FakeUsageRepository()
+    )
     if authenticated:
         app.dependency_overrides[get_current_user] = lambda: "user-1"
     return TestClient(app)
@@ -148,3 +174,74 @@ class TestChatEndpoint:
 
         assert response.status_code == 422
         assert fake.calls == []
+
+
+class TestChatJwtValidation:
+    """Without a dependency override the endpoint must validate real JWTs."""
+
+    def test_chat_accepts_valid_jwt(self) -> None:
+        fake = FakeAIClient(deltas=["ok"])
+        client = _make_client(fake, authenticated=False)
+        token = create_access_token("user-7")
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-1"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+
+    def test_chat_rejects_forged_jwt(self) -> None:
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        client = _make_client(fake, authenticated=False)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-1"},
+            headers={"Authorization": "Bearer not.a.real-token"},
+        )
+
+        assert response.status_code == 401
+        assert fake.calls == []
+
+
+class TestChatCostLimit:
+    def test_chat_returns_429_when_daily_cost_limit_reached(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(settings, "ai_cost_limit_usd_per_day", 5.0)
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        usage_repo = FakeUsageRepository(daily_cost_usd=5.0)
+        client = _make_client(fake, usage_repo=usage_repo)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-1"},
+        )
+
+        assert response.status_code == 429
+        assert fake.calls == []
+        assert usage_repo.saved == []
+
+    def test_chat_records_usage_after_successful_stream(self) -> None:
+        fake = FakeAIClient(deltas=["Hallo", " Welt"])
+        usage_repo = FakeUsageRepository(daily_cost_usd=0.0)
+        client = _make_client(fake, usage_repo=usage_repo)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Sag hallo", "space_id": "space-1", "model": "gpt-4.1"},
+        )
+
+        assert response.status_code == 200
+        assert len(usage_repo.saved) == 1
+        usage = usage_repo.saved[0]
+        assert usage.user_id == "user-1"
+        assert usage.space_id == "space-1"
+        assert usage.model == "gpt-4.1"
+        assert usage.feature == "chat"
+        assert usage.prompt_tokens > 0
+        assert usage.completion_tokens > 0
+        assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
+        assert usage.cost_usd > 0
