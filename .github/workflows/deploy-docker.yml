@@ -64,6 +64,11 @@ jobs:
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           GOOGLE_TTS_CREDENTIALS_JSON=${{ secrets.GOOGLE_TTS_CREDENTIALS_JSON }}
 
+          # Billing bleibt aus, bis STRIPE-Secrets gesetzt sind (sk_test_... fuer Testmodus)
+          ENABLE_BILLING=${{ secrets.ENABLE_BILLING || 'false' }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+
           # Self-hosted SeaweedFS: Uploads intern, Public-Links über die Domain
           S3_BUCKET=kibuka-assets
           S3_REGION=eu-central-1
