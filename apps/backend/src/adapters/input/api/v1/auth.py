@@ -10,6 +10,9 @@ from pydantic import BaseModel, EmailStr, Field
 from .....core.domain.entities.user import User, UserRole, UserStatus
 from .....core.ports.output.i_user_repository import IUserRepository
 from .....infrastructure.security import create_access_token, hash_password, verify_password
+from ..dependencies import get_user_repository
+
+__all__ = ["get_user_repository", "router"]
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 bearer = HTTPBearer(auto_error=False)
@@ -17,11 +20,6 @@ bearer = HTTPBearer(auto_error=False)
 #: Valid bcrypt hash of a random throwaway value — verified when the email is
 #: unknown so both login paths take comparable time (no user enumeration).
 _TIMING_EQUALIZER_HASH = "$2b$12$bEEeJlaLwfD2p5BV1rVvtOMGxaB2vL92p0HF/F.s5hf0xK.hHzG0."
-
-
-async def get_user_repository() -> IUserRepository:
-    """Override this dependency in the DI container or tests."""
-    raise NotImplementedError("Wire IUserRepository via dependency override")
 
 
 class RegisterRequest(BaseModel):

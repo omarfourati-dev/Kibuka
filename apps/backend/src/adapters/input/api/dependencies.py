@@ -7,9 +7,15 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from ....core.ports.output.i_user_repository import IUserRepository
 from ....infrastructure.security import InvalidTokenError, decode_access_token
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+async def get_user_repository() -> IUserRepository:
+    """Override this dependency in the DI container or tests."""
+    raise NotImplementedError("Wire IUserRepository via dependency override")
 
 
 async def get_current_user(
@@ -42,3 +48,18 @@ async def get_optional_current_user(
         return decode_access_token(credentials.credentials)
     except InvalidTokenError:
         return None
+
+
+async def require_admin(
+    user_id: Annotated[str, Depends(get_current_user)],
+    repo: Annotated[IUserRepository, Depends(get_user_repository)],
+) -> str:
+    """Return the user id only for an active admin/owner account, else 403.
+
+    Unlike get_current_user, this loads the user on every request — admin
+    surfaces must react to suspensions immediately, not at token expiry.
+    """
+    user = await repo.get_by_id(user_id)
+    if user is None or not user.is_active or not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return user_id

@@ -11,6 +11,7 @@ class IAIClient(ABC):
         messages: list[dict[str, str]],
         model: str,
         stream: bool = False,
+        max_tokens: int | None = None,
     ) -> AsyncGenerator[str, None]: ...
 
     @abstractmethod

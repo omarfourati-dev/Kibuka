@@ -35,6 +35,40 @@ MODEL_PRICES_USD_PER_1M: dict[str, tuple[float, float]] = {
     "gpt-4.1": (2.00, 8.00),
 }
 
+#: Hard cap on completion length — bounds the worst-case cost of one request.
+MAX_COMPLETION_TOKENS = 1024
+
+#: Concurrent streams per user — bounds how far parallel requests can
+#: overshoot the daily limit (check-then-act window).
+MAX_CONCURRENT_STREAMS_PER_USER = 2
+
+
+class StreamLimiter:
+    """Process-local counter of concurrent streams per user."""
+
+    def __init__(self, max_concurrent: int) -> None:
+        self._max = max_concurrent
+        self._active: dict[str, int] = {}
+        self._lock = asyncio.Lock()
+
+    async def try_acquire(self, key: str) -> bool:
+        async with self._lock:
+            if self._active.get(key, 0) >= self._max:
+                return False
+            self._active[key] = self._active.get(key, 0) + 1
+            return True
+
+    async def release(self, key: str) -> None:
+        async with self._lock:
+            remaining = self._active.get(key, 0) - 1
+            if remaining <= 0:
+                self._active.pop(key, None)
+            else:
+                self._active[key] = remaining
+
+
+stream_limiter = StreamLimiter(max_concurrent=MAX_CONCURRENT_STREAMS_PER_USER)
+
 
 @cache
 def get_ai_client() -> IAIClient:
@@ -105,17 +139,29 @@ async def chat(
             detail="Daily AI cost limit reached",
         )
 
-    prompt_tokens = await ai_client.count_tokens(body.message, body.model)
-    deltas = await ai_client.chat_completion(
-        [{"role": "user", "content": body.message}],
-        body.model,
-        stream=True,
-    )
+    if not await stream_limiter.try_acquire(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many concurrent chat streams",
+        )
+
+    try:
+        prompt_tokens = await ai_client.count_tokens(body.message, body.model)
+        deltas = await ai_client.chat_completion(
+            [{"role": "user", "content": body.message}],
+            body.model,
+            stream=True,
+            max_tokens=MAX_COMPLETION_TOKENS,
+        )
+    except BaseException:
+        await stream_limiter.release(user_id)
+        raise
 
     async def sse_stream() -> AsyncGenerator[bytes, None]:
         completion_parts: list[str] = []
 
-        async def _record_usage() -> None:
+        async def _finalize() -> None:
+            await stream_limiter.release(user_id)
             completion_text = "".join(completion_parts)
             completion_tokens = (
                 await ai_client.count_tokens(completion_text, body.model) if completion_text else 0
@@ -134,9 +180,9 @@ async def chat(
                 )
             )
 
-        # Usage must be recorded on every exit path — normal completion,
-        # provider errors mid-stream, and client disconnects — because the
-        # provider has already billed the tokens produced so far.
+        # Usage recording and slot release must run on every exit path —
+        # normal completion, provider errors mid-stream, and client
+        # disconnects — because the provider has already billed the tokens.
         try:
             async for delta in deltas:
                 completion_parts.append(delta)
@@ -144,14 +190,14 @@ async def chat(
             yield b"data: [DONE]\n\n"
         except GeneratorExit:
             # Client disconnected: awaiting here would violate the async
-            # generator protocol, so record partial usage in a detached task.
-            asyncio.get_running_loop().create_task(_record_usage())
+            # generator protocol, so finalize in a detached task.
+            asyncio.get_running_loop().create_task(_finalize())
             raise
         except BaseException:
-            await _record_usage()
+            await _finalize()
             raise
         else:
-            await _record_usage()
+            await _finalize()
 
     return StreamingResponse(sse_stream(), media_type="text/event-stream")
 

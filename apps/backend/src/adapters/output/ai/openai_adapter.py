@@ -19,12 +19,14 @@ class OpenAIAdapter(IAIClient):
         messages: list[dict[str, str]],
         model: str,
         stream: bool = False,
+        max_tokens: int | None = None,
     ) -> AsyncGenerator[str, None]:
         async def _stream() -> AsyncGenerator[str, None]:
             response = await self._client.chat.completions.create(
                 model=model or self._default_model,
                 messages=cast(list[ChatCompletionMessageParam], messages),
                 stream=True,
+                max_tokens=max_tokens,
             )
             async for chunk in response:
                 delta = chunk.choices[0].delta.content
@@ -36,6 +38,7 @@ class OpenAIAdapter(IAIClient):
                 model=model or self._default_model,
                 messages=cast(list[ChatCompletionMessageParam], messages),
                 stream=False,
+                max_tokens=max_tokens,
             )
             yield response.choices[0].message.content or ""
 

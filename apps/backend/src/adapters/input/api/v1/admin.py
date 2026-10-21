@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+from .....infrastructure.config import settings
+from ..dependencies import require_admin
+
+# Every admin endpoint requires an authenticated, active admin account —
+# this router exposes user data, feature flags and a local code runner.
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/stats")
@@ -31,7 +36,14 @@ async def list_mobile_builds() -> Any:
 
 @router.post("/ai-code/run")
 async def run_ai_code(instruction: str) -> Any:
-    """Stream Claude Code CLI output as SSE."""
+    """Stream Claude Code CLI output as SSE.
+
+    Executes a local process from user input — only ever available in
+    development, and only behind the ENABLE_AI_CODE_EDITOR flag.
+    """
+    if not settings.enable_ai_code_editor or settings.environment != "development":
+        raise HTTPException(status_code=404, detail="Feature not available")
+
     import asyncio
     from collections.abc import AsyncGenerator as AG
 
