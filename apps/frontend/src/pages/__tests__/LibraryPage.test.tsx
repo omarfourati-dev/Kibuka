@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Switch, Route } from "react-router-dom";
 import LibraryPage from "../LibraryPage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
@@ -12,11 +12,12 @@ vi.mock("../../components/book/BookCard", () => ({
   ),
 }));
 
-// ─── Mock useNavigate ────────────────────────────────────────────────────────
+// ─── Mock useHistory ─────────────────────────────────────────────────────────
 const mockNavigate = vi.fn();
+const mockHistory = { push: mockNavigate, replace: vi.fn(), goBack: vi.fn() };
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
-  return { ...actual, useNavigate: () => mockNavigate };
+  return { ...actual, useHistory: () => mockHistory };
 });
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
@@ -48,10 +49,10 @@ const bookList = [
 function renderLibraryPage() {
   return render(
     <MemoryRouter initialEntries={["/library"]}>
-      <Routes>
-        <Route path="/library" element={<LibraryPage />} />
-        <Route path="/books/:bookId" element={<div>BookDetail</div>} />
-      </Routes>
+      <Switch>
+        <Route exact path="/library" component={LibraryPage} />
+        <Route path="/books/:bookId" render={() => <div>BookDetail</div>} />
+      </Switch>
     </MemoryRouter>,
   );
 }

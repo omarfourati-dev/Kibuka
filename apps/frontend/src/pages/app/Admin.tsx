@@ -1,5 +1,12 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, NavLink } from "react-router-dom";
+import {
+  Switch,
+  Route,
+  Redirect,
+  NavLink,
+  useRouteMatch,
+  useLocation,
+} from "react-router-dom";
 import { BarChart2, Users, Smartphone, Code2, ToggleLeft } from "lucide-react";
 import { cn } from "../../utils/cn";
 
@@ -24,6 +31,8 @@ const SubPageFallback = () => (
 );
 
 export default function Admin() {
+  const { url, path } = useRouteMatch();
+  const { pathname } = useLocation();
   return (
     <div className="flex flex-col h-full">
       {/* Secondary nav */}
@@ -31,15 +40,13 @@ export default function Admin() {
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors",
-                isActive
-                  ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
-                  : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100",
-              )
-            }
+            to={`${url}/${to}`}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+              pathname.startsWith(`${url}/${to}`)
+                ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100",
+            )}
           >
             <Icon className="w-4 h-4" />
             {label}
@@ -50,14 +57,18 @@ export default function Admin() {
       {/* Content */}
       <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950">
         <Suspense fallback={<SubPageFallback />}>
-          <Routes>
-            <Route index element={<Navigate to="analytics" replace />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="mobile-build" element={<MobileBuild />} />
-            <Route path="ai-code-editor" element={<AICodeEditor />} />
-            <Route path="feature-flags" element={<FeatureFlags />} />
-          </Routes>
+          <Switch>
+            <Route
+              exact
+              path={path}
+              render={() => <Redirect to={`${url}/analytics`} />}
+            />
+            <Route path={`${path}/analytics`} component={Analytics} />
+            <Route path={`${path}/users`} component={UsersPage} />
+            <Route path={`${path}/mobile-build`} component={MobileBuild} />
+            <Route path={`${path}/ai-code-editor`} component={AICodeEditor} />
+            <Route path={`${path}/feature-flags`} component={FeatureFlags} />
+          </Switch>
         </Suspense>
       </main>
     </div>

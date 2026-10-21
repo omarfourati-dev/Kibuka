@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
+import { IonContent, IonPage } from "@ionic/react";
 import { PricingCard } from "../components/pricing/PricingCard";
 import { cn } from "../utils/cn";
 
@@ -159,129 +160,137 @@ function FaqAccordionItem({ question, answer }: FaqItem) {
 // ─── PricingPage ──────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
-  const navigate = useNavigate();
+  const history = useHistory();
 
   useEffect(() => {
     document.title = "Preise — Kibuka";
   }, []);
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        backgroundColor: "var(--color-background)",
-        color: "var(--color-text-primary)",
-      }}
-    >
-      {/* Nav */}
-      <header
-        className="sticky top-0 z-10 border-b backdrop-blur-sm"
-        style={{
-          borderColor: "var(--color-border)",
-          backgroundColor: "var(--color-background)",
-        }}
-      >
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link
-            to="/"
-            className="font-extrabold text-xl"
-            style={{ color: "var(--color-primary)" }}
-          >
-            📚 Kibuka
-          </Link>
-          <Link
-            to="/"
-            className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            Zur Bibliothek
-          </Link>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section className="max-w-3xl mx-auto px-6 py-16 text-center">
-        <h1
-          className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          Verpasse keine neuen Bücher mehr
-        </h1>
-        <p
-          className="text-lg md:text-xl max-w-xl mx-auto"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          Täglich ein neues KI-generiertes Kinderbuch in 4 Sprachen — für
-          mehrsprachige Familien, die ihren Kindern die Welt eröffnen möchten.
-        </p>
-      </section>
-
-      {/* Pricing cards */}
-      <section className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
-          {PLANS.map((plan) => (
-            <PricingCard
-              key={plan.id}
-              title={plan.title}
-              price={plan.price}
-              priceNote={plan.priceNote}
-              savings={plan.savings}
-              features={plan.features}
-              isHighlighted={plan.isHighlighted}
-              badge={plan.badge}
-              ctaLabel={plan.ctaLabel}
-              onCta={() => navigate("/library")}
-            />
-          ))}
-        </div>
-
-        {/* Loss aversion note */}
-        <p
-          className="text-center text-sm mt-8"
-          style={{ color: "var(--color-text-muted)" }}
-        >
-          14 Tage kostenlos testen &mdash; keine Kreditkarte erforderlich.
-          Jederzeit kündbar.
-        </p>
-      </section>
-
-      {/* FAQ */}
-      <section className="max-w-2xl mx-auto px-6 pb-20">
-        <h2
-          className="text-2xl font-bold text-center mb-8"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          Häufig gestellte Fragen
-        </h2>
+    <IonPage>
+      <IonContent>
         <div
-          className="rounded-2xl border p-6"
+          className="min-h-screen"
           style={{
-            borderColor: "var(--color-border)",
-            backgroundColor: "var(--color-surface)",
+            backgroundColor: "var(--color-background)",
+            color: "var(--color-text-primary)",
           }}
         >
-          {FAQ_ITEMS.map((item) => (
-            <FaqAccordionItem
-              key={item.question}
-              question={item.question}
-              answer={item.answer}
-            />
-          ))}
-        </div>
-      </section>
+          {/* Nav */}
+          <header
+            className="sticky top-0 z-10 border-b backdrop-blur-sm"
+            style={{
+              borderColor: "var(--color-border)",
+              backgroundColor: "var(--color-background)",
+            }}
+          >
+            <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+              <Link
+                to="/"
+                className="font-extrabold text-xl"
+                style={{ color: "var(--color-primary)" }}
+              >
+                📚 Kibuka
+              </Link>
+              <Link
+                to="/"
+                className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                Zur Bibliothek
+              </Link>
+            </div>
+          </header>
 
-      {/* Footer */}
-      <footer
-        className="border-t"
-        style={{ borderColor: "var(--color-border)" }}
-      >
-        <div className="max-w-6xl mx-auto px-6 py-8 text-center">
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            &copy; {new Date().getFullYear()} Kibuka &mdash; Alle Rechte
-            vorbehalten.
-          </p>
+          {/* Hero */}
+          <section className="max-w-3xl mx-auto px-6 py-16 text-center">
+            <h1
+              className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              Verpasse keine neuen Bücher mehr
+            </h1>
+            <p
+              className="text-lg md:text-xl max-w-xl mx-auto"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              Täglich ein neues KI-generiertes Kinderbuch in 4 Sprachen — für
+              mehrsprachige Familien, die ihren Kindern die Welt eröffnen
+              möchten.
+            </p>
+          </section>
+
+          {/* Pricing cards */}
+          <section className="max-w-6xl mx-auto px-6 pb-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
+              {PLANS.map((plan) => (
+                <PricingCard
+                  key={plan.id}
+                  title={plan.title}
+                  price={plan.price}
+                  priceNote={plan.priceNote}
+                  savings={plan.savings}
+                  features={plan.features}
+                  isHighlighted={plan.isHighlighted}
+                  badge={plan.badge}
+                  ctaLabel={plan.ctaLabel}
+                  onCta={() => history.push("/library")}
+                />
+              ))}
+            </div>
+
+            {/* Loss aversion note */}
+            <p
+              className="text-center text-sm mt-8"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              14 Tage kostenlos testen &mdash; keine Kreditkarte erforderlich.
+              Jederzeit kündbar.
+            </p>
+          </section>
+
+          {/* FAQ */}
+          <section className="max-w-2xl mx-auto px-6 pb-20">
+            <h2
+              className="text-2xl font-bold text-center mb-8"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              Häufig gestellte Fragen
+            </h2>
+            <div
+              className="rounded-2xl border p-6"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+              }}
+            >
+              {FAQ_ITEMS.map((item) => (
+                <FaqAccordionItem
+                  key={item.question}
+                  question={item.question}
+                  answer={item.answer}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer
+            className="border-t"
+            style={{ borderColor: "var(--color-border)" }}
+          >
+            <div className="max-w-6xl mx-auto px-6 py-8 text-center">
+              <p
+                className="text-sm"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                &copy; {new Date().getFullYear()} Kibuka &mdash; Alle Rechte
+                vorbehalten.
+              </p>
+            </div>
+          </footer>
         </div>
-      </footer>
-    </div>
+      </IonContent>
+    </IonPage>
   );
 }

@@ -1,5 +1,16 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import { Redirect, Route, Switch } from "react-router-dom";
+import {
+  IonApp,
+  IonIcon,
+  IonLabel,
+  IonRouterOutlet,
+  IonTabBar,
+  IonTabButton,
+  IonTabs,
+} from "@ionic/react";
+import { IonReactRouter } from "@ionic/react-router";
+import { homeOutline, libraryOutline, pricetagsOutline } from "ionicons/icons";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -24,102 +35,96 @@ const Fallback = () => (
   </div>
 );
 
+const lazyPage = (Page: React.LazyExoticComponent<() => JSX.Element>) =>
+  function LazyPage() {
+    return (
+      <Suspense fallback={<Fallback />}>
+        <Page />
+      </Suspense>
+    );
+  };
+
+function MainTabs() {
+  return (
+    <IonTabs>
+      <IonRouterOutlet>
+        <Route exact path="/" component={lazyPage(HomePageKibuka)} />
+        <Route exact path="/library" component={lazyPage(LibraryPage)} />
+        <Route exact path="/books" component={lazyPage(LibraryPage)} />
+        <Route
+          exact
+          path="/books/:bookId"
+          component={lazyPage(BookDetailPage)}
+        />
+        <Route exact path="/pricing" component={lazyPage(PricingPage)} />
+      </IonRouterOutlet>
+      <IonTabBar slot="bottom" className="kibuka-tab-bar">
+        <IonTabButton tab="home" href="/">
+          <IonIcon aria-hidden="true" icon={homeOutline} />
+          <IonLabel>Home</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="library" href="/library">
+          <IonIcon aria-hidden="true" icon={libraryOutline} />
+          <IonLabel>Bibliothek</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="pricing" href="/pricing">
+          <IonIcon aria-hidden="true" icon={pricetagsOutline} />
+          <IonLabel>Preise</IonLabel>
+        </IonTabButton>
+      </IonTabBar>
+    </IonTabs>
+  );
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <ErrorBoundary>
-        <Suspense fallback={<Fallback />}>
-          <Routes>
-            {/* Kibuka book routes */}
+    <IonApp>
+      <IonReactRouter>
+        <ErrorBoundary>
+          <Switch>
+            {/* Fullscreen routes without tab bar */}
             <Route
-              path="/books"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <LibraryPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/library"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <LibraryPage />
-                </Suspense>
-              }
-            />
-            <Route
+              exact
               path="/books/:bookId/read"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <ReaderPage />
-                </Suspense>
-              }
+              component={lazyPage(ReaderPage)}
             />
-            <Route
-              path="/books/:bookId"
-              element={
-                <Suspense fallback={<Fallback />}>
-                  <BookDetailPage />
-                </Suspense>
-              }
-            />
+            <Route exact path="/landing" component={lazyPage(LandingPage)} />
+            <Route exact path="/login" component={lazyPage(LoginPage)} />
 
-            {/* Public */}
-            <Route
-              path="/"
-              element={
+            {/* Protected template area */}
+            <ProtectedRoute path="/app">
+              <AppLayout>
                 <Suspense fallback={<Fallback />}>
-                  <HomePageKibuka />
+                  <Route
+                    exact
+                    path="/app"
+                    render={() => <Redirect to="/app/dashboard" />}
+                  />
+                  <Route
+                    exact
+                    path="/app/dashboard"
+                    component={lazyPage(DashboardPage)}
+                  />
+                  <Route
+                    exact
+                    path="/app/spaces"
+                    component={lazyPage(SpacesPage)}
+                  />
+                  <Route
+                    exact
+                    path="/app/settings"
+                    component={lazyPage(SettingsPage)}
+                  />
+                  <Route path="/app/admin" component={lazyPage(AdminPage)} />
                 </Suspense>
-              }
-            />
-            <Route path="/landing" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
+              </AppLayout>
+            </ProtectedRoute>
 
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              {/* App — layout route */}
-              <Route path="/app" element={<AppLayout />}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route
-                  path="dashboard"
-                  element={
-                    <Suspense fallback={<div>Loading...</div>}>
-                      <DashboardPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="spaces"
-                  element={
-                    <Suspense fallback={<div>Loading...</div>}>
-                      <SpacesPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="settings"
-                  element={
-                    <Suspense fallback={<div>Loading...</div>}>
-                      <SettingsPage />
-                    </Suspense>
-                  }
-                />
-                {/* Admin */}
-                <Route
-                  path="admin/*"
-                  element={
-                    <Suspense fallback={<div>Loading...</div>}>
-                      <AdminPage />
-                    </Suspense>
-                  }
-                />
-              </Route>
-            </Route>
-          </Routes>
-        </Suspense>
-      </ErrorBoundary>
-    </BrowserRouter>
+            {/* Tab navigation (Home, Library, Pricing, Book Detail) */}
+            <Route path="/" component={MainTabs} />
+          </Switch>
+        </ErrorBoundary>
+      </IonReactRouter>
+    </IonApp>
   );
 }

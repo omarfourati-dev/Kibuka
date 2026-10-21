@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import { apiClient } from "@omarsapp/shared-api";
@@ -15,7 +15,7 @@ interface AuthResponse {
 }
 
 export default function Login() {
-  const navigate = useNavigate();
+  const history = useHistory();
   const { isAuthenticated, setUser } = useAuthStore();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -31,9 +31,9 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/app/dashboard", { replace: true });
+      history.replace("/app/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, history]);
 
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -52,7 +52,7 @@ export default function Login() {
       ),
     onSuccess: (data) => {
       setUser(data.user);
-      navigate("/app/dashboard", { replace: true });
+      history.replace("/app/dashboard");
     },
     onError: (err: unknown) => {
       if (err instanceof Error) {

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kibuka-frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@omarsapp/frontend", "dev"],
+      "port": 5173
+    }
+  ]
+}

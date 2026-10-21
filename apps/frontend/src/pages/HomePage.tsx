@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useHistory } from "react-router-dom";
+import { IonContent, IonPage } from "@ionic/react";
 import { BookHero } from "../components/book/BookHero";
 import { BookCard } from "../components/book/BookCard";
 
@@ -27,7 +28,7 @@ interface BooksListResponse {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const navigate = useNavigate();
+  const history = useHistory();
 
   const [dailyBook, setDailyBook] = useState<BookSummary | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
@@ -62,8 +63,12 @@ export default function HomePage() {
     };
   }, []);
 
+  const hasContent = dailyBook !== null || books.length > 0;
+
+  let body: React.ReactNode;
+
   if (loading) {
-    return (
+    body = (
       <div
         role="status"
         aria-label="Lade Startseite..."
@@ -86,12 +91,8 @@ export default function HomePage() {
         </div>
       </div>
     );
-  }
-
-  const hasContent = dailyBook !== null || books.length > 0;
-
-  if (!hasContent) {
-    return (
+  } else if (!hasContent) {
+    body = (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
         <span className="text-5xl select-none">📚</span>
         <p
@@ -108,59 +109,65 @@ export default function HomePage() {
         </p>
       </div>
     );
+  } else {
+    body = (
+      <div className="flex flex-col gap-10 p-6 max-w-4xl mx-auto">
+        {/* Daily book hero */}
+        {dailyBook && (
+          <BookHero
+            book={{
+              id: dailyBook.id,
+              title:
+                dailyBook.titles.de ?? Object.values(dailyBook.titles)[0] ?? "",
+              coverImageUrl: dailyBook.cover_image_url ?? undefined,
+              theme: dailyBook.theme,
+              ageRange: dailyBook.age_range,
+              languages: Object.keys(dailyBook.titles).filter(
+                (k) => dailyBook.titles[k],
+              ),
+              priceSingle: dailyBook.price_single,
+            }}
+            onRead={() => history.push(`/books/${dailyBook.id}`)}
+            onPurchase={() => history.push(`/books/${dailyBook.id}`)}
+          />
+        )}
+
+        {/* Book grid */}
+        {books.length > 0 && (
+          <section>
+            <h2
+              className="text-xl font-bold mb-4"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              Alle Bücher
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {books.map((book) => (
+                <BookCard
+                  key={book.id}
+                  id={book.id}
+                  title={book.titles.de ?? Object.values(book.titles)[0] ?? ""}
+                  coverImageUrl={book.cover_image_url ?? undefined}
+                  theme={book.theme}
+                  ageRange={book.age_range}
+                  languages={Object.keys(book.titles).filter(
+                    (k) => book.titles[k],
+                  )}
+                  isDailyBook={book.is_daily_book}
+                  priceSingle={book.price_single}
+                  onClick={() => history.push(`/books/${book.id}`)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-10 p-6 max-w-4xl mx-auto">
-      {/* Daily book hero */}
-      {dailyBook && (
-        <BookHero
-          book={{
-            id: dailyBook.id,
-            title:
-              dailyBook.titles.de ?? Object.values(dailyBook.titles)[0] ?? "",
-            coverImageUrl: dailyBook.cover_image_url ?? undefined,
-            theme: dailyBook.theme,
-            ageRange: dailyBook.age_range,
-            languages: Object.keys(dailyBook.titles).filter(
-              (k) => dailyBook.titles[k],
-            ),
-            priceSingle: dailyBook.price_single,
-          }}
-          onRead={() => navigate(`/books/${dailyBook.id}`)}
-          onPurchase={() => navigate(`/books/${dailyBook.id}`)}
-        />
-      )}
-
-      {/* Book grid */}
-      {books.length > 0 && (
-        <section>
-          <h2
-            className="text-xl font-bold mb-4"
-            style={{ color: "var(--color-text-primary)" }}
-          >
-            Alle Bücher
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {books.map((book) => (
-              <BookCard
-                key={book.id}
-                id={book.id}
-                title={book.titles.de ?? Object.values(book.titles)[0] ?? ""}
-                coverImageUrl={book.cover_image_url ?? undefined}
-                theme={book.theme}
-                ageRange={book.age_range}
-                languages={Object.keys(book.titles).filter(
-                  (k) => book.titles[k],
-                )}
-                isDailyBook={book.is_daily_book}
-                priceSingle={book.price_single}
-                onClick={() => navigate(`/books/${book.id}`)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
+    <IonPage>
+      <IonContent>{body}</IonContent>
+    </IonPage>
   );
 }

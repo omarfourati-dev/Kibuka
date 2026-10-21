@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 400;
 const DEFAULT_SIDEBAR_WIDTH = 256;
 
-export function AppLayout() {
+export function AppLayout({ children }: { children: ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const handlersRef = useRef<{
@@ -60,9 +60,7 @@ export function AppLayout() {
           onMouseDown={startResize}
         />
       </div>
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }

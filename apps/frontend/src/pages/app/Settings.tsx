@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import { apiClient } from "@omarsapp/shared-api";
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function Settings() {
-  const navigate = useNavigate();
+  const history = useHistory();
   const { user, setUser, clearUser } = useAuthStore();
 
   const [name, setName] = useState(user?.name ?? "");
@@ -75,7 +75,7 @@ export default function Settings() {
     mutationFn: () => apiClient.delete("/users/me"),
     onSuccess: () => {
       clearUser();
-      navigate("/", { replace: true });
+      history.replace("/");
     },
     onError: (err: unknown) => {
       if (err instanceof Error) {

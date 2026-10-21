@@ -68,14 +68,27 @@ desktop.ini
 .turbo/
 
 # ================================================
-# Expo / Mobile
+# Mobile (Capacitor-Plattformordner werden committet,
+# native Build-Artefakte nicht)
 # ================================================
-.expo/
-android/
-ios/
 *.ipa
 *.apk
 *.aab
+apps/frontend/android/app/build/
+apps/frontend/android/build/
+apps/frontend/android/.gradle/
+apps/frontend/android/local.properties
+apps/frontend/ios/App/Pods/
+apps/frontend/ios/App/build/
+apps/frontend/ios/DerivedData/
+
+# TypeScript inkrementelle Build-Infos
+*.tsbuildinfo
+
+# Lokale Agent-/Plugin-Artefakte
+.claude-flow/
+.claude/proven-config.json
+.claude/.proven-config-version
 
 # ================================================
 # Logs

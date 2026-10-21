@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
+  // Ein einzelner Vite-Dev-Server verkraftet keine parallelen Worker zuverlässig
+  // (zufällige Timeouts unter Last) — seriell ist die Suite trotzdem in ~1 min durch.
+  workers: 1,
   retries: 1,
   reporter: 'html',
   use: {
