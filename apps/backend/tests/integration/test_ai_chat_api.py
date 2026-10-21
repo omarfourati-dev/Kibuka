@@ -14,9 +14,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.adapters.input.api.v1.ai import (
+    MAX_COMPLETION_TOKENS,
+    MAX_CONCURRENT_STREAMS_PER_USER,
     get_ai_client,
     get_ai_usage_repository,
     get_current_user,
+    stream_limiter,
 )
 from src.adapters.input.api.v1.ai import router as ai_router
 from src.core.domain.entities.ai_usage import AIUsage
@@ -45,8 +48,11 @@ class FakeAIClient:
         messages: list[dict[str, str]],
         model: str,
         stream: bool = False,
+        max_tokens: int | None = None,
     ) -> AsyncGenerator[str, None]:
-        self.calls.append({"messages": messages, "model": model, "stream": stream})
+        self.calls.append(
+            {"messages": messages, "model": model, "stream": stream, "max_tokens": max_tokens}
+        )
 
         async def _gen() -> AsyncGenerator[str, None]:
             for i, delta in enumerate(self._deltas):
@@ -127,6 +133,7 @@ class TestChatEndpoint:
         assert call["model"] == "gpt-4.1"
         assert call["stream"] is True
         assert call["messages"][-1] == {"role": "user", "content": "Wie geht's?"}
+        assert call["max_tokens"] == MAX_COMPLETION_TOKENS
 
     def test_chat_returns_404_when_ai_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(settings, "enable_ai", False)
@@ -252,6 +259,36 @@ class TestChatCostLimit:
         assert usage.completion_tokens > 0
         assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
         assert usage.cost_usd > 0
+
+    def test_chat_returns_429_when_user_has_too_many_concurrent_streams(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Concurrent streams per user are capped to bound parallel spend."""
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        client = _make_client(fake)
+        monkeypatch.setitem(stream_limiter._active, "user-1", MAX_CONCURRENT_STREAMS_PER_USER)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-1"},
+        )
+
+        assert response.status_code == 429
+        assert fake.calls == []
+
+    def test_chat_releases_stream_slot_after_completion(self) -> None:
+        """The concurrency slot must be freed on every exit path."""
+        fake = FakeAIClient(deltas=["ok"])
+        client = _make_client(fake)
+
+        for _ in range(MAX_CONCURRENT_STREAMS_PER_USER + 1):
+            response = client.post(
+                "/api/v1/ai/chat",
+                json={"message": "Hallo", "space_id": "space-1"},
+            )
+            assert response.status_code == 200
+
+        assert stream_limiter._active.get("user-1", 0) == 0
 
     def test_chat_records_usage_even_when_stream_breaks_midway(self) -> None:
         """Provider errors mid-stream must not lose the usage already paid for."""
