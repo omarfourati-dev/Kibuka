@@ -155,14 +155,98 @@ class TestBookCheckout:
 # ---------------------------------------------------------------------------
 
 
-def _event(event_type: str, metadata: dict[str, str], payment_intent: str = "pi_123") -> dict:
+def _event(
+    event_type: str,
+    metadata: dict[str, str],
+    payment_intent: str = "pi_123",
+    payment_status: str = "paid",
+    amount_total: int = 199,
+) -> dict:
     return {
         "type": event_type,
-        "data": {"object": {"metadata": metadata, "payment_intent": payment_intent}},
+        "data": {
+            "object": {
+                "metadata": metadata,
+                "payment_intent": payment_intent,
+                "payment_status": payment_status,
+                "amount_total": amount_total,
+            }
+        },
     }
 
 
+@pytest.fixture(autouse=True)
+def _billing_webhook_config(monkeypatch: pytest.MonkeyPatch):
+    """Webhook tests run with billing enabled and a configured secret."""
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test")
+    yield
+
+
 class TestStripeWebhook:
+    def test_webhook_fails_closed_without_secret(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No configured secret means signatures cannot be verified — 404."""
+        monkeypatch.setattr(settings, "stripe_webhook_secret", "")
+        client, repo, _ = _make_client()
+
+        response = client.post(
+            "/api/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "x"}
+        )
+
+        assert response.status_code == 404
+        assert repo.purchases == []
+
+    def test_unpaid_session_grants_nothing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import stripe
+
+        event = _event(
+            "checkout.session.completed",
+            {"book_id": "book-1", "user_id": "user-1"},
+            payment_status="unpaid",
+        )
+        monkeypatch.setattr(stripe.Webhook, "construct_event", MagicMock(return_value=event))
+        client, repo, _ = _make_client()
+
+        response = client.post(
+            "/api/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "ok"}
+        )
+
+        assert response.status_code == 200
+        assert repo.purchases == []
+
+    def test_async_payment_succeeded_records_purchase(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import stripe
+
+        event = _event(
+            "checkout.session.async_payment_succeeded",
+            {"book_id": "book-1", "user_id": "user-1"},
+        )
+        monkeypatch.setattr(stripe.Webhook, "construct_event", MagicMock(return_value=event))
+        client, repo, _ = _make_client()
+
+        response = client.post(
+            "/api/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "ok"}
+        )
+
+        assert response.status_code == 200
+        assert len(repo.purchases) == 1
+
+    def test_amount_comes_from_session_total(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import stripe
+
+        event = _event(
+            "checkout.session.completed",
+            {"book_id": "book-1", "user_id": "user-1", "amount_cents": "1"},
+            amount_total=249,
+        )
+        monkeypatch.setattr(stripe.Webhook, "construct_event", MagicMock(return_value=event))
+        client, repo, _ = _make_client()
+
+        client.post("/api/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "ok"})
+
+        assert repo.purchases[0].amount == pytest.approx(2.49)
+
     def test_invalid_signature_returns_400(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import stripe
 
