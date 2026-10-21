@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
-from google.cloud import texttospeech
+# v1beta1 ist Pflicht: Nur dort gibt es SSML-Timepoints (TimepointType.SSML_MARK)
+# für die Wort-Timestamps des Karaoke-Highlightings.
+from google.cloud import texttospeech_v1beta1 as texttospeech
 
 from ....core.domain.entities.book import WordTimestamp
 from ....core.domain.value_objects.language import Language
@@ -29,7 +32,7 @@ def _build_ssml(text: str) -> str:
     return f"<speak>{marked}</speak>"
 
 
-def _parse_timestamps(timepoints: list[Any], words: list[str]) -> list[WordTimestamp]:
+def _parse_timestamps(timepoints: Sequence[Any], words: list[str]) -> list[WordTimestamp]:
     """
     Convert Google TTS timepoints to WordTimestamp list.
 

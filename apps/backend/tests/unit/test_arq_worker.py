@@ -58,6 +58,7 @@ for _mod in [
     "google",
     "google.cloud",
     "google.cloud.texttospeech",
+    "google.cloud.texttospeech_v1beta1",
     "google.oauth2",
     "google.oauth2.service_account",
 ]:
