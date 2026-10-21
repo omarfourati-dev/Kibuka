@@ -2,17 +2,27 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from functools import cache
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
 
 from .....adapters.output.ai.openai_adapter import OpenAIAdapter
 from .....core.ports.output.i_ai_client import IAIClient
 from .....infrastructure.config import settings
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+_bearer = HTTPBearer(auto_error=False)
+
+#: Server-side allowlist — client-supplied model ids outside this set are
+#: rejected so callers cannot escalate to arbitrary expensive models.
+ALLOWED_CHAT_MODELS = frozenset({"gpt-4.1-mini", "gpt-4.1"})
+
+#: Upper bound on message length to cap per-request token spend.
+MAX_MESSAGE_LENGTH = 4000
 
 
 @cache
@@ -25,8 +35,22 @@ def get_ai_client() -> IAIClient:
     return OpenAIAdapter(api_key=settings.openai_api_key)
 
 
+async def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
+) -> str:
+    """Return user_id or raise 401 — paid AI calls require authentication."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    # Placeholder — real implementation validates JWT
+    return "authenticated-user"
+
+
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=MAX_MESSAGE_LENGTH)
     space_id: str
     conversation_id: str | None = None
     model: str = "gpt-4.1-mini"
@@ -46,10 +70,20 @@ class AgentRequest(BaseModel):
 
 
 @router.post("/chat")
-async def chat(body: ChatRequest, ai_client: IAIClient = Depends(get_ai_client)) -> Any:  # noqa: B008
+async def chat(
+    body: ChatRequest,
+    _user_id: Annotated[str, Depends(get_current_user)],
+    ai_client: IAIClient = Depends(get_ai_client),  # noqa: B008
+) -> Any:
     """Streaming chat completion via OpenAI, emitted as server-sent events."""
     if not settings.enable_ai:
         raise HTTPException(status_code=404, detail="Feature not available")
+
+    if body.model not in ALLOWED_CHAT_MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Model not allowed. Allowed models: {sorted(ALLOWED_CHAT_MODELS)}",
+        )
 
     deltas = await ai_client.chat_completion(
         [{"role": "user", "content": body.message}],
