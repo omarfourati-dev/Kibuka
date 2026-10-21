@@ -131,14 +131,16 @@ class GoogleTTSService(ITTSService):
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
             sample_rate_hertz=22050,
-            enable_time_pointing=[texttospeech.SynthesizeSpeechRequest.TimepointType.SSML_MARK],
         )
 
-        response = await self._client.synthesize_speech(
+        # enable_time_pointing ist ein Feld des Requests, nicht der AudioConfig
+        request = texttospeech.SynthesizeSpeechRequest(
             input=synthesis_input,
             voice=voice,
             audio_config=audio_config,
+            enable_time_pointing=[texttospeech.SynthesizeSpeechRequest.TimepointType.SSML_MARK],
         )
+        response = await self._client.synthesize_speech(request=request)
 
         audio_data: bytes = response.audio_content
         word_timestamps = _parse_timestamps(response.timepoints, text.split())
