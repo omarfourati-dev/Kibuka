@@ -251,6 +251,44 @@ class TestGenerateDailyBook:
         assert saved_book.id == book.id
 
 
+class TestGenerateDailyBookJob:
+    """The ARQ job must commit the worker session — repositories only flush."""
+
+    @pytest.mark.asyncio
+    async def test_job_commits_session_on_success(self, service) -> None:
+        from src.adapters.services.book_generation_service import generate_daily_book_job
+
+        session = AsyncMock()
+        ctx = {"book_generation_service": service, "_db_session": session}
+
+        await generate_daily_book_job(ctx)
+
+        session.commit.assert_awaited_once()
+        session.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_job_rolls_back_on_failure(
+        self, mock_book_repository, mock_tts_service, mock_image_service
+    ) -> None:
+        from src.adapters.services.book_generation_service import generate_daily_book_job
+
+        failing_client = _make_openai_client(chat_side_effect=RuntimeError("api down"))
+        svc = BookGenerationService(
+            openai_client=failing_client,
+            book_repository=mock_book_repository,
+            tts_service=mock_tts_service,
+            image_service=mock_image_service,
+        )
+        session = AsyncMock()
+        ctx = {"book_generation_service": svc, "_db_session": session}
+
+        with pytest.raises(RuntimeError):
+            await generate_daily_book_job(ctx)
+
+        session.rollback.assert_awaited_once()
+        session.commit.assert_not_awaited()
+
+
 class TestTranslatePage:
     @pytest.mark.asyncio
     async def test_translate_page_calls_gpt_with_correct_language(
