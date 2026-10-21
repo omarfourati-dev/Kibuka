@@ -87,6 +87,10 @@ async def stripe_webhook(
     stripe_signature: Annotated[str | None, Header(alias="stripe-signature")] = None,
 ) -> Any:
     """Stripe webhook — signature-verified; records completed book purchases."""
+    # Fail closed: ohne konfiguriertes Secret ist keine Verifikation möglich
+    if not settings.stripe_webhook_secret:
+        raise HTTPException(status_code=404, detail="Feature not available")
+
     payload = await request.body()
     try:
         event = stripe.Webhook.construct_event(
@@ -97,15 +101,24 @@ async def stripe_webhook(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature"
         ) from exc
 
-    if event["type"] == "checkout.session.completed":
+    if event["type"] in (
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+    ):
         session_obj = event["data"]["object"]
+        # Zugriff nur bei bestätigter Zahlung — "completed" kann unpaid sein
+        # (verzögerte Zahlarten), dann folgt später async_payment_succeeded
+        if session_obj.get("payment_status") != "paid":
+            logger.info("Checkout session not paid yet — no grant")
+            return {"received": True}
         metadata = session_obj.get("metadata") or {}
         book_id = metadata.get("book_id")
         user_id = metadata.get("user_id")
         if book_id and user_id:
             # Idempotent: Stripe liefert Events mehrfach aus
             if not await repo.is_purchased_by_user(book_id, user_id):
-                amount_cents = int(metadata.get("amount_cents") or 0)
+                # Betrag aus der Session selbst, nicht aus Metadaten
+                amount_cents = int(session_obj.get("amount_total") or 0)
                 await repo.record_purchase(
                     BookPurchase(
                         id=str(uuid.uuid4()),
@@ -118,7 +131,7 @@ async def stripe_webhook(
                 )
                 logger.info("Recorded purchase of book %s for user %s", book_id, user_id)
         else:
-            logger.warning("checkout.session.completed without book/user metadata")
+            logger.warning("Paid checkout session without book/user metadata")
 
     return {"received": True}
 
