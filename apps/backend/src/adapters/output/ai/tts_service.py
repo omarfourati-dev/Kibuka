@@ -89,7 +89,7 @@ class GoogleTTSService(ITTSService):
 
             from google.oauth2 import service_account
 
-            creds = service_account.Credentials.from_service_account_info(
+            creds = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
                 json.loads(credentials_json),
                 scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )

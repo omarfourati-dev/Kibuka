@@ -1,0 +1,102 @@
+# Produktion — läuft auf dem VPS unter /home/kibuka, hinter Caddy (Netz "web").
+# Secrets liegen in /home/kibuka/.env (vom Deploy-rsync ausgenommen).
+name: kibuka
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: kibuka-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kibuka}
+      POSTGRES_USER: ${POSTGRES_USER:-kibuka}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-kibuka} -d ${POSTGRES_DB:-kibuka}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: kibuka-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: apps/backend
+      dockerfile: Dockerfile
+    image: kibuka-backend:latest
+    container_name: kibuka-backend
+    command: sh -c "alembic upgrade head && uvicorn src.infrastructure.main:app --host 0.0.0.0 --port 8000 --workers 2"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  worker:
+    image: kibuka-backend:latest
+    container_name: kibuka-worker
+    command: arq src.workers.arq_worker.WorkerSettings
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    image: kibuka-frontend:latest
+    container_name: kibuka-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app_network
+      # "web" ist das servergemeinsame Caddy-Netz — Caddy erreicht kibuka-frontend:80,
+      # nginx leitet /api/ intern an backend:8000 weiter.
+      - web
+
+networks:
+  app_network:
+    driver: bridge
+  web:
+    external: true
+
+volumes:
+  db_data:
+  redis_data:
