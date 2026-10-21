@@ -1,19 +1,29 @@
 from __future__ import annotations
 
-from typing import Any
+import uuid
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+
+from .....core.domain.entities.user import User, UserRole, UserStatus
+from .....core.ports.output.i_user_repository import IUserRepository
+from .....infrastructure.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 bearer = HTTPBearer(auto_error=False)
 
 
+async def get_user_repository() -> IUserRepository:
+    """Override this dependency in the DI container or tests."""
+    raise NotImplementedError("Wire IUserRepository via dependency override")
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     name: str
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class LoginRequest(BaseModel):
@@ -27,21 +37,49 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest) -> Any:
-    """Register a new user."""
-    raise HTTPException(status_code=501, detail="Inject use case via DI in container.py")
+async def register(
+    body: RegisterRequest,
+    repo: Annotated[IUserRepository, Depends(get_user_repository)],
+) -> Any:
+    """Register a new user and return a signed access token."""
+    existing = await repo.get_by_email(body.email)
+    if existing is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    user = User(
+        id=str(uuid.uuid4()),
+        email=body.email,
+        name=body.name,
+        role=UserRole.MEMBER,
+        status=UserStatus.ACTIVE,
+        hashed_password=hash_password(body.password),
+    )
+    saved = await repo.save(user)
+    return TokenResponse(access_token=create_access_token(saved.id))
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, response: Response) -> Any:
-    """Login with email/password. Returns access token, sets refresh token cookie."""
-    raise HTTPException(status_code=501, detail="Inject use case via DI in container.py")
+async def login(
+    body: LoginRequest,
+    repo: Annotated[IUserRepository, Depends(get_user_repository)],
+) -> Any:
+    """Login with email/password and return a signed access token."""
+    user = await repo.get_by_email(body.email)
+    if (
+        user is None
+        or not user.hashed_password
+        or not verify_password(body.password, user.hashed_password)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+        )
+    return TokenResponse(access_token=create_access_token(user.id))
 
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(request: Request) -> Any:
     """Refresh access token using httpOnly refresh cookie."""
-    raise HTTPException(status_code=501, detail="Inject use case via DI in container.py")
+    raise HTTPException(status_code=501, detail="Refresh flow not implemented yet")
 
 
 @router.post("/logout")

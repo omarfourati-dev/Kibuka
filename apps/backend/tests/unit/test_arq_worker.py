@@ -79,11 +79,13 @@ _fake_settings.s3_access_key_id = ""
 _fake_settings.s3_secret_access_key = ""
 _fake_settings.s3_endpoint_url = ""
 
+_real_config_module = sys.modules.get("src.infrastructure.config")
 _config_stub = types.ModuleType("src.infrastructure.config")
 _config_stub.settings = _fake_settings  # type: ignore[attr-defined]
 sys.modules["src.infrastructure.config"] = _config_stub
 
 # Also patch the database module to avoid real DB connection at import time
+_real_db_module = sys.modules.get("src.infrastructure.database")
 _db_stub = types.ModuleType("src.infrastructure.database")
 _db_stub.async_session_maker = MagicMock()  # type: ignore[attr-defined]
 sys.modules["src.infrastructure.database"] = _db_stub
@@ -97,6 +99,20 @@ from src.adapters.services.book_generation_service import (  # noqa: E402
     generate_daily_book_job,
 )
 from src.workers.arq_worker import WorkerSettings, shutdown, startup  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Restore the real infrastructure modules: the stubs above must only affect
+# the arq_worker import, never test modules collected after this one.
+# ---------------------------------------------------------------------------
+
+if _real_config_module is not None:
+    sys.modules["src.infrastructure.config"] = _real_config_module
+else:
+    del sys.modules["src.infrastructure.config"]
+if _real_db_module is not None:
+    sys.modules["src.infrastructure.database"] = _real_db_module
+else:
+    del sys.modules["src.infrastructure.database"]
 
 # ---------------------------------------------------------------------------
 # WorkerSettings structural tests

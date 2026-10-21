@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.infrastructure.security import decode_access_token
 
 from src.adapters.input.api.v1.auth import get_user_repository
 from src.adapters.input.api.v1.auth import router as auth_router
 from src.core.domain.entities.user import User
+from src.infrastructure.security import decode_access_token
 
 # ---------------------------------------------------------------------------
 # Fakes

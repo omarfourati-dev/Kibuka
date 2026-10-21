@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 from jose import jwt
+
+from src.infrastructure.config import settings
 from src.infrastructure.security import (
     InvalidTokenError,
     create_access_token,
@@ -11,8 +13,6 @@ from src.infrastructure.security import (
     hash_password,
     verify_password,
 )
-
-from src.infrastructure.config import settings
 
 
 class TestAccessToken:

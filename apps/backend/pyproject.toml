@@ -14,7 +14,7 @@ dependencies = [
   # Config + Auth
   "pydantic-settings>=2.6",
   "python-jose[cryptography]>=3.3",
-  "passlib[bcrypt]>=1.7",
+  "bcrypt>=4.1",
   "authlib>=1.3",
   "httpx>=0.28",
   # Rate Limiting

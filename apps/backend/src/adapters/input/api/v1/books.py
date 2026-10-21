@@ -5,15 +5,16 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+from src.adapters.input.api.dependencies import get_current_user, get_optional_current_user
 from src.core.domain.entities.book import Book, BookPage
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
 
+__all__ = ["get_current_user", "get_optional_current_user", "router"]
+
 router = APIRouter(prefix="/books", tags=["books"])
-_bearer = HTTPBearer(auto_error=False)
 
 # ---------------------------------------------------------------------------
 # In-memory progress store (per-process; placeholder until full persistence)
@@ -30,30 +31,6 @@ _progress_store: dict[tuple[str, str], int] = {}
 async def get_book_repository() -> IBookRepository:
     """Override this dependency in the DI container or tests."""
     raise NotImplementedError("Wire IBookRepository via dependency override")
-
-
-async def get_optional_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
-) -> str | None:
-    """Return user_id if authenticated, None otherwise. Never raises."""
-    if credentials is None:
-        return None
-    # Placeholder — real implementation validates JWT
-    return "authenticated-user"
-
-
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
-) -> str:
-    """Return user_id or raise 401."""
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    # Placeholder — real implementation validates JWT
-    return "authenticated-user"
 
 
 # ---------------------------------------------------------------------------

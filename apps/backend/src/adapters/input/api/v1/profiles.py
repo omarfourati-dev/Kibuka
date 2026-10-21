@@ -6,11 +6,13 @@ import uuid
 from typing import Annotated, TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
+from src.adapters.input.api.dependencies import get_current_user
+
+__all__ = ["get_current_user", "router"]
+
 router = APIRouter(prefix="/profiles", tags=["profiles"])
-_bearer = HTTPBearer(auto_error=False)
 
 
 class _ProfileRecord(TypedDict):
@@ -31,20 +33,6 @@ _profiles_store: dict[str, list[_ProfileRecord]] = {}
 # ---------------------------------------------------------------------------
 # Dependency helpers
 # ---------------------------------------------------------------------------
-
-
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
-) -> str:
-    """Return user_id or raise 401."""
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    # Placeholder — real implementation validates JWT
-    return "authenticated-user"
 
 
 # ---------------------------------------------------------------------------

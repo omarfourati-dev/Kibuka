@@ -1,21 +1,25 @@
 from __future__ import annotations
 
+import uuid
 from collections.abc import AsyncGenerator
 from functools import cache
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from .....adapters.output.ai.openai_adapter import OpenAIAdapter
+from .....adapters.output.persistence.repositories.ai_usage_repository import (
+    InMemoryAIUsageRepository,
+)
+from .....core.domain.entities.ai_usage import AIUsage
 from .....core.ports.output.i_ai_client import IAIClient
+from .....core.ports.output.i_ai_usage_repository import IAIUsageRepository
 from .....infrastructure.config import settings
+from ..dependencies import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["ai"])
-
-_bearer = HTTPBearer(auto_error=False)
 
 #: Server-side allowlist — client-supplied model ids outside this set are
 #: rejected so callers cannot escalate to arbitrary expensive models.
@@ -23,6 +27,12 @@ ALLOWED_CHAT_MODELS = frozenset({"gpt-4.1-mini", "gpt-4.1"})
 
 #: Upper bound on message length to cap per-request token spend.
 MAX_MESSAGE_LENGTH = 4000
+
+#: USD per 1M tokens (input, output) — used to attribute cost per request.
+MODEL_PRICES_USD_PER_1M: dict[str, tuple[float, float]] = {
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4.1": (2.00, 8.00),
+}
 
 
 @cache
@@ -35,18 +45,14 @@ def get_ai_client() -> IAIClient:
     return OpenAIAdapter(api_key=settings.openai_api_key)
 
 
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
-) -> str:
-    """Return user_id or raise 401 — paid AI calls require authentication."""
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    # Placeholder — real implementation validates JWT
-    return "authenticated-user"
+@cache
+def get_ai_usage_repository() -> IAIUsageRepository:
+    """Provide the AI usage store for daily cost-limit enforcement.
+
+    Defaults to the process-local in-memory store so the limit works without
+    DB wiring; production deployments override this with SqlAIUsageRepository.
+    """
+    return InMemoryAIUsageRepository()
 
 
 class ChatRequest(BaseModel):
@@ -69,11 +75,17 @@ class AgentRequest(BaseModel):
     tools: list[str] = ["web_search", "rag_search"]
 
 
+def _estimate_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    input_price, output_price = MODEL_PRICES_USD_PER_1M[model]
+    return (prompt_tokens * input_price + completion_tokens * output_price) / 1_000_000
+
+
 @router.post("/chat")
 async def chat(
     body: ChatRequest,
-    _user_id: Annotated[str, Depends(get_current_user)],
+    user_id: Annotated[str, Depends(get_current_user)],
     ai_client: IAIClient = Depends(get_ai_client),  # noqa: B008
+    usage_repo: IAIUsageRepository = Depends(get_ai_usage_repository),  # noqa: B008
 ) -> Any:
     """Streaming chat completion via OpenAI, emitted as server-sent events."""
     if not settings.enable_ai:
@@ -85,6 +97,14 @@ async def chat(
             detail=f"Model not allowed. Allowed models: {sorted(ALLOWED_CHAT_MODELS)}",
         )
 
+    daily_cost = await usage_repo.get_daily_cost_usd(user_id)
+    if daily_cost >= settings.ai_cost_limit_usd_per_day:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily AI cost limit reached",
+        )
+
+    prompt_tokens = await ai_client.count_tokens(body.message, body.model)
     deltas = await ai_client.chat_completion(
         [{"role": "user", "content": body.message}],
         body.model,
@@ -92,9 +112,26 @@ async def chat(
     )
 
     async def sse_stream() -> AsyncGenerator[bytes, None]:
+        completion_text = ""
         async for delta in deltas:
+            completion_text += delta
             yield f"data: {delta}\n\n".encode()
         yield b"data: [DONE]\n\n"
+
+        completion_tokens = await ai_client.count_tokens(completion_text, body.model)
+        await usage_repo.save(
+            AIUsage(
+                id=str(uuid.uuid4()),
+                space_id=body.space_id,
+                user_id=user_id,
+                model=body.model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
+                cost_usd=_estimate_cost_usd(body.model, prompt_tokens, completion_tokens),
+                feature="chat",
+            )
+        )
 
     return StreamingResponse(sse_stream(), media_type="text/event-stream")
 

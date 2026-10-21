@@ -12,7 +12,6 @@ from collections.abc import AsyncGenerator
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.infrastructure.security import create_access_token
 
 from src.adapters.input.api.v1.ai import (
     get_ai_client,
@@ -22,6 +21,7 @@ from src.adapters.input.api.v1.ai import (
 from src.adapters.input.api.v1.ai import router as ai_router
 from src.core.domain.entities.ai_usage import AIUsage
 from src.infrastructure.config import settings
+from src.infrastructure.security import create_access_token
 
 # ---------------------------------------------------------------------------
 # Fakes
