@@ -39,6 +39,7 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState("de");
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!bookId) return;
@@ -139,6 +140,29 @@ export default function BookDetailPage() {
       </IonPage>
     );
   }
+
+  const handlePurchase = async () => {
+    setPurchaseError(null);
+    try {
+      const res = await fetch("/api/v1/billing/checkout/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ book_id: book.id }),
+      });
+      if (res.status === 401) {
+        history.push("/login");
+        return;
+      }
+      if (!res.ok) {
+        setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+        return;
+      }
+      const data = (await res.json()) as { url: string };
+      window.location.assign(data.url);
+    } catch {
+      setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+    }
+  };
 
   const title =
     book.titles[selectedLanguage] ??
@@ -254,11 +278,17 @@ export default function BookDetailPage() {
                   <button
                     type="button"
                     aria-label={formattedPrice}
+                    onClick={handlePurchase}
                     className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95"
                     style={{ backgroundColor: "var(--color-primary)" }}
                   >
                     {formattedPrice}
                   </button>
+                )}
+                {purchaseError && (
+                  <p className="text-sm w-full" style={{ color: "#dc2626" }}>
+                    {purchaseError}
+                  </p>
                 )}
               </div>
             </div>

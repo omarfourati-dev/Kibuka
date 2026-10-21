@@ -13,6 +13,7 @@ from .....core.domain.entities.book import (
     PageContent,
     WordTimestamp,
 )
+from .....core.domain.entities.purchase import BookPurchase
 from .....core.domain.value_objects.language import AgeRange, BookTheme, Language
 from .....core.ports.output.i_book_repository import IBookRepository
 from ..models import (
@@ -118,6 +119,21 @@ class SqlBookRepository(IBookRepository):
             )
         )
         return bool(result.scalar())
+
+    async def record_purchase(self, purchase: BookPurchase) -> None:
+        self._session.add(
+            BookPurchaseModel(
+                id=purchase.id,
+                user_id=purchase.user_id,
+                book_id=purchase.book_id,
+                purchase_type=purchase.purchase_type.value,
+                amount=purchase.amount,
+                currency=purchase.currency,
+                stripe_payment_intent_id=purchase.stripe_payment_intent_id,
+                created_at=purchase.created_at,
+            )
+        )
+        await self._session.flush()
 
     def _to_entity(self, model: BookModel) -> Book:
         translations = [

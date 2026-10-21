@@ -129,6 +129,40 @@ describe("BookDetailPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("starts stripe checkout when buy button is clicked", async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/billing/checkout/book")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({ url: "https://checkout.stripe.com/test" }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockBook),
+      } as Response);
+    });
+
+    renderBookDetailPage();
+    const buyButton = await screen.findByRole("button", {
+      name: /kaufen|buy|€/i,
+    });
+    fireEvent.click(buyButton);
+
+    await waitFor(() => {
+      const checkoutCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) =>
+          String(url).includes("/billing/checkout/book"),
+        );
+      expect(checkoutCall).toBeDefined();
+      const [, init] = checkoutCall!;
+      expect(init?.method).toBe("POST");
+      expect(String(init?.body)).toContain("book-1");
+    });
+  });
+
   it("shows read button when purchased", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,

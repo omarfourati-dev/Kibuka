@@ -15,6 +15,39 @@ class StripeBillingAdapter:
     def construct_webhook_event(self, payload: bytes, sig_header: str) -> Any:
         return stripe.Webhook.construct_event(payload, sig_header, self._webhook_secret)
 
+    async def create_book_checkout(
+        self,
+        *,
+        book_id: str,
+        user_id: str,
+        title: str,
+        amount_cents: int,
+        success_url: str,
+        cancel_url: str,
+    ) -> str:
+        """One-time payment session for a single book; metadata drives the webhook."""
+        session = await stripe.checkout.Session.create_async(
+            mode="payment",
+            line_items=[
+                {
+                    "quantity": 1,
+                    "price_data": {
+                        "currency": "eur",
+                        "unit_amount": amount_cents,
+                        "product_data": {"name": title},
+                    },
+                }
+            ],
+            metadata={
+                "book_id": book_id,
+                "user_id": user_id,
+                "amount_cents": str(amount_cents),
+            },
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return session.url or ""
+
     async def create_checkout_session(
         self,
         customer_email: str,

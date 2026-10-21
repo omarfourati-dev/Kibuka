@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from ...domain.entities.book import Book
+from ...domain.entities.purchase import BookPurchase
 from ...domain.value_objects.language import AgeRange, BookTheme, Language
 
 
@@ -31,3 +32,6 @@ class IBookRepository(ABC):
 
     @abstractmethod
     async def is_purchased_by_user(self, book_id: str, user_id: str) -> bool: ...
+
+    @abstractmethod
+    async def record_purchase(self, purchase: BookPurchase) -> None: ...

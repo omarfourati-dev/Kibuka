@@ -128,6 +128,9 @@ class MockBookRepository(IBookRepository):
     async def is_purchased_by_user(self, book_id: str, user_id: str) -> bool:
         return (book_id, user_id) in self._purchased
 
+    async def record_purchase(self, purchase) -> None:  # noqa: ANN001
+        self._purchased.add((purchase.book_id, purchase.user_id))
+
     def add_book(self, book: Book) -> None:
         self._books[book.id] = book
 
