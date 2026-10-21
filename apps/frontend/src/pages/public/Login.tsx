@@ -10,8 +10,9 @@ import { Input } from "../../components/ui/Input";
 type Mode = "login" | "register";
 
 interface AuthResponse {
+  access_token: string;
+  token_type: string;
   user: AuthUser;
-  accessToken: string;
 }
 
 export default function Login() {
@@ -52,7 +53,7 @@ export default function Login() {
       ),
     onSuccess: (data) => {
       setUser(data.user);
-      setToken(data.accessToken);
+      setToken(data.access_token);
       history.replace("/");
     },
     onError: (err: unknown) => {

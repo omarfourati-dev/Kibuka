@@ -107,6 +107,21 @@ class TestLogin:
         assert response.status_code == 200
         assert decode_access_token(response.json()["access_token"]) in repo.users
 
+    def test_login_response_includes_public_user(self) -> None:
+        repo = FakeUserRepository()
+        client = _make_client(repo)
+        self._register(client)
+
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "omar@example.com", "password": "s3cret-pass"},
+        )
+
+        user = response.json()["user"]
+        assert user["email"] == "omar@example.com"
+        assert user["role"] == "member"
+        assert "hashed_password" not in user
+
     def test_login_with_wrong_password_returns_401(self) -> None:
         repo = FakeUserRepository()
         client = _make_client(repo)

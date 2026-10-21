@@ -49,22 +49,20 @@ async def get_book_repository(
 
 
 class WordTimestampResponse(BaseModel):
+    # camelCase — der Web-Reader (audio-sync.ts) konsumiert startTime/endTime in ms
     word: str
-    start_time_ms: int
-    end_time_ms: int
-
-
-class PageContentResponse(BaseModel):
-    language: str
-    text: str
-    audio_url: str | None = None
-    word_timestamps: list[WordTimestampResponse] = []
+    startTime: int
+    endTime: int
 
 
 class BookPageResponse(BaseModel):
+    """Seiteninhalte als Sprach-Maps — der Vertrag des Web-Readers."""
+
     page_number: int
     illustration_url: str | None = None
-    contents: list[PageContentResponse] = []
+    texts: dict[str, str] = {}
+    audio_urls: dict[str, str] = {}
+    word_timestamps: dict[str, list[WordTimestampResponse]] = {}
 
 
 class BookSummaryResponse(BaseModel):
@@ -112,27 +110,28 @@ class ProgressResponse(BaseModel):
 
 
 def _page_to_response(page: BookPage) -> BookPageResponse:
-    p: BookPage = page
-    contents = [
-        PageContentResponse(
-            language=str(c.language),
-            text=c.text,
-            audio_url=c.audio_url,
-            word_timestamps=[
-                WordTimestampResponse(
-                    word=ts.word,
-                    start_time_ms=ts.start_time_ms,
-                    end_time_ms=ts.end_time_ms,
-                )
-                for ts in c.word_timestamps
-            ],
-        )
-        for c in p.contents
-    ]
+    texts: dict[str, str] = {}
+    audio_urls: dict[str, str] = {}
+    word_timestamps: dict[str, list[WordTimestampResponse]] = {}
+    for c in page.contents:
+        lang = c.language.value
+        texts[lang] = c.text
+        if c.audio_url:
+            audio_urls[lang] = c.audio_url
+        word_timestamps[lang] = [
+            WordTimestampResponse(
+                word=ts.word,
+                startTime=ts.start_time_ms,
+                endTime=ts.end_time_ms,
+            )
+            for ts in c.word_timestamps
+        ]
     return BookPageResponse(
-        page_number=p.page_number,
-        illustration_url=p.illustration_url,
-        contents=contents,
+        page_number=page.page_number,
+        illustration_url=page.illustration_url,
+        texts=texts,
+        audio_urls=audio_urls,
+        word_timestamps=word_timestamps,
     )
 
 

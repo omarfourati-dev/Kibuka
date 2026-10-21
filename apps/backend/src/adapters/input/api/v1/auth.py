@@ -33,9 +33,21 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class PublicUser(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user: PublicUser | None = None
+
+
+def _public_user(user: User) -> PublicUser:
+    return PublicUser(id=user.id, email=user.email, name=user.name, role=user.role.value)
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -57,7 +69,7 @@ async def register(
         hashed_password=hash_password(body.password),
     )
     saved = await repo.save(user)
-    return TokenResponse(access_token=create_access_token(saved.id))
+    return TokenResponse(access_token=create_access_token(saved.id), user=_public_user(saved))
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -75,7 +87,7 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
-    return TokenResponse(access_token=create_access_token(user.id))
+    return TokenResponse(access_token=create_access_token(user.id), user=_public_user(user))
 
 
 @router.post("/refresh", response_model=TokenResponse)
