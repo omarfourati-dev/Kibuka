@@ -2,18 +2,19 @@
 
 Pipeline:
     1. Pick a random theme + age range.
-    2. Generate a German story via Claude (claude-sonnet-4-6).
-    3. Validate content safety with a second Claude call.
-    4. Translate each page into AR, FR, EN via Claude.
+    2. Generate a German story via OpenAI GPT.
+    3. Validate content safety: OpenAI Moderation API (hard gate) followed by
+       a GPT child-suitability verdict.
+    4. Translate each page into AR, FR, EN via GPT.
     5. Generate per-page DALL-E illustrations via IImageService.
-    6. Generate TTS audio per page per language via ITTSService.
+    6. Generate TTS audio per page per language via ITTSService (Google Cloud).
     7. Assemble the Book domain entity.
     8. Persist via IBookRepository.set_daily_book.
     9. Return the saved Book.
 
-No FastAPI, no SQLAlchemy, no OpenAI SDK imported here — hexagonal architecture
-principle: this adapter only depends on domain entities/value-objects and port
-interfaces.
+No FastAPI and no SQLAlchemy imported here — hexagonal architecture principle:
+this adapter only depends on domain entities/value-objects, port interfaces and
+the OpenAI SDK it wraps.
 """
 
 from __future__ import annotations
@@ -23,11 +24,11 @@ import logging
 import random
 import re
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import cast
 from uuid import uuid4
 
-from anthropic import AsyncAnthropic
-from anthropic.types import TextBlock
+from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from ...core.domain.entities.book import Book, BookPage, BookTranslation, PageContent
 from ...core.domain.value_objects.language import AgeRange, BookTheme, Language
@@ -66,7 +67,12 @@ _LANGUAGE_NAMES: dict[Language, str] = {
     Language.EN: "Englische",
 }
 
-_MODEL = "claude-sonnet-4-6"
+#: GPT model for story generation and translations.
+_MODEL = "gpt-4.1"
+#: Cheaper GPT model for the short SAFE/UNSAFE verdict.
+_SAFETY_MODEL = "gpt-4.1-mini"
+#: OpenAI Moderation model — free hard gate before the LLM verdict.
+_MODERATION_MODEL = "omni-moderation-latest"
 
 # Theme → German user prompt fragment
 _THEME_PROMPTS: dict[BookTheme, str] = {
@@ -89,12 +95,12 @@ class BookGenerationService:
 
     def __init__(
         self,
-        anthropic_client: AsyncAnthropic,
+        openai_client: AsyncOpenAI,
         book_repository: IBookRepository,
         tts_service: ITTSService,
         image_service: IImageService,
     ) -> None:
-        self._claude = anthropic_client
+        self._openai = openai_client
         self._repo = book_repository
         self._tts = tts_service
         self._images = image_service
@@ -118,7 +124,7 @@ class BookGenerationService:
         german_title: str = cast(str, story_data["title"])
         german_pages: list[str] = cast(list[str], story_data["pages"])
 
-        # 2. Content safety check
+        # 2. Content safety check (Moderation API gate + GPT verdict)
         full_text = " ".join(german_pages)
         is_safe = await self._validate_content_safety(full_text)
         if not is_safe:
@@ -235,10 +241,34 @@ class BookGenerationService:
     # Private helpers
     # ------------------------------------------------------------------
 
+    async def _chat(
+        self,
+        user_prompt: str,
+        *,
+        system_prompt: str | None = None,
+        model: str = _MODEL,
+        max_tokens: int = 2048,
+    ) -> str:
+        """Single GPT chat call; returns the assistant message text."""
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt is not None:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_prompt})
+
+        response = await self._openai.chat.completions.create(
+            model=model,
+            max_tokens=max_tokens,
+            messages=messages,
+        )
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("OpenAI returned an empty chat completion")
+        return content
+
     async def _generate_story_german(
         self, theme: BookTheme, age_range: AgeRange
     ) -> dict[str, object]:
-        """Call Claude to generate a German children's story.
+        """Call GPT to generate a German children's story.
 
         Returns a dict with keys 'title' (str) and 'pages' (list[str]).
         Retries once if the response cannot be parsed as JSON.
@@ -247,13 +277,7 @@ class BookGenerationService:
         user_prompt += f" Die Geschichte ist für Kinder im Alter von {age_range} Jahren."
 
         for attempt in range(2):
-            response = await self._claude.messages.create(
-                model=_MODEL,
-                max_tokens=2048,
-                system=STORY_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            raw_text = self._extract_text(response)
+            raw_text = await self._chat(user_prompt, system_prompt=STORY_SYSTEM_PROMPT)
 
             try:
                 return self._parse_json_response(raw_text)
@@ -262,7 +286,7 @@ class BookGenerationService:
                     logger.warning("Story JSON parse failed (attempt 1), retrying: %s", exc)
                     continue
                 raise ValueError(
-                    f"Claude returned invalid story JSON after retry: {raw_text!r}"
+                    f"GPT returned invalid story JSON after retry: {raw_text!r}"
                 ) from exc
 
         # Unreachable, but satisfies mypy
@@ -275,50 +299,35 @@ class BookGenerationService:
             raise ValueError(f"Cannot translate to source language: {target_language}")
         system_prompt = TRANSLATION_SYSTEM_PROMPT.format(language_name=language_name)
 
-        response = await self._claude.messages.create(
-            model=_MODEL,
-            max_tokens=512,
-            system=system_prompt,
-            messages=[{"role": "user", "content": german_text}],
-        )
-        return self._extract_text(response).strip()
+        translated = await self._chat(german_text, system_prompt=system_prompt, max_tokens=512)
+        return translated.strip()
 
     async def _validate_content_safety(self, text: str) -> bool:
-        """Second Claude call — returns True only when the model responds with 'SAFE'."""
-        prompt = SAFETY_CHECK_PROMPT.format(text=text)
-        response = await self._claude.messages.create(
-            model=_MODEL,
-            max_tokens=16,
-            messages=[{"role": "user", "content": prompt}],
+        """Two-stage safety check, both via OpenAI.
+
+        1. Moderation API (free) — hard gate against harmful content.
+        2. GPT verdict — child-suitability for ages 3-8 ("SAFE"/"UNSAFE"),
+           which the Moderation categories alone do not cover.
+        """
+        moderation = await self._openai.moderations.create(
+            model=_MODERATION_MODEL,
+            input=text,
         )
-        verdict: str = self._extract_text(response).strip().upper()
-        return verdict == "SAFE"
+        if moderation.results[0].flagged:
+            logger.warning("Moderation API flagged generated story — rejecting book")
+            return False
+
+        prompt = SAFETY_CHECK_PROMPT.format(text=text)
+        verdict = await self._chat(prompt, model=_SAFETY_MODEL, max_tokens=16)
+        return verdict.strip().upper() == "SAFE"
 
     # ------------------------------------------------------------------
     # Utility
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _extract_text(response: Any) -> str:  # noqa: ANN401
-        """Extract plain text from the first content block of a Claude response.
-
-        Accepts any object that has a ``text`` attribute (covers both the real
-        ``anthropic.types.TextBlock`` and test MagicMocks).  Raises ValueError
-        when the first block carries no text (e.g. a ToolUseBlock).
-        """
-        block = response.content[0]
-        # Use TextBlock isinstance check in production; fall back to hasattr so
-        # that unit-test MagicMocks also work without special-casing.
-        if isinstance(block, TextBlock):
-            return block.text
-        text_attr = getattr(block, "text", None)
-        if text_attr is None:
-            raise ValueError(f"Unexpected content block type: {type(block)!r}")
-        return str(text_attr)
-
-    @staticmethod
     def _parse_json_response(raw: str) -> dict[str, object]:
-        """Extract JSON from Claude's response.
+        """Extract JSON from the model response.
 
         Handles cases where the model wraps the JSON in markdown code fences
         (```json ... ```) or adds explanatory text before/after.
@@ -339,7 +348,7 @@ class BookGenerationService:
         if brace_match:
             return cast(dict[str, object], json.loads(brace_match.group(0)))
 
-        raise json.JSONDecodeError("No JSON object found in Claude response", raw, 0)
+        raise json.JSONDecodeError("No JSON object found in model response", raw, 0)
 
 
 # ---------------------------------------------------------------------------

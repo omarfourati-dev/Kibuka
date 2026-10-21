@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 
-from anthropic import AsyncAnthropic
 from arq import cron
 from arq.connections import RedisSettings
 from openai import AsyncOpenAI
@@ -40,13 +39,12 @@ async def startup(ctx: dict) -> None:  # type: ignore[type-arg]
     """Initialise all service dependencies and store them in the ARQ context.
 
     ARQ passes *ctx* (a plain dict) to every job function, so we use it as a
-    lightweight DI container.  All heavy clients (Anthropic, OpenAI, Google TTS,
-    S3, database) are created once here and reused across jobs.
+    lightweight DI container.  All heavy clients (OpenAI, Google TTS, S3,
+    database) are created once here and reused across jobs.
     """
     logger.info("ARQ worker starting up — wiring service dependencies")
 
-    # External AI clients
-    anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+    # External AI client — OpenAI covers story, translations, safety and images
     openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
 
     # Storage
@@ -79,7 +77,7 @@ async def startup(ctx: dict) -> None:  # type: ignore[type-arg]
 
     # Assemble the orchestrating service
     book_generation_service = BookGenerationService(
-        anthropic_client=anthropic_client,
+        openai_client=openai_client,
         book_repository=book_repository,
         tts_service=tts_service,
         image_service=image_service,

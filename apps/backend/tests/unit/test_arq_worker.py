@@ -154,10 +154,6 @@ class TestStartupShutdown:
 
         with (
             patch(
-                "src.workers.arq_worker.AsyncAnthropic",
-                return_value=MagicMock(),
-            ),
-            patch(
                 "src.workers.arq_worker.AsyncOpenAI",
                 return_value=MagicMock(),
             ),
@@ -195,10 +191,10 @@ class TestStartupShutdown:
         await shutdown(ctx)
 
     @pytest.mark.asyncio
-    async def test_startup_uses_settings_for_anthropic_key(self) -> None:
-        """Anthropic client must be initialised with the API key from settings."""
+    async def test_startup_uses_settings_for_openai_key(self) -> None:
+        """OpenAI client must be initialised with the API key from settings."""
         ctx: dict = {}
-        mock_anthropic_cls = MagicMock(return_value=MagicMock())
+        mock_openai_cls = MagicMock(return_value=MagicMock())
 
         mock_session = AsyncMock()
         mock_session_cm = AsyncMock()
@@ -207,8 +203,7 @@ class TestStartupShutdown:
         mock_session_maker = MagicMock(return_value=mock_session_cm)
 
         with (
-            patch("src.workers.arq_worker.AsyncAnthropic", mock_anthropic_cls),
-            patch("src.workers.arq_worker.AsyncOpenAI", return_value=MagicMock()),
+            patch("src.workers.arq_worker.AsyncOpenAI", mock_openai_cls),
             patch("src.workers.arq_worker.GoogleTTSService", return_value=MagicMock()),
             patch("src.workers.arq_worker.DallE3ImageService", return_value=MagicMock()),
             patch("src.workers.arq_worker.S3StorageService", return_value=MagicMock()),
@@ -217,6 +212,6 @@ class TestStartupShutdown:
         ):
             await startup(ctx)
 
-        mock_anthropic_cls.assert_called_once()
-        call_kwargs = mock_anthropic_cls.call_args
+        mock_openai_cls.assert_called_once()
+        call_kwargs = mock_openai_cls.call_args
         assert call_kwargs is not None
