@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
   # Web
   "fastapi>=0.115",
+  "python-multipart>=0.0.18",
   "uvicorn[standard]>=0.32",
   # Database — PostgreSQL + pgvector
   "sqlalchemy[asyncio]>=2.0",

@@ -1,21 +1,34 @@
 from __future__ import annotations
+
 import asyncio
-from logging.config import fileConfig
-from alembic import context
-from sqlalchemy.ext.asyncio import create_async_engine
-import sys
 import os
+import sys
+from logging.config import fileConfig
+
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from alembic import context
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.infrastructure.config import settings
 from src.adapters.output.persistence.base_model import Base
 from src.adapters.output.persistence.models import (  # noqa: F401 — ensure all models are imported
-    UserModel, SpaceModel, DocumentModel, DocumentChunkModel,
-    ConversationModel, ChatMessageModel, AgentRunModel, AgentStepModel,
-    SubscriptionModel, NotificationModel, ApiKeyModel,
-    OutgoingWebhookModel, ActivityLogModel, AIUsageModel,
+    ActivityLogModel,
+    AgentRunModel,
+    AgentStepModel,
+    AIUsageModel,
+    ApiKeyModel,
+    ChatMessageModel,
+    ConversationModel,
+    DocumentChunkModel,
+    DocumentModel,
+    NotificationModel,
+    OutgoingWebhookModel,
+    SpaceModel,
+    SubscriptionModel,
+    UserModel,
 )
+from src.infrastructure.config import settings
 
 config = context.config
 if config.config_file_name is not None:
