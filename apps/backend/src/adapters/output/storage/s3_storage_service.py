@@ -45,10 +45,14 @@ class S3StorageService(IStorageService):
         # Lazy import — boto3 may not be present in unit-test environments.
         try:
             import boto3
+            from botocore.config import Config
 
             kwargs: dict[str, Any] = {"region_name": region}
             if endpoint_url:
                 kwargs["endpoint_url"] = endpoint_url
+                # S3-compatible stores behind a plain domain (MinIO, R2) need
+                # path-style URLs — virtual-host style would hit bucket.domain.
+                kwargs["config"] = Config(s3={"addressing_style": "path"})
             if access_key_id:
                 kwargs["aws_access_key_id"] = access_key_id
                 kwargs["aws_secret_access_key"] = secret_access_key

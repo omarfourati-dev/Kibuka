@@ -64,11 +64,12 @@ jobs:
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           GOOGLE_TTS_CREDENTIALS_JSON=${{ secrets.GOOGLE_TTS_CREDENTIALS_JSON }}
 
+          # Self-hosted MinIO: Uploads und Public-URLs laufen über Caddy
           S3_BUCKET=kibuka-assets
           S3_REGION=eu-central-1
           S3_ACCESS_KEY_ID=${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY=${{ secrets.S3_SECRET_ACCESS_KEY }}
-          S3_ENDPOINT_URL=
+          S3_ENDPOINT_URL=https://kibuka.omarfourati.de
           EOF
 
       - name: Build images
