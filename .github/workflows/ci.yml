@@ -1,8 +1,9 @@
 name: CI
+# Kein pull_request-Trigger: Der self-hosted Runner läuft auf dem
+# Produktionsserver — PR-Code (auch aus Forks) darf dort nie ausgeführt werden.
 on:
   push:
     branches: [main, develop]
-  pull_request:
 
 jobs:
   backend:
