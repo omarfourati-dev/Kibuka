@@ -12,6 +12,7 @@ from collections.abc import AsyncGenerator
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
 from src.adapters.input.api.v1.ai import (
     MAX_COMPLETION_TOKENS,
@@ -70,11 +71,14 @@ class FakeAIClient:
 
 
 class FakeUsageRepository:
-    def __init__(self, daily_cost_usd: float = 0.0) -> None:
+    def __init__(self, daily_cost_usd: float = 0.0, fail_saves: bool = False) -> None:
         self._daily_cost_usd = daily_cost_usd
+        self._fail_saves = fail_saves
         self.saved: list[AIUsage] = []
 
     async def save(self, usage: AIUsage) -> AIUsage:
+        if self._fail_saves:
+            raise IntegrityError("INSERT INTO ai_usage ...", {}, Exception("fk violation"))
         self.saved.append(usage)
         return usage
 
@@ -238,7 +242,9 @@ class TestChatCostLimit:
         assert fake.calls == []
         assert usage_repo.saved == []
 
-    def test_chat_records_usage_after_successful_stream(self) -> None:
+    def test_chat_reserves_prompt_cost_before_provider_and_records_completion(self) -> None:
+        """Fail-closed accounting: prompt cost is written BEFORE the provider
+        call (reservation), completion cost after the stream."""
         fake = FakeAIClient(deltas=["Hallo", " Welt"])
         usage_repo = FakeUsageRepository(daily_cost_usd=0.0)
         client = _make_client(fake, usage_repo=usage_repo)
@@ -249,16 +255,36 @@ class TestChatCostLimit:
         )
 
         assert response.status_code == 200
-        assert len(usage_repo.saved) == 1
-        usage = usage_repo.saved[0]
-        assert usage.user_id == "user-1"
-        assert usage.space_id == "space-1"
-        assert usage.model == "gpt-4.1"
-        assert usage.feature == "chat"
-        assert usage.prompt_tokens > 0
-        assert usage.completion_tokens > 0
-        assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
-        assert usage.cost_usd > 0
+        assert len(usage_repo.saved) == 2
+        reservation, completion = usage_repo.saved
+        for usage in (reservation, completion):
+            assert usage.user_id == "user-1"
+            assert usage.space_id == "space-1"
+            assert usage.model == "gpt-4.1"
+            assert usage.feature == "chat"
+            assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
+        assert reservation.prompt_tokens > 0
+        assert reservation.completion_tokens == 0
+        assert reservation.cost_usd > 0
+        assert completion.prompt_tokens == 0
+        assert completion.completion_tokens > 0
+        assert completion.cost_usd > 0
+
+    def test_chat_rejects_before_provider_when_usage_reservation_fails(self) -> None:
+        """An invalid space_id (FK violation) must abort BEFORE any paid
+        provider call — never stream for free."""
+        fake = FakeAIClient(deltas=["nie gesendet"])
+        usage_repo = FakeUsageRepository(fail_saves=True)
+        client = _make_client(fake, usage_repo=usage_repo)
+
+        response = client.post(
+            "/api/v1/ai/chat",
+            json={"message": "Hallo", "space_id": "space-does-not-exist"},
+        )
+
+        assert response.status_code == 400
+        assert fake.calls == []
+        assert stream_limiter._active.get("user-1", 0) == 0
 
     def test_chat_returns_429_when_user_has_too_many_concurrent_streams(
         self, monkeypatch: pytest.MonkeyPatch
@@ -302,7 +328,9 @@ class TestChatCostLimit:
                 json={"message": "Sag hallo", "space_id": "space-1"},
             )
 
-        assert len(usage_repo.saved) == 1
-        usage = usage_repo.saved[0]
-        assert usage.prompt_tokens > 0
-        assert usage.cost_usd > 0
+        # Reservation (prompt cost) plus the partial completion record
+        assert len(usage_repo.saved) == 2
+        reservation, completion = usage_repo.saved
+        assert reservation.prompt_tokens > 0
+        assert reservation.cost_usd > 0
+        assert completion.completion_tokens > 0
