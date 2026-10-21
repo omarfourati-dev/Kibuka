@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from collections.abc import AsyncGenerator
 from functools import cache
@@ -9,6 +10,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
 from .....adapters.output.ai.openai_adapter import OpenAIAdapter
 from .....adapters.output.persistence.repositories.ai_usage_repository import (
@@ -21,7 +23,13 @@ from .....infrastructure.config import settings
 from .....infrastructure.database import async_session_maker
 from ..dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+#: Strong references to detached finalize tasks (client-disconnect path) —
+#: without them the event loop may garbage-collect a running task.
+_background_tasks: set[asyncio.Task[None]] = set()
 
 #: Server-side allowlist — client-supplied model ids outside this set are
 #: rejected so callers cannot escalate to arbitrary expensive models.
@@ -146,8 +154,31 @@ async def chat(
             detail="Too many concurrent chat streams",
         )
 
+    def _usage_row(prompt_tokens: int, completion_tokens: int) -> AIUsage:
+        return AIUsage(
+            id=str(uuid.uuid4()),
+            space_id=body.space_id,
+            user_id=user_id,
+            model=body.model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+            cost_usd=_estimate_cost_usd(body.model, prompt_tokens, completion_tokens),
+            feature="chat",
+        )
+
     try:
         prompt_tokens = await ai_client.count_tokens(body.message, body.model)
+        # Fail-closed accounting: reserve the prompt cost BEFORE any paid
+        # provider call. An invalid space_id fails here (FK) and the request
+        # is rejected with zero provider spend.
+        try:
+            await usage_repo.save(_usage_row(prompt_tokens, 0))
+        except IntegrityError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unknown space_id",
+            ) from exc
         deltas = await ai_client.chat_completion(
             [{"role": "user", "content": body.message}],
             body.model,
@@ -164,22 +195,15 @@ async def chat(
         async def _finalize() -> None:
             await stream_limiter.release(user_id)
             completion_text = "".join(completion_parts)
-            completion_tokens = (
-                await ai_client.count_tokens(completion_text, body.model) if completion_text else 0
-            )
-            await usage_repo.save(
-                AIUsage(
-                    id=str(uuid.uuid4()),
-                    space_id=body.space_id,
-                    user_id=user_id,
-                    model=body.model,
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    total_tokens=prompt_tokens + completion_tokens,
-                    cost_usd=_estimate_cost_usd(body.model, prompt_tokens, completion_tokens),
-                    feature="chat",
-                )
-            )
+            if not completion_text:
+                return
+            try:
+                completion_tokens = await ai_client.count_tokens(completion_text, body.model)
+                await usage_repo.save(_usage_row(0, completion_tokens))
+            except Exception:
+                # The prompt reservation is already persisted; losing the
+                # completion row must be visible, never silent.
+                logger.exception("Failed to record chat completion usage for user %s", user_id)
 
         # Usage recording and slot release must run on every exit path —
         # normal completion, provider errors mid-stream, and client
@@ -191,8 +215,11 @@ async def chat(
             yield b"data: [DONE]\n\n"
         except GeneratorExit:
             # Client disconnected: awaiting here would violate the async
-            # generator protocol, so finalize in a detached task.
-            asyncio.get_running_loop().create_task(_finalize())
+            # generator protocol, so finalize in a detached task that we keep
+            # a strong reference to (otherwise it may be garbage-collected).
+            task = asyncio.get_running_loop().create_task(_finalize())
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
             raise
         except BaseException:
             await _finalize()
