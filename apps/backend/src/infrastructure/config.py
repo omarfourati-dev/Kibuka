@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+#: Shipped default — only acceptable in development; see validator below.
+DEFAULT_SECRET_KEY = "changeme-replace-in-production-env"
 
 
 class Settings(BaseSettings):
@@ -17,7 +20,18 @@ class Settings(BaseSettings):
     app_url: str = "http://localhost:8000"
     environment: str = "development"
     debug: bool = False
-    secret_key: str = Field(default="changeme-replace-in-production-env", min_length=32)
+    secret_key: str = Field(default=DEFAULT_SECRET_KEY, min_length=32)
+
+    @model_validator(mode="after")
+    def _reject_default_secret_outside_development(self) -> Settings:
+        """Tokens signed with the shipped default key could be forged by anyone."""
+        if self.environment != "development" and self.secret_key == DEFAULT_SECRET_KEY:
+            raise ValueError(
+                "SECRET_KEY must be set to a strong unique value when "
+                f"ENVIRONMENT={self.environment!r} — the shipped default is only "
+                "allowed in development"
+            )
+        return self
 
     # Database
     database_url: str = "postgresql+asyncpg://omar:omar@localhost:5432/myapp_dev"

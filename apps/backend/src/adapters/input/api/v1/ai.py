@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import AsyncGenerator
 from functools import cache
@@ -112,26 +113,45 @@ async def chat(
     )
 
     async def sse_stream() -> AsyncGenerator[bytes, None]:
-        completion_text = ""
-        async for delta in deltas:
-            completion_text += delta
-            yield f"data: {delta}\n\n".encode()
-        yield b"data: [DONE]\n\n"
+        completion_parts: list[str] = []
 
-        completion_tokens = await ai_client.count_tokens(completion_text, body.model)
-        await usage_repo.save(
-            AIUsage(
-                id=str(uuid.uuid4()),
-                space_id=body.space_id,
-                user_id=user_id,
-                model=body.model,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_tokens=prompt_tokens + completion_tokens,
-                cost_usd=_estimate_cost_usd(body.model, prompt_tokens, completion_tokens),
-                feature="chat",
+        async def _record_usage() -> None:
+            completion_text = "".join(completion_parts)
+            completion_tokens = (
+                await ai_client.count_tokens(completion_text, body.model) if completion_text else 0
             )
-        )
+            await usage_repo.save(
+                AIUsage(
+                    id=str(uuid.uuid4()),
+                    space_id=body.space_id,
+                    user_id=user_id,
+                    model=body.model,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=prompt_tokens + completion_tokens,
+                    cost_usd=_estimate_cost_usd(body.model, prompt_tokens, completion_tokens),
+                    feature="chat",
+                )
+            )
+
+        # Usage must be recorded on every exit path — normal completion,
+        # provider errors mid-stream, and client disconnects — because the
+        # provider has already billed the tokens produced so far.
+        try:
+            async for delta in deltas:
+                completion_parts.append(delta)
+                yield f"data: {delta}\n\n".encode()
+            yield b"data: [DONE]\n\n"
+        except GeneratorExit:
+            # Client disconnected: awaiting here would violate the async
+            # generator protocol, so record partial usage in a detached task.
+            asyncio.get_running_loop().create_task(_record_usage())
+            raise
+        except BaseException:
+            await _record_usage()
+            raise
+        else:
+            await _record_usage()
 
     return StreamingResponse(sse_stream(), media_type="text/event-stream")
 

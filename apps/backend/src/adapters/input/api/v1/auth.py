@@ -14,6 +14,10 @@ from .....infrastructure.security import create_access_token, hash_password, ver
 router = APIRouter(prefix="/auth", tags=["auth"])
 bearer = HTTPBearer(auto_error=False)
 
+#: Valid bcrypt hash of a random throwaway value — verified when the email is
+#: unknown so both login paths take comparable time (no user enumeration).
+_TIMING_EQUALIZER_HASH = "$2b$12$bEEeJlaLwfD2p5BV1rVvtOMGxaB2vL92p0HF/F.s5hf0xK.hHzG0."
+
 
 async def get_user_repository() -> IUserRepository:
     """Override this dependency in the DI container or tests."""
@@ -65,11 +69,11 @@ async def login(
 ) -> Any:
     """Login with email/password and return a signed access token."""
     user = await repo.get_by_email(body.email)
-    if (
-        user is None
-        or not user.hashed_password
-        or not verify_password(body.password, user.hashed_password)
-    ):
+    password_ok = verify_password(
+        body.password,
+        user.hashed_password if user and user.hashed_password else _TIMING_EQUALIZER_HASH,
+    )
+    if user is None or not user.hashed_password or not password_ok or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
