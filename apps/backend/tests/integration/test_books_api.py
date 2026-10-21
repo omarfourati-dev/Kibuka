@@ -15,6 +15,7 @@ from src.core.domain.entities.book import (
     PageContent,
     WordTimestamp,
 )
+from src.core.domain.entities.user import User, UserRole, UserStatus
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
 
@@ -155,9 +156,32 @@ def book_repo() -> MockBookRepository:
     return repo
 
 
-@pytest.fixture()
-def client(book_repo: MockBookRepository) -> TestClient:
-    """Build the FastAPI app and override book_repository dependency."""
+class FakeUserRepo:
+    """User lookup stand-in for the admin-bypass checks."""
+
+    def __init__(
+        self, role: UserRole = UserRole.MEMBER, status: UserStatus = UserStatus.ACTIVE
+    ) -> None:
+        self._role = role
+        self._status = status
+
+    async def get_by_id(self, user_id: str) -> User:
+        return User(
+            id=user_id,
+            email=f"{user_id}@example.com",
+            name="Test",
+            role=self._role,
+            status=self._status,
+        )
+
+
+def _build_client(
+    book_repo: MockBookRepository,
+    optional_user: str | None,
+    auth_user: str = USER_ID,
+    user_repo: FakeUserRepo | None = None,
+) -> TestClient:
+    from src.adapters.input.api.dependencies import get_user_repository
     from src.adapters.input.api.v1.books import (
         get_book_repository,
         get_current_user,
@@ -168,49 +192,32 @@ def client(book_repo: MockBookRepository) -> TestClient:
     app = FastAPI()
     app.include_router(books_router, prefix="/api/v1")
 
-    async def _override_repo() -> MockBookRepository:
-        return book_repo
-
-    async def _override_optional_user() -> str | None:
-        return None  # unauthenticated by default
-
-    async def _override_auth_user() -> str:
-        return USER_ID
-
-    app.dependency_overrides[get_book_repository] = _override_repo
-    app.dependency_overrides[get_optional_current_user] = _override_optional_user
-    app.dependency_overrides[get_current_user] = _override_auth_user
+    app.dependency_overrides[get_book_repository] = lambda: book_repo
+    app.dependency_overrides[get_optional_current_user] = lambda: optional_user
+    app.dependency_overrides[get_current_user] = lambda: auth_user
+    app.dependency_overrides[get_user_repository] = lambda: user_repo or FakeUserRepo()
 
     return TestClient(app, raise_server_exceptions=True)
+
+
+@pytest.fixture()
+def client(book_repo: MockBookRepository) -> TestClient:
+    """Unauthenticated client."""
+    return _build_client(book_repo, optional_user=None)
 
 
 @pytest.fixture()
 def authed_client(book_repo: MockBookRepository) -> TestClient:
-    """Authenticated client — current user = USER_ID."""
-    from src.adapters.input.api.v1.books import (
-        get_book_repository,
-        get_current_user,
-        get_optional_current_user,
+    """Authenticated client — current user = USER_ID (regular member)."""
+    return _build_client(book_repo, optional_user=USER_ID)
+
+
+@pytest.fixture()
+def admin_client(book_repo: MockBookRepository) -> TestClient:
+    """Authenticated client whose user is an active admin."""
+    return _build_client(
+        book_repo, optional_user=USER_ID, user_repo=FakeUserRepo(role=UserRole.ADMIN)
     )
-    from src.adapters.input.api.v1.books import router as books_router
-
-    app = FastAPI()
-    app.include_router(books_router, prefix="/api/v1")
-
-    async def _override_repo() -> MockBookRepository:
-        return book_repo
-
-    async def _override_optional_user() -> str | None:
-        return USER_ID
-
-    async def _override_auth_user() -> str:
-        return USER_ID
-
-    app.dependency_overrides[get_book_repository] = _override_repo
-    app.dependency_overrides[get_optional_current_user] = _override_optional_user
-    app.dependency_overrides[get_current_user] = _override_auth_user
-
-    return TestClient(app, raise_server_exceptions=True)
 
 
 # ---------------------------------------------------------------------------
@@ -463,3 +470,24 @@ class TestProgress:
         response = authed_client.get("/api/v1/books/book-1/progress")
         data = response.json()
         assert data["completed"] is True
+
+
+class TestAdminAccess:
+    """Active admins can read every book without purchasing it."""
+
+    def test_admin_can_read_full_book_without_purchase(self, admin_client: TestClient) -> None:
+        response = admin_client.get("/api/v1/books/book-1/read")
+
+        assert response.status_code == 200
+        assert len(response.json()["pages"]) > 0
+
+    def test_admin_sees_book_as_purchased_in_detail(self, admin_client: TestClient) -> None:
+        response = admin_client.get("/api/v1/books/book-1")
+
+        assert response.status_code == 200
+        assert response.json()["is_purchased"] is True
+
+    def test_member_without_purchase_is_still_rejected(self, authed_client: TestClient) -> None:
+        response = authed_client.get("/api/v1/books/book-1/read")
+
+        assert response.status_code == 403
