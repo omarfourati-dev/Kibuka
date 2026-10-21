@@ -6,12 +6,14 @@ password and returns a signed access token; login verifies credentials.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.adapters.input.api.v1.auth import get_user_repository
 from src.adapters.input.api.v1.auth import router as auth_router
-from src.core.domain.entities.user import User
+from src.core.domain.entities.user import User, UserStatus
 from src.infrastructure.security import decode_access_token
 
 # ---------------------------------------------------------------------------
@@ -124,6 +126,35 @@ class TestLogin:
         response = client.post(
             "/api/v1/auth/login",
             json={"email": "nobody@example.com", "password": "whatever"},
+        )
+
+        assert response.status_code == 401
+
+    def test_login_with_suspended_account_returns_401(self) -> None:
+        """Inactive or suspended accounts must not receive tokens."""
+        repo = FakeUserRepository()
+        client = _make_client(repo)
+        self._register(client)
+        user = next(iter(repo.users.values()))
+        user.status = UserStatus.SUSPENDED
+
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "omar@example.com", "password": "s3cret-pass"},
+        )
+
+        assert response.status_code == 401
+
+    def test_login_with_soft_deleted_account_returns_401(self) -> None:
+        repo = FakeUserRepository()
+        client = _make_client(repo)
+        self._register(client)
+        user = next(iter(repo.users.values()))
+        user.deleted_at = datetime.now(UTC)
+
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "omar@example.com", "password": "s3cret-pass"},
         )
 
         assert response.status_code == 401

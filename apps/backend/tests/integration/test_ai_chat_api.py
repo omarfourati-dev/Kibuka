@@ -29,10 +29,15 @@ from src.infrastructure.security import create_access_token
 
 
 class FakeAIClient:
-    """IAIClient stand-in that records calls and yields canned deltas."""
+    """IAIClient stand-in that records calls and yields canned deltas.
 
-    def __init__(self, deltas: list[str]) -> None:
+    With fail_after_first_delta=True the stream raises mid-way, simulating a
+    provider error after tokens were already produced (and paid for).
+    """
+
+    def __init__(self, deltas: list[str], fail_after_first_delta: bool = False) -> None:
         self._deltas = deltas
+        self._fail_after_first_delta = fail_after_first_delta
         self.calls: list[dict] = []
 
     async def chat_completion(
@@ -44,8 +49,10 @@ class FakeAIClient:
         self.calls.append({"messages": messages, "model": model, "stream": stream})
 
         async def _gen() -> AsyncGenerator[str, None]:
-            for delta in self._deltas:
+            for i, delta in enumerate(self._deltas):
                 yield delta
+                if self._fail_after_first_delta and i == 0:
+                    raise RuntimeError("provider stream broke")
 
         return _gen()
 
@@ -244,4 +251,21 @@ class TestChatCostLimit:
         assert usage.prompt_tokens > 0
         assert usage.completion_tokens > 0
         assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
+        assert usage.cost_usd > 0
+
+    def test_chat_records_usage_even_when_stream_breaks_midway(self) -> None:
+        """Provider errors mid-stream must not lose the usage already paid for."""
+        fake = FakeAIClient(deltas=["Hallo", " Welt"], fail_after_first_delta=True)
+        usage_repo = FakeUsageRepository(daily_cost_usd=0.0)
+        client = _make_client(fake, usage_repo=usage_repo)
+
+        with pytest.raises(RuntimeError, match="provider stream broke"):
+            client.post(
+                "/api/v1/ai/chat",
+                json={"message": "Sag hallo", "space_id": "space-1"},
+            )
+
+        assert len(usage_repo.saved) == 1
+        usage = usage_repo.saved[0]
+        assert usage.prompt_tokens > 0
         assert usage.cost_usd > 0
