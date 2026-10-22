@@ -73,6 +73,12 @@ describe("BookCard", () => {
     expect(screen.getByText("Gekauft")).toBeInTheDocument();
   });
 
+  it("shows Gratis instead of €0,00 for free books", () => {
+    render(<BookCard {...defaultProps} isPurchased={false} priceSingle={0} />);
+    expect(screen.getByText("Gratis")).toBeInTheDocument();
+    expect(screen.queryByText("€0,00")).not.toBeInTheDocument();
+  });
+
   it("calls onClick when clicked", () => {
     const handleClick = vi.fn();
     render(<BookCard {...defaultProps} onClick={handleClick} />);
