@@ -15,47 +15,35 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#FF6B35" />
 
-    <!-- Primary meta -->
+    <!--
+      SEO/GEO: nginx ersetzt den Block unten pro Seite durch Titel, Beschreibung,
+      Canonical, Open Graph und JSON-LD aus dem Backend (/api/v1/seo/head…).
+      Im Vite-Dev-Server sind die SSI-Marker nur Kommentare — dort gilt der
+      Standard-Head darunter; in Produktion dient er als Rückfall (stub), falls
+      das Backend nicht antwortet.
+    -->
+    <!--# block name="seo_head" -->
+    <title>Kibuka – Jeden Tag ein neues Kinderbuch in 4 Sprachen</title>
     <meta
       name="description"
-      content="Kibuka — Täglich neue KI-generierte Kinderbücher in Deutsch, Arabisch, Französisch und Englisch. Für Kinder von 3 bis 10 Jahren."
+      content="Kibuka schenkt mehrsprachigen Familien jeden Tag ein neues illustriertes Kinderbuch zum Vorlesen und Mitlesen – auf Deutsch, Arabisch, Französisch und Englisch."
     />
-    <meta
-      name="keywords"
-      content="Kinderbücher, KI, mehrsprachig, Arabisch, Deutsch, Französisch, Englisch, Kinder, Lesen"
-    />
-    <meta name="author" content="Kibuka" />
-    <link rel="canonical" href="https://kibuka.omarfourati.de" />
-
-    <!-- Open Graph -->
-    <meta property="og:title" content="Kibuka — Täglich neue KI-Kinderbücher" />
-    <meta
-      property="og:description"
-      content="Täglich neue KI-generierte Kinderbücher in 4 Sprachen. Für mehrsprachige Familien."
-    />
-    <meta property="og:image" content="https://kibuka.omarfourati.de/og-image.png" />
-    <meta property="og:url" content="https://kibuka.omarfourati.de" />
+    <meta property="og:site_name" content="Kibuka" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="de_DE" />
-
-    <!-- Twitter Card -->
+    <meta property="og:title" content="Kibuka – Jeden Tag ein neues Kinderbuch in 4 Sprachen" />
+    <meta
+      property="og:description"
+      content="Täglich ein neues illustriertes Kinderbuch zum Vorlesen und Mitlesen – auf Deutsch, Arabisch, Französisch und Englisch."
+    />
+    <meta property="og:image" content="https://kibuka.omarfourati.de/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Kibuka — KI-Kinderbücher" />
+    <meta name="twitter:title" content="Kibuka – Jeden Tag ein neues Kinderbuch in 4 Sprachen" />
     <meta
       name="twitter:description"
-      content="Täglich neue mehrsprachige KI-Kinderbücher für Kinder von 3-8 Jahren."
+      content="Täglich ein neues illustriertes Kinderbuch in 4 Sprachen für Kinder von 3 bis 10 Jahren."
     />
     <meta name="twitter:image" content="https://kibuka.omarfourati.de/og-image.png" />
-
-    <title>Kibuka</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -64,28 +52,40 @@
             "@type": "WebSite",
             "@id": "https://kibuka.omarfourati.de/#website",
             "name": "Kibuka",
-            "url": "https://kibuka.omarfourati.de",
-            "description": "Täglich neue KI-generierte Kinderbücher in 4 Sprachen",
-            "potentialAction": {
-              "@type": "SearchAction",
-              "target": "https://kibuka.omarfourati.de/library?q={search_term_string}",
-              "query-input": "required name=search_term_string"
-            }
+            "url": "https://kibuka.omarfourati.de/",
+            "inLanguage": "de"
           },
           {
             "@type": "Organization",
             "@id": "https://kibuka.omarfourati.de/#organization",
             "name": "Kibuka",
-            "url": "https://kibuka.omarfourati.de",
-            "logo": "https://kibuka.omarfourati.de/logo.png",
-            "description": "KI-Kinderbücher für mehrsprachige Familien"
+            "url": "https://kibuka.omarfourati.de/",
+            "logo": "https://kibuka.omarfourati.de/logo.png"
           }
         ]
       }
     </script>
+    <!--# endblock -->
+    <!--# include virtual="/__seo/head$seo_path" stub="seo_head" wait="yes" -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Server-gerenderter SEO-Inhalt in #root — sichtbar nur bis die App startet */
+      .kibuka-seo { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1rem 6rem;
+        font-family: Nunito, system-ui, sans-serif; color: #36271c; line-height: 1.55; }
+      .kibuka-seo a { color: #c2410c; }
+      .kibuka-seo img { max-width: 12rem; height: auto; border-radius: 1rem; }
+      .kibuka-seo nav { margin-bottom: 1rem; font-size: 0.9rem; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!--# block name="seo_body" --><!-- kibuka --><!--# endblock -->
+    <div id="root"><!--# include virtual="/__seo/body$seo_path" stub="seo_body" wait="yes" --></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

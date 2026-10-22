@@ -1,6 +1,35 @@
+# Kibuka — mehrsprachige Kinderbücher
+# Öffentliche Seiten sind für Suchmaschinen und KI-Suche ausdrücklich freigegeben.
+# Gesperrt: API, Login/Profil, geschützter Bereich und der Lese-Modus
+# (vollständige Buchtexte sind das bezahlte Produkt).
+
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /app/
 Disallow: /admin/
+Disallow: /login
+Disallow: /profile
+Disallow: /books/*/read
+
+# KI-Suche und -Assistenten (Antworten mit Quellenlink)
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: GPTBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: ClaudeBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
+Disallow: /login
+Disallow: /profile
+Disallow: /books/*/read
 
 Sitemap: https://kibuka.omarfourati.de/sitemap.xml

@@ -9,6 +9,7 @@ from .books import router as books_router
 from .health import router as health_router
 from .notifications import router as notifications_router
 from .profiles import router as profiles_router
+from .seo import router as seo_router
 from .spaces import router as spaces_router
 from .users import router as users_router
 from .webhooks import router as webhooks_router
@@ -26,3 +27,4 @@ api_router.include_router(health_router)
 api_router.include_router(notifications_router)
 api_router.include_router(books_router)
 api_router.include_router(profiles_router)
+api_router.include_router(seo_router)
