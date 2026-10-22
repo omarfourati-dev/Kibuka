@@ -7,6 +7,7 @@ from .auth import router as auth_router
 from .billing import router as billing_router
 from .books import router as books_router
 from .health import router as health_router
+from .notifications import router as notifications_router
 from .profiles import router as profiles_router
 from .spaces import router as spaces_router
 from .users import router as users_router
@@ -22,5 +23,6 @@ api_router.include_router(billing_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(api_keys_router)
 api_router.include_router(health_router)
+api_router.include_router(notifications_router)
 api_router.include_router(books_router)
 api_router.include_router(profiles_router)
