@@ -19,6 +19,7 @@ import {
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AdSenseLoader } from "./components/ads/AdSenseLoader";
 
 const LandingPage = lazy(() => import("./pages/public/Landing"));
 const LoginPage = lazy(() => import("./pages/public/Login"));
@@ -113,6 +114,7 @@ export default function App() {
   return (
     <IonApp>
       <IonReactRouter>
+        <AdSenseLoader />
         <ErrorBoundary>
           <Switch>
             {/* Fullscreen routes without tab bar */}

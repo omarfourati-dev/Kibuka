@@ -3,6 +3,7 @@ import { IonContent, IonPage } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import { getAuthHeaders, useAuthStore } from "@omarsapp/shared-stores";
 import { logout } from "../lib/session";
+import { IMPRINT_URL, PRIVACY_URL, resetAdConsent } from "../lib/ads";
 
 interface SubscriptionStatus {
   status: string;
@@ -256,6 +257,36 @@ export default function ProfilePage() {
               </button>
             </div>
           )}
+
+          <nav
+            aria-label="Rechtliches"
+            className="flex flex-wrap justify-center gap-4 text-xs"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            <button
+              type="button"
+              onClick={() => resetAdConsent()}
+              className="hover:underline"
+            >
+              Datenschutzeinstellungen
+            </button>
+            <a
+              href={PRIVACY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              Datenschutz
+            </a>
+            <a
+              href={IMPRINT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              Impressum
+            </a>
+          </nav>
         </div>
       </IonContent>
     </IonPage>
