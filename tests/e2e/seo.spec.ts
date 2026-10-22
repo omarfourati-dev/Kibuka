@@ -103,14 +103,22 @@ test.describe('SEO — robots.txt & sitemap', () => {
     expect(response.status()).toBeLessThan(404)
   })
 
-  test('sitemap.xml is accessible', async ({ page }) => {
-    const response = await page.request.get('/sitemap.xml')
-    expect(response.status()).toBeLessThan(404)
+  // sitemap.xml und llms.txt kommen seit dem SEO-Umbau dynamisch vom Backend
+  // (alle Bücher) — abgedeckt in apps/backend/tests/integration/test_seo_api.py
+
+  test('robots.txt invites AI search crawlers but keeps private areas closed', async ({ page }) => {
+    const text = await (await page.request.get('/robots.txt')).text()
+    for (const bot of ['OAI-SearchBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']) {
+      expect(text).toContain(`User-agent: ${bot}`)
+    }
+    expect(text).toContain('Disallow: /books/*/read')
+    expect(text).toContain('Sitemap: https://kibuka.omarfourati.de/sitemap.xml')
   })
 
-  test('llms.txt is accessible for GEO', async ({ page }) => {
-    const response = await page.request.get('/llms.txt')
-    expect(response.status()).toBeLessThan(404)
+  test('index.html carries the SSI hooks for server-side SEO rendering', async ({ page }) => {
+    const html = await (await page.request.get('/')).text()
+    expect(html).toContain('<!--# include virtual="/__seo/head$seo_path"')
+    expect(html).toContain('<!--# include virtual="/__seo/body$seo_path"')
   })
 })
 
