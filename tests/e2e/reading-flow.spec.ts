@@ -188,3 +188,44 @@ test.describe('Reader Page', () => {
     await expect(page.locator('body')).not.toBeEmpty()
   })
 })
+
+test.describe('Tab-Navigation', () => {
+  // Bug 22.10.: Nach einem Tab-Wechsel kam man nicht mehr zurück zu Home —
+  // die URL wechselte, aber die alte Seite blieb oben liegen.
+  const DAILY = {
+    id: 'daily-1', theme: 'animals', age_range: '3-5', cover_image_url: null,
+    is_daily_book: true, published_at: new Date().toISOString(), page_count: 6,
+    price_single: 0, titles: { de: 'Lilly, die kleine Füchsin' },
+  }
+
+  async function topPageText(page: import('@playwright/test').Page) {
+    // Welche Ionic-Seite liegt tatsächlich oben? (ion-page-invisible ist nur
+    // opacity:0 — Playwrights toBeVisible würde sie als sichtbar werten)
+    return page.evaluate(() => {
+      const el = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 3)
+      return el?.closest('.ion-page')?.textContent ?? ''
+    })
+  }
+
+  for (const tab of ['Bibliothek', 'Preise', 'Profil']) {
+    test(`switching ${tab} → Home shows the home page again`, async ({ page }) => {
+      await page.route('**/api/v1/books/daily', (r) =>
+        r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DAILY) })
+      )
+      await page.route('**/api/v1/books?**', (r) =>
+        r.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ items: [], total: 0, page: 1, page_size: 6 }) })
+      )
+      await page.route('**/api/v1/auth/refresh', (r) => r.fulfill({ status: 401, body: '{}' }))
+
+      await page.goto('/')
+      await expect(page.getByText('Buch des Tages')).toBeVisible({ timeout: 10000 })
+
+      await page.locator('ion-tab-button', { hasText: tab }).click()
+      await expect.poll(() => topPageText(page)).not.toContain('Buch des Tages')
+
+      await page.locator('ion-tab-button', { hasText: 'Home' }).click()
+      await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('Buch des Tages')
+    })
+  }
+})
