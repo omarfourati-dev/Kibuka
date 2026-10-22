@@ -87,7 +87,8 @@ class BookFullResponse(BookSummaryResponse):
 
 
 class PaginatedBooksResponse(BaseModel):
-    books: list[BookSummaryResponse]
+    # "items" ist der Vertrag des Web-Frontends (LibraryPage/HomePage)
+    items: list[BookSummaryResponse]
     total: int
     page: int
     page_size: int
@@ -185,7 +186,7 @@ async def list_books(
         page_size=page_size,
     )
     return PaginatedBooksResponse(
-        books=[_book_to_summary(b) for b in books],
+        items=[_book_to_summary(b) for b in books],
         total=total,
         page=page,
         page_size=page_size,
