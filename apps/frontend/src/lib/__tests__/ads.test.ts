@@ -24,19 +24,23 @@ afterEach(() => {
 });
 
 describe("adsAllowedOn", () => {
-  it("allows every view with content, including the reader", () => {
+  it("allows the browsing views with content", () => {
     for (const path of [
       "/",
       "/library",
       "/books",
       "/books/42",
-      "/books/42/read",
       "/pricing",
       "/profile",
       "/landing",
     ]) {
       expect(adsAllowedOn(path)).toBe(true);
     }
+  });
+
+  it("keeps the reader free of ads — children read there", () => {
+    expect(adsAllowedOn("/books/42/read")).toBe(false);
+    expect(adsAllowedOn("/books/9f9e0588-73aa/read")).toBe(false);
   });
 
   it("keeps login and the protected area free of ads", () => {
