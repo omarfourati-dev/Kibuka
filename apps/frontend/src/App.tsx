@@ -64,6 +64,22 @@ function MainTabs() {
         />
         <Route exact path="/pricing" component={lazyPage(PricingPage)} />
         <Route exact path="/profile" component={lazyPage(ProfilePage)} />
+        {/* 404: unbekannte Pfade zurück zur Startseite. Als explizite
+            Pfad-Negativliste statt pfadloser Catch-all-Route — die matcht
+            im IonRouterOutlet sonst vor spezifischeren Routen. */}
+        <Route
+          render={({ location }) =>
+            [
+              /^\/$/,
+              /^\/library$/,
+              /^\/books(\/|$)/,
+              /^\/pricing$/,
+              /^\/profile$/,
+            ].some((re) => re.test(location.pathname)) ? null : (
+              <Redirect to="/" />
+            )
+          }
+        />
       </IonRouterOutlet>
       <IonTabBar slot="bottom" className="kibuka-tab-bar">
         <IonTabButton tab="home" href="/">

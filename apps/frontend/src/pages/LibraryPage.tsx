@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
+import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookCard } from "../components/book/BookCard";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -15,6 +16,7 @@ interface BookSummary {
   page_count: number;
   price_single: number;
   titles: Record<string, string>;
+  is_purchased?: boolean;
 }
 
 interface BooksListResponse {
@@ -59,6 +61,8 @@ export default function LibraryPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [language, setLanguage] = useState("");
   const [ageRange, setAgeRange] = useState("");
@@ -67,6 +71,7 @@ export default function LibraryPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
 
     const params = new URLSearchParams({
       page: String(page),
@@ -76,18 +81,19 @@ export default function LibraryPage() {
     if (ageRange) params.set("age_range", ageRange);
     if (theme) params.set("theme", theme);
 
-    fetch(`/api/v1/books?${params.toString()}`)
-      .then((r) => (r.ok ? (r.json() as Promise<BooksListResponse>) : null))
+    fetch(`/api/v1/books?${params.toString()}`, { headers: getAuthHeaders() })
+      .then((r) => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json() as Promise<BooksListResponse>;
+      })
       .then((data) => {
         if (cancelled) return;
-        setBooks(data?.items ?? []);
-        setTotal(data?.total ?? 0);
+        setBooks(data.items ?? []);
+        setTotal(data.total ?? 0);
       })
       .catch(() => {
-        if (!cancelled) {
-          setBooks([]);
-          setTotal(0);
-        }
+        // Fehler nicht als leeren Katalog tarnen
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -96,7 +102,7 @@ export default function LibraryPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, language, ageRange, theme]);
+  }, [page, language, ageRange, theme, reloadKey]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -217,6 +223,30 @@ export default function LibraryPage() {
                 />
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+              <span className="text-5xl select-none">🙈</span>
+              <p
+                className="text-lg font-semibold"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                Etwas ist schiefgelaufen
+              </p>
+              <p
+                className="text-sm text-center"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                Die Bücher konnten nicht geladen werden.
+              </p>
+              <button
+                type="button"
+                onClick={() => setReloadKey((k) => k + 1)}
+                className="px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: "var(--color-primary)" }}
+              >
+                Erneut versuchen
+              </button>
+            </div>
           ) : books.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
               <span className="text-5xl select-none">📚</span>
@@ -248,6 +278,7 @@ export default function LibraryPage() {
                   )}
                   isDailyBook={book.is_daily_book}
                   priceSingle={book.price_single}
+                  isPurchased={book.is_purchased ?? false}
                   onClick={() => history.push(`/books/${book.id}`)}
                 />
               ))}

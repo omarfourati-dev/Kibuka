@@ -14,6 +14,7 @@ interface BookHeroProps {
   book: BookHeroBook;
   onRead?: () => void;
   onPurchase?: () => void;
+  onPreview?: () => void;
   isPurchased?: boolean;
   selectedLanguage?: string;
 }
@@ -29,6 +30,7 @@ export function BookHero({
   book,
   onRead,
   onPurchase,
+  onPreview,
   isPurchased = false,
   selectedLanguage,
 }: BookHeroProps) {
@@ -72,22 +74,18 @@ export function BookHero({
           {book.title}
         </h1>
 
-        {/* Language selector */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Verfügbare Sprachen — reine Info-Badges, keine toten Buttons.
+            Die Sprachwahl passiert auf der Detailseite bzw. im Reader. */}
+        <div className="flex gap-2 flex-wrap" aria-label="Verfügbare Sprachen">
           {book.languages.map((lang) => {
             const label = LANGUAGE_LABELS[lang] ?? lang.toUpperCase();
             const isSelected = lang === selectedLanguage;
             return (
-              <button
+              <span
                 key={lang}
-                type="button"
-                aria-pressed={isSelected}
-                aria-label={label}
                 className={cn(
-                  "px-3 py-1 rounded-full text-sm font-semibold border-2 transition-all duration-150",
-                  isSelected
-                    ? "text-white border-transparent"
-                    : "border-current hover:opacity-80",
+                  "px-3 py-1 rounded-full text-sm font-semibold border-2 select-none",
+                  isSelected ? "text-white border-transparent" : "",
                 )}
                 style={
                   isSelected
@@ -102,7 +100,7 @@ export function BookHero({
                 }
               >
                 {label}
-              </button>
+              </span>
             );
           })}
         </div>
@@ -132,7 +130,7 @@ export function BookHero({
 
           <button
             type="button"
-            onClick={onRead}
+            onClick={onPreview ?? onRead}
             className="px-6 py-3 rounded-xl font-bold text-base border-2 transition-all duration-200 hover:opacity-80"
             style={{
               borderColor: "var(--color-primary)",

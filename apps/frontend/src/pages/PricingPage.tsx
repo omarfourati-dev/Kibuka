@@ -193,7 +193,7 @@ export default function PricingPage() {
                 📚 Kibuka
               </Link>
               <Link
-                to="/"
+                to="/library"
                 className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
                 style={{ color: "var(--color-text-secondary)" }}
               >

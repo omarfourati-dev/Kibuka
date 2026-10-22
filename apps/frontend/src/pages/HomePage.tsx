@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
+import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookHero } from "../components/book/BookHero";
 import { BookCard } from "../components/book/BookCard";
 
@@ -16,6 +17,7 @@ interface BookSummary {
   page_count: number;
   price_single: number;
   titles: Record<string, string>;
+  is_purchased?: boolean;
 }
 
 interface BooksListResponse {
@@ -33,15 +35,21 @@ export default function HomePage() {
   const [dailyBook, setDailyBook] = useState<BookSummary | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
 
     Promise.all([
-      fetch("/api/v1/books/daily").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/v1/books?page=1&page_size=6").then((r) =>
-        r.ok ? (r.json() as Promise<BooksListResponse>) : null,
+      fetch("/api/v1/books/daily", { headers: getAuthHeaders() }).then((r) =>
+        r.ok ? r.json() : null,
       ),
+      fetch("/api/v1/books?page=1&page_size=6", {
+        headers: getAuthHeaders(),
+      }).then((r) => (r.ok ? (r.json() as Promise<BooksListResponse>) : null)),
     ])
       .then(([daily, list]) => {
         if (cancelled) return;
@@ -49,10 +57,8 @@ export default function HomePage() {
         setBooks((list as BooksListResponse | null)?.items ?? []);
       })
       .catch(() => {
-        if (!cancelled) {
-          setDailyBook(null);
-          setBooks([]);
-        }
+        // Netzwerkfehler ist KEIN leerer Katalog — eigener Fehlerzustand
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -61,7 +67,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const hasContent = dailyBook !== null || books.length > 0;
 
@@ -89,6 +95,33 @@ export default function HomePage() {
             />
           ))}
         </div>
+      </div>
+    );
+  } else if (loadError) {
+    body = (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
+        <span className="text-5xl select-none">🙈</span>
+        <p
+          className="text-lg font-semibold"
+          style={{ color: "var(--color-text-primary)" }}
+        >
+          Etwas ist schiefgelaufen
+        </p>
+        <p
+          className="text-sm text-center"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
+          Die Bücher konnten nicht geladen werden. Prüfe deine Verbindung und
+          versuche es noch einmal.
+        </p>
+        <button
+          type="button"
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
+          style={{ backgroundColor: "var(--color-primary)" }}
+        >
+          Erneut versuchen
+        </button>
       </div>
     );
   } else if (!hasContent) {
@@ -127,8 +160,17 @@ export default function HomePage() {
               ),
               priceSingle: dailyBook.price_single,
             }}
-            onRead={() => history.push(`/books/${dailyBook.id}`)}
+            isPurchased={dailyBook.is_purchased ?? false}
+            // Gratis/gekauft → direkt in den Reader; sonst zur Detailseite
+            onRead={() =>
+              history.push(
+                dailyBook.price_single === 0 || dailyBook.is_purchased
+                  ? `/books/${dailyBook.id}/read`
+                  : `/books/${dailyBook.id}`,
+              )
+            }
             onPurchase={() => history.push(`/books/${dailyBook.id}`)}
+            onPreview={() => history.push(`/books/${dailyBook.id}`)}
           />
         )}
 
@@ -155,6 +197,7 @@ export default function HomePage() {
                   )}
                   isDailyBook={book.is_daily_book}
                   priceSingle={book.price_single}
+                  isPurchased={book.is_purchased ?? false}
                   onClick={() => history.push(`/books/${book.id}`)}
                 />
               ))}

@@ -75,11 +75,13 @@ class BookSummaryResponse(BaseModel):
     page_count: int
     price_single: float
     titles: dict[str, str]
+    # Damit Bibliothek/Startseite zeigen können, was dem Nutzer gehört
+    is_purchased: bool = False
 
 
 class BookDetailResponse(BookSummaryResponse):
+    # is_purchased kommt aus der Summary-Basisklasse
     preview_pages: list[BookPageResponse]
-    is_purchased: bool
 
 
 class BookFullResponse(BookSummaryResponse):
@@ -136,7 +138,7 @@ def _page_to_response(page: BookPage) -> BookPageResponse:
     )
 
 
-def _book_to_summary(book: Book) -> BookSummaryResponse:
+def _book_to_summary(book: Book, *, is_purchased: bool = False) -> BookSummaryResponse:
     return BookSummaryResponse(
         id=book.id,
         theme=str(book.theme),
@@ -147,6 +149,7 @@ def _book_to_summary(book: Book) -> BookSummaryResponse:
         page_count=book.page_count,
         price_single=book.price_single,
         titles={str(t.language): t.title for t in book.translations},
+        is_purchased=is_purchased,
     )
 
 
@@ -170,14 +173,16 @@ async def get_daily_book(
 @router.get("", response_model=PaginatedBooksResponse)
 async def list_books(
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
-    _user: Annotated[str | None, Depends(get_optional_current_user)] = None,
+    user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
+    user_id: Annotated[str | None, Depends(get_optional_current_user)] = None,
     language: Annotated[Language | None, Query()] = None,
     age_range: Annotated[AgeRange | None, Query()] = None,
     theme: Annotated[BookTheme | None, Query()] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> PaginatedBooksResponse:
-    """List all books with optional filters. Public endpoint."""
+    """List all books with optional filters. Public endpoint; signed-in
+    users get their purchases marked (admins see everything as owned)."""
     books, total = await repo.list_books(
         language=language,
         age_range=age_range,
@@ -185,8 +190,15 @@ async def list_books(
         page=page,
         page_size=page_size,
     )
+    is_admin = bool(user_id) and await _is_active_admin(user_repo, user_id or "")
+    items: list[BookSummaryResponse] = []
+    for b in books:
+        purchased = bool(user_id) and (
+            is_admin or await repo.is_purchased_by_user(b.id, user_id or "")
+        )
+        items.append(_book_to_summary(b, is_purchased=purchased))
     return PaginatedBooksResponse(
-        items=[_book_to_summary(b) for b in books],
+        items=items,
         total=total,
         page=page,
         page_size=page_size,
@@ -221,12 +233,8 @@ async def get_book_detail(
     sorted_pages = sorted(book.pages, key=lambda p: p.page_number)
     preview_pages = [_page_to_response(p) for p in sorted_pages[:2]]
 
-    summary = _book_to_summary(book)
-    return BookDetailResponse(
-        **summary.model_dump(),
-        preview_pages=preview_pages,
-        is_purchased=is_purchased,
-    )
+    summary = _book_to_summary(book, is_purchased=is_purchased)
+    return BookDetailResponse(**summary.model_dump(), preview_pages=preview_pages)
 
 
 @router.get("/{book_id}/read", response_model=BookFullResponse)
