@@ -70,7 +70,7 @@ export default function LibraryPage() {
 
     const params = new URLSearchParams({
       page: String(page),
-      pageSize: String(PAGE_SIZE),
+      page_size: String(PAGE_SIZE),
     });
     if (language) params.set("language", language);
     if (ageRange) params.set("age_range", ageRange);

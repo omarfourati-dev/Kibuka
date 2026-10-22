@@ -39,7 +39,7 @@ export default function HomePage() {
 
     Promise.all([
       fetch("/api/v1/books/daily").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/v1/books?page=1&pageSize=6").then((r) =>
+      fetch("/api/v1/books?page=1&page_size=6").then((r) =>
         r.ok ? (r.json() as Promise<BooksListResponse>) : null,
       ),
     ])
