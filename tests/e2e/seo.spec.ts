@@ -66,6 +66,29 @@ test.describe('SEO — Homepage', () => {
   })
 })
 
+test.describe('SEO — Sprach-Landingpages', () => {
+  for (const [path, lang, dir] of [
+    ['/ar', 'ar', 'rtl'],
+    ['/fr', 'fr', 'ltr'],
+    ['/en', 'en', 'ltr'],
+  ] as const) {
+    test(`${path} opens the home page with <html lang="${lang}" dir="${dir}">`, async ({ page }) => {
+      await page.goto(path)
+      await expect(page).toHaveURL(new RegExp(`${path}$`))
+      await expect(page.locator('html')).toHaveAttribute('lang', lang)
+      await expect(page.locator('html')).toHaveAttribute('dir', dir)
+    })
+  }
+
+  test('leaving a language page restores German', async ({ page }) => {
+    await page.goto('/ar')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+    await page.goto('/library')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'de')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
+  })
+})
+
 test.describe('SEO — Pricing Page', () => {
   test('pricing page title contains Kibuka', async ({ page }) => {
     await page.goto('/pricing')
