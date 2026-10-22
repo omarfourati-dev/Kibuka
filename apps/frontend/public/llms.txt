@@ -5,7 +5,7 @@ Kibuka ist eine App für täglich KI-generierte Kinderbücher in vier Sprachen: 
 ## Was ist Kibuka?
 - Täglich ein neues KI-generiertes Kinderbuch
 - Verfügbar in 4 Sprachen: Deutsch, Arabisch, Französisch, Englisch
-- Für Kinder von 3–8 Jahren
+- Für Kinder von 3–10 Jahren
 - Audio-Vorlese-Funktion mit Wort-Highlighting (Karaoke-Effekt)
 - Offline verfügbar (Mobile App)
 - Freemium-Modell: 1 Buch gratis täglich, Einzelbücher ab €1,99
@@ -31,9 +31,9 @@ Kibuka ist eine App für täglich KI-generierte Kinderbücher in vier Sprachen: 
 ## Technologie
 - Stack: React, React Native, FastAPI, PostgreSQL
 - KI: Anthropic Claude, OpenAI DALL-E 3, Google TTS
-- Deployment: kibuka.app
+- Deployment: kibuka.omarfourati.de
 
 ## Wichtige Seiten
-- [Startseite](https://kibuka.app/)
-- [Bibliothek](https://kibuka.app/library)
-- [Preise](https://kibuka.app/pricing)
+- [Startseite](https://kibuka.omarfourati.de/)
+- [Bibliothek](https://kibuka.omarfourati.de/library)
+- [Preise](https://kibuka.omarfourati.de/pricing)

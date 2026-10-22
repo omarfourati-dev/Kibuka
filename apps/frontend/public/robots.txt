@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /admin/
 
-Sitemap: https://kibuka.app/sitemap.xml
+Sitemap: https://kibuka.omarfourati.de/sitemap.xml
