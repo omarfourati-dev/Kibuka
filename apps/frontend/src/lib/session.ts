@@ -14,6 +14,9 @@ const KEEP_ALIVE_MS = 12 * 60 * 1000;
  * true = angemeldet; false = keine gültige Sitzung (Store wird geleert).
  */
 export async function restoreSession(): Promise<boolean> {
+  // Nie angemeldet gewesen (persistiertes Flag) → kein Refresh-Cookie zu
+  // erwarten: spart einen Request und eine 401 pro anonymem Besuch
+  if (!useAuthStore.getState().isAuthenticated) return false;
   try {
     const res = await fetch("/api/v1/auth/refresh", {
       method: "POST",
