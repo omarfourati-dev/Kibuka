@@ -34,9 +34,27 @@ sondern auf `omarfourati.de` und müssen fachlich geprüft werden.
   - **außerordentlich** → `manual_review` (Grund von Hand prüfen)
   - Stripe-Fehler → `failed`, die Kündigung bleibt gespeichert
   - Bestätigungs-E-Mail (Vorlage `templates/email/contract_cancellation.html`)
+    mit festem Text, Vorgangsnummer, Eingangszeit, Art und Vertragsende —
+    **ohne** Formular-Freitext (Name, Grund, Vertragsangabe): das Formular
+    braucht keinen Login, sonst ließe sich fremden Adressen beliebiger Text
+    zustellen. Die Details stehen auf der Bestätigungsseite.
 - Die Antwort ist für bekannte und unbekannte Adressen identisch (keine
-  Konto-Enumeration). Drosselung: 10 Anfragen pro IP und Stunde (Redis,
-  `X-Real-IP` von nginx); fällt Redis aus, wird nicht gedrosselt.
+  Konto-Enumeration). Drosselung: 10 Anfragen pro IP und Stunde (siehe unten).
+
+## 4. Drosselung (`adapters/input/api/rate_limit.py`)
+
+| Endpunkt                       | Limit pro Client-IP |
+| ------------------------------ | ------------------- |
+| `POST /auth/login`             | 10 / 5 min          |
+| `POST /auth/register`          | 5 / Stunde          |
+| `POST /auth/refresh`           | 60 / 5 min          |
+| `POST /contracts/cancellation` | 10 / Stunde         |
+
+- Zähler in Redis (INCR + EXPIRE NX in einer Transaktion), fällt Redis aus,
+  wird nicht gedrosselt (Login/Kündigung sollen nie daran scheitern).
+- **Client-IP:** Caddy → nginx → Backend. nginx übernimmt die IP aus Caddys
+  `X-Forwarded-For` (`set_real_ip_from` nur private Docker-Netze) und reicht
+  sie als `X-Real-IP` weiter. Ohne das teilten sich alle Besucher Caddys IP.
 
 ### Betrieb
 

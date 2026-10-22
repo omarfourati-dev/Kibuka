@@ -80,17 +80,10 @@ class SubmitCancellation:
         return cancellation
 
     async def _confirm(self, cancellation: ContractCancellation, has_account: bool) -> None:
-        # Freitext aus dem Formular nur an echte Kontoadressen — sonst wäre
-        # das Formular ein Spam-Relais an beliebige Adressen
-        form_input: dict[str, object] = (
-            {
-                "name": cancellation.name,
-                "reason": cancellation.reason,
-                "contract_reference": cancellation.contract_reference,
-            }
-            if has_account
-            else {"name": None, "reason": None, "contract_reference": None}
-        )
+        # Kein Freitext aus dem Formular (Name, Grund, Vertragsangabe) in der
+        # Mail — das Formular braucht keinen Login, sonst könnte jeder fremden
+        # Adressen eigenen Text (Spam, Phishing) zustellen lassen. Die Details
+        # stehen auf der Bestätigungsseite.
         try:
             await self._email.send(
                 to=cancellation.email,
@@ -102,7 +95,6 @@ class SubmitCancellation:
                     "kind": cancellation.kind.value,
                     "effective_at": cancellation.effective_at,
                     "matched": has_account,
-                    **form_input,
                 },
             )
         except Exception:

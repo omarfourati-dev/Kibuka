@@ -4,6 +4,26 @@ from .config import settings
 
 
 def configure_telemetry() -> None:
+    _configure_sentry()
+    _configure_tracing()
+
+
+def _configure_sentry() -> None:
+    if not settings.sentry_dsn:
+        return
+
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        traces_sample_rate=0.1,
+        # Kinder-App: keine IPs, Cookies oder Request-Bodies an Dritte
+        send_default_pii=False,
+    )
+
+
+def _configure_tracing() -> None:
     if not settings.otel_exporter_otlp_endpoint:
         return
 
@@ -19,12 +39,3 @@ def configure_telemetry() -> None:
     )
     trace.set_tracer_provider(provider)
     FastAPIInstrumentor().instrument()
-
-    if settings.sentry_dsn:
-        import sentry_sdk
-
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            environment=settings.environment,
-            traces_sample_rate=0.1,
-        )

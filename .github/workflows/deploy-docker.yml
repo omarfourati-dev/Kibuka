@@ -78,6 +78,9 @@ jobs:
           SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
           EMAIL_FROM=${{ secrets.EMAIL_FROM || 'noreply@kibuka.omarfourati.de' }}
 
+          # Fehlerüberwachung — ohne Secret bleibt Sentry aus
+          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+
           # Self-hosted SeaweedFS: Uploads intern, Public-Links über die Domain
           S3_BUCKET=kibuka-assets
           S3_REGION=eu-central-1

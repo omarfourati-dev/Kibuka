@@ -9,17 +9,22 @@ _KEY_PREFIX = "ratelimit:"
 
 
 class RedisRateLimitStore(IRateLimitStore):
-    """Festes Zeitfenster in Redis — gemeinsam für alle Worker."""
+    """Festes Zeitfenster in Redis — gemeinsam für alle Worker.
+
+    INCR und EXPIRE NX laufen in einer Transaktion, EXPIRE NX bei jedem
+    Treffer: Ein Zähler ohne Ablauf (= dauerhafte Sperre) kann so nie entstehen.
+    """
 
     def __init__(self, client: Any) -> None:
         self._redis = client
 
     async def hit(self, key: str, window_seconds: int) -> int:
         full_key = _KEY_PREFIX + key
-        count = int(await self._redis.incr(full_key))
-        if count == 1:
-            await self._redis.expire(full_key, window_seconds)
-        return count
+        pipe = self._redis.pipeline(transaction=True)
+        pipe.incr(full_key)
+        pipe.expire(full_key, window_seconds, nx=True)
+        count, _ = await pipe.execute()
+        return int(count)
 
 
 class InMemoryRateLimitStore(IRateLimitStore):
