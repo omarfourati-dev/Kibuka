@@ -20,6 +20,8 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdSenseLoader } from "./components/ads/AdSenseLoader";
+import { DocumentLanguage } from "./components/DocumentLanguage";
+import type { Language } from "./lib/rtl";
 
 const LandingPage = lazy(() => import("./pages/public/Landing"));
 const LoginPage = lazy(() => import("./pages/public/Login"));
@@ -68,8 +70,25 @@ const SpacesPageRoute = lazyPage(SpacesPage);
 const SettingsPageRoute = lazyPage(SettingsPage);
 const AdminPageRoute = lazyPage(AdminPage);
 
+// Sprach-Landingpages: Startseite mit voreingestellter Sprache (ebenfalls
+// stabile Komponenten, siehe oben)
+const homeInLanguage = (lang: Language) =>
+  function LocalizedHomePage() {
+    return (
+      <Suspense fallback={<Fallback />}>
+        <HomePageKibuka lang={lang} />
+      </Suspense>
+    );
+  };
+const HomePageArRoute = homeInLanguage("ar");
+const HomePageFrRoute = homeInLanguage("fr");
+const HomePageEnRoute = homeInLanguage("en");
+
 const TAB_PATHS = [
   "/",
+  "/ar",
+  "/fr",
+  "/en",
   "/library",
   "/books",
   "/books/:bookId",
@@ -82,6 +101,9 @@ function MainTabs() {
     <IonTabs>
       <IonRouterOutlet>
         <Route exact path="/" component={HomePageKibukaRoute} />
+        <Route exact path="/ar" component={HomePageArRoute} />
+        <Route exact path="/fr" component={HomePageFrRoute} />
+        <Route exact path="/en" component={HomePageEnRoute} />
         <Route exact path="/library" component={LibraryPageRoute} />
         <Route exact path="/books" component={LibraryPageRoute} />
         <Route exact path="/books/:bookId" component={BookDetailPageRoute} />
@@ -115,6 +137,7 @@ export default function App() {
     <IonApp>
       <IonReactRouter>
         <AdSenseLoader />
+        <DocumentLanguage />
         <ErrorBoundary>
           <Switch>
             {/* Fullscreen routes without tab bar */}

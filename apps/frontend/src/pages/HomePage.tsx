@@ -4,6 +4,8 @@ import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookHero } from "../components/book/BookHero";
 import { BookCard } from "../components/book/BookCard";
+import { pickTitle } from "../lib/locale";
+import type { Language } from "../lib/rtl";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,7 +31,12 @@ interface BooksListResponse {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+interface HomePageProps {
+  /** Voreingestellte Sprache der Sprach-Landingpages (/ar, /fr, /en) */
+  lang?: Language;
+}
+
+export default function HomePage({ lang = "de" }: HomePageProps = {}) {
   const history = useHistory();
 
   const [dailyBook, setDailyBook] = useState<BookSummary | null>(null);
@@ -150,8 +157,7 @@ export default function HomePage() {
           <BookHero
             book={{
               id: dailyBook.id,
-              title:
-                dailyBook.titles.de ?? Object.values(dailyBook.titles)[0] ?? "",
+              title: pickTitle(dailyBook.titles, lang),
               coverImageUrl: dailyBook.cover_image_url ?? undefined,
               theme: dailyBook.theme,
               ageRange: dailyBook.age_range,
@@ -188,7 +194,7 @@ export default function HomePage() {
                 <BookCard
                   key={book.id}
                   id={book.id}
-                  title={book.titles.de ?? Object.values(book.titles)[0] ?? ""}
+                  title={pickTitle(book.titles, lang)}
                   coverImageUrl={book.cover_image_url ?? undefined}
                   theme={book.theme}
                   ageRange={book.age_range}
