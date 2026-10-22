@@ -14,6 +14,16 @@ import {
   User as UserIcon,
 } from "lucide-react";
 
+interface UserMeResponse {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+  space_id: string | null;
+  avatar_url: string | null;
+}
+
 export default function Settings() {
   const history = useHistory();
   const { user, setUser, clearUser } = useAuthStore();
@@ -47,15 +57,16 @@ export default function Settings() {
   }, []);
 
   const updateProfile = useMutation({
-    mutationFn: (data: { name: string; avatarUrl?: string }) =>
-      apiClient.patch<User>("/users/me", data),
+    // Backend-API ist snake_case: avatar_url im Body, space_id in der Antwort
+    mutationFn: (data: { name: string; avatar_url?: string }) =>
+      apiClient.patch<UserMeResponse>("/users/me", data),
     onSuccess: (updatedUser) => {
       setUser({
         id: updatedUser.id,
         email: updatedUser.email,
         name: updatedUser.name,
-        role: updatedUser.role,
-        spaceId: updatedUser.spaceId,
+        role: updatedUser.role as User["role"],
+        spaceId: updatedUser.space_id ?? undefined,
       });
       setProfileSaved(true);
       setProfileError("");
@@ -94,7 +105,10 @@ export default function Settings() {
       setProfileError("Avatar URL must use HTTPS.");
       return;
     }
-    updateProfile.mutate({ name, ...(avatarUrl ? { avatarUrl } : {}) });
+    updateProfile.mutate({
+      name,
+      ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+    });
   };
 
   const handleDeleteAccount = () => {
