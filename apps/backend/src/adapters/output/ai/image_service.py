@@ -6,6 +6,7 @@ payloads directly, so no temporary-URL download is involved.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 
 from loguru import logger
@@ -14,6 +15,7 @@ from openai import AsyncOpenAI
 from ....core.domain.value_objects.language import AgeRange, BookTheme
 from ....core.ports.output.i_image_service import IImageService
 from ....core.ports.output.i_storage_service import IStorageService
+from .image_encoding import to_webp
 
 # ---------------------------------------------------------------------------
 # Age-range style modifiers — influence prompt detail level and complexity
@@ -163,10 +165,10 @@ class OpenAIImageService(IImageService):
             age_range,
         )
 
-        image_bytes = await self._generate_image_bytes(prompt, book_id)
+        image_bytes = await self._generate_webp(prompt, book_id)
 
-        s3_key = f"books/{book_id}/illustrations/page_{page_number:03d}.png"
-        public_url = await self._storage.upload_image(image_bytes, s3_key, "image/png")
+        s3_key = f"books/{book_id}/illustrations/page_{page_number:03d}.webp"
+        public_url = await self._storage.upload_image(image_bytes, s3_key, "image/webp")
 
         logger.info("Illustration uploaded to {}", public_url)
         return public_url
@@ -193,10 +195,10 @@ class OpenAIImageService(IImageService):
             age_range,
         )
 
-        image_bytes = await self._generate_image_bytes(prompt, book_id)
+        image_bytes = await self._generate_webp(prompt, book_id)
 
-        s3_key = f"books/{book_id}/cover.png"
-        public_url = await self._storage.upload_image(image_bytes, s3_key, "image/png")
+        s3_key = f"books/{book_id}/cover.webp"
+        public_url = await self._storage.upload_image(image_bytes, s3_key, "image/webp")
 
         logger.info("Cover uploaded to {}", public_url)
         return public_url
@@ -204,6 +206,12 @@ class OpenAIImageService(IImageService):
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    async def _generate_webp(self, prompt: str, book_id: str) -> bytes:
+        """PNG vom Modell holen und als verkleinertes WebP zurückgeben."""
+        png = await self._generate_image_bytes(prompt, book_id)
+        # Pillow ist CPU-lastig — nicht die Event-Loop des Workers blockieren
+        return await asyncio.to_thread(to_webp, png)
 
     async def _generate_image_bytes(self, prompt: str, book_id: str) -> bytes:
         """Call the image model and return the decoded PNG bytes."""

@@ -111,6 +111,8 @@ class S3StorageService(IStorageService):
                 Key=key,
                 Body=data,
                 ContentType=content_type,
+                # Keys sind pro Buch fest und ändern sich nie
+                CacheControl="public, max-age=31536000, immutable",
             ),
         )
         return await self.get_public_url(key)

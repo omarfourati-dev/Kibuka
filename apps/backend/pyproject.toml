@@ -45,6 +45,7 @@ dependencies = [
   "opentelemetry-exporter-otlp>=1.29",
   "prometheus-fastapi-instrumentator>=7.0",
   "sentry-sdk[fastapi]>=2.19",
+  "pillow>=11",
 ]
 
 [tool.uv]
@@ -58,6 +59,10 @@ dev-dependencies = [
   "aiosqlite>=0.20",
   "httpx>=0.28",
 ]
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
 
 [tool.ruff]
 target-version = "py312"
