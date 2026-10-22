@@ -92,6 +92,26 @@ describe("HomePage", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
+  it("requests the book grid with the backend's snake_case page_size param", async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/daily")) {
+        return Promise.resolve({ ok: false } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ items: [], total: 0, page: 1, page_size: 6 }),
+      } as Response);
+    });
+
+    renderHomePage();
+    await waitFor(() => {
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        expect.stringContaining("page_size=6"),
+      );
+    });
+  });
+
   it("renders BookHero with daily book after load", async () => {
     vi.mocked(fetch).mockImplementation((url) => {
       if (String(url).includes("/daily")) {

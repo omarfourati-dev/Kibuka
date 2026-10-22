@@ -102,6 +102,21 @@ describe("LibraryPage", () => {
     expect(screen.getByText("Zweites Buch")).toBeInTheDocument();
   });
 
+  it("requests the list with the backend's snake_case page_size param", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({ items: bookList, total: 2, page: 1, page_size: 12 }),
+    } as Response);
+
+    renderLibraryPage();
+    await waitFor(() => {
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        expect.stringContaining("page_size="),
+      );
+    });
+  });
+
   it("shows pagination controls", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
