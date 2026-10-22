@@ -45,7 +45,9 @@ def _make_client(
     app.dependency_overrides[get_user_repository] = lambda: repo
     shared_store = store or InMemoryRefreshTokenStore()
     app.dependency_overrides[get_refresh_token_store] = lambda: shared_store
-    return TestClient(app)
+    # https wie in Produktion — sonst schickt der Client Secure-Cookies nicht
+    # mit und die Tests hingen von ENVIRONMENT ab (CI: test, lokal: development)
+    return TestClient(app, base_url="https://testserver")
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +263,7 @@ class TestRefreshTokenRevocation:
 
         client.post("/api/v1/auth/logout")
         client.cookies.clear()
-        client.cookies.set("refresh_token", stolen, path="/api/v1/auth")
+        client.cookies.set("refresh_token", stolen, domain="testserver", path="/api/v1/auth")
 
         assert client.post("/api/v1/auth/refresh").status_code == 401
 
@@ -273,7 +275,7 @@ class TestRefreshTokenRevocation:
 
         assert client.post("/api/v1/auth/refresh").status_code == 200  # rotiert
         client.cookies.clear()
-        client.cookies.set("refresh_token", first, path="/api/v1/auth")
+        client.cookies.set("refresh_token", first, domain="testserver", path="/api/v1/auth")
 
         assert client.post("/api/v1/auth/refresh").status_code == 401
 
@@ -288,3 +290,18 @@ class TestRefreshTokenRevocation:
         client.cookies.clear()
         client.cookies.set("refresh_token", create_refresh_token(user_id), path="/api/v1/auth")
         assert client.post("/api/v1/auth/refresh").status_code == 401
+
+
+class TestRefreshCookieSecurity:
+    def test_cookie_is_secure_outside_development(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        from src.infrastructure.config import settings
+
+        monkeypatch.setattr(settings, "environment", "production")
+        client = _make_client(FakeUserRepository())
+
+        response = client.post(
+            "/api/v1/auth/register",
+            json={"email": "omar@example.com", "name": "Omar", "password": "s3cret-pass"},
+        )
+
+        assert "Secure" in response.headers.get("set-cookie", "")
