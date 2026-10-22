@@ -15,10 +15,11 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.input.seo.renderer import (
+    LANGUAGE_HOME_PATHS,
     Prices,
     SeoPage,
     book_page,
-    home_page,
+    language_home_page,
     library_page,
     llms_txt,
     noindex_page,
@@ -37,6 +38,8 @@ router = APIRouter(prefix="/seo", tags=["seo"])
 _BOOK_PATH = re.compile(r"^/books/([0-9A-Za-z-]{1,64})$")
 _MAX_SITEMAP_BOOKS = 1000
 _HOME_BOOKS = 12
+# Startseite pro Sprache: "/" (Deutsch), "/ar", "/fr", "/en"
+_HOME_LANGUAGES = {path: lang for lang, path in LANGUAGE_HOME_PATHS.items()}
 
 
 async def get_seo_book_repository(
@@ -79,10 +82,10 @@ async def _resolve(path: str, repo: IBookRepository) -> SeoPage | None:
     """None = private/unbekannte Seite (noindex, kein Inhalt)."""
     base, prices = _base(), _prices()
     path = _normalize(path)
-    if path == "/":
+    if path in _HOME_LANGUAGES:
         daily = await repo.get_daily_book()
         books = await _all_books(repo, _HOME_BOOKS)
-        return home_page(base, daily, books, prices)
+        return language_home_page(base, _HOME_LANGUAGES[path], daily, books, prices)
     if path in ("/library", "/books"):
         return library_page(base, await _all_books(repo, _MAX_SITEMAP_BOOKS), prices)
     if path == "/pricing":

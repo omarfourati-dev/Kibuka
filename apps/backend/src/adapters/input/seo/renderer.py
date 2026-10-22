@@ -20,6 +20,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 from ....core.domain.entities.book import Book
 from ....core.domain.value_objects.language import Language
+from .landing_copy import COPY, NATIVE_NAMES, OG_LOCALES, money, trial_period
 
 SITE_NAME = "Kibuka"
 DEFAULT_IMAGE = "/og-image.png"
@@ -32,6 +33,14 @@ LANGUAGE_NAMES: dict[Language, str] = {
     Language.EN: "Englisch",
 }
 LANGUAGE_ORDER = [Language.DE, Language.AR, Language.FR, Language.EN]
+
+# Startseite pro Sprache — Deutsch bleibt "/" und ist auch x-default
+LANGUAGE_HOME_PATHS: dict[Language, str] = {
+    Language.DE: "/",
+    Language.AR: "/ar",
+    Language.FR: "/fr",
+    Language.EN: "/en",
+}
 
 THEME_NAMES: dict[str, str] = {
     "animals": "Tiere",
@@ -96,6 +105,9 @@ class SeoPage:
     image: str | None = None
     json_ld: list[dict[str, Any]] = field(default_factory=list)
     body_html: str = ""
+    locale: str = "de_DE"
+    # (hreflang, absolute URL) — nur für Seiten mit echten Sprachvarianten
+    alternates: list[tuple[str, str]] = field(default_factory=list)
 
     def head_html(self) -> str:
         e = html.escape
@@ -106,10 +118,22 @@ class SeoPage:
         ]
         if self.canonical:
             parts.append(f'<link rel="canonical" href="{e(self.canonical)}">')
+        parts += [
+            f'<link rel="alternate" hreflang="{e(code)}" href="{e(href)}">'
+            for code, href in self.alternates
+        ]
         image = self.image
         parts += [
             f'<meta property="og:site_name" content="{SITE_NAME}">',
-            '<meta property="og:locale" content="de_DE">',
+            f'<meta property="og:locale" content="{e(self.locale)}">',
+        ]
+        if self.alternates:
+            parts += [
+                f'<meta property="og:locale:alternate" content="{locale}">'
+                for locale in OG_LOCALES.values()
+                if locale != self.locale
+            ]
+        parts += [
             f'<meta property="og:type" content="{e(self.og_type)}">',
             f'<meta property="og:title" content="{e(self.title)}">',
             f'<meta property="og:description" content="{e(self.description)}">',
@@ -223,16 +247,37 @@ def _book_list(books: Sequence[Book]) -> str:
     return "<ul>" + "".join(_book_card(b) for b in books) + "</ul>" if books else ""
 
 
-def _nav() -> str:
+def _nav(labels: tuple[str, str, str] = ("Start", "Bibliothek", "Preise"), home: str = "/") -> str:
+    start, library, pricing = (html.escape(label) for label in labels)
     return (
-        '<nav><a href="/">Start</a> · <a href="/library">Bibliothek</a> · '
-        '<a href="/pricing">Preise</a></nav>'
+        f'<nav><a href="{home}">{start}</a> · <a href="/library">{library}</a> · '
+        f'<a href="/pricing">{pricing}</a></nav>'
     )
 
 
-def _wrap(inner: str) -> str:
+def _wrap(inner: str, nav: str | None = None, lang: Language | None = None) -> str:
     # Wird von der SPA beim Start ersetzt (createRoot leert #root)
-    return f'<main class="kibuka-seo">{_nav()}{inner}</main>'
+    attrs = f' lang="{lang.value}" dir="{_dir(lang)}"' if lang else ""
+    return f'<main class="kibuka-seo"{attrs}>{nav or _nav()}{inner}</main>'
+
+
+def _dir(lang: Language) -> str:
+    return "rtl" if lang == Language.AR else "ltr"
+
+
+def _language_alternates(base: str) -> list[tuple[str, str]]:
+    return [(lang.value, f"{base}{LANGUAGE_HOME_PATHS[lang]}") for lang in LANGUAGE_ORDER] + [
+        ("x-default", f"{base}/")
+    ]
+
+
+def _language_switcher(label: str) -> str:
+    links = " · ".join(
+        f'<a href="{LANGUAGE_HOME_PATHS[lang]}" hreflang="{lang.value}" lang="{lang.value}">'
+        f"{html.escape(NATIVE_NAMES[lang])}</a>"
+        for lang in LANGUAGE_ORDER
+    )
+    return f"<p>{html.escape(label)} {links}</p>"
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +301,7 @@ def home_page(base: str, daily: Book | None, books: Sequence[Book], prices: Pric
         f"<section><h2>Neue Bücher</h2>{_book_list(books)}</section>"
         f'<p><a href="/pricing">Abo ab {_price_de(prices.monthly)} € im Monat – '
         f"{prices.trial_days} Tage gratis testen</a></p>"
+        f"{_language_switcher('Auch auf:')}"
     )
     image = daily.cover_image_url if daily and daily.cover_image_url else f"{base}{DEFAULT_IMAGE}"
     return SeoPage(
@@ -264,6 +310,97 @@ def home_page(base: str, daily: Book | None, books: Sequence[Book], prices: Pric
         canonical=f"{base}/",
         image=image,
         json_ld=[_website(base), _organization(base)],
+        body_html=body,
+        alternates=_language_alternates(base),
+    )
+
+
+def _localized_link(book: Book, lang: Language) -> str:
+    """Buchlink mit Titel in der Seitensprache, sonst dem deutschen (als lang markiert)."""
+    titles = _titles(book)
+    title, lang_attr = titles.get(lang), ""
+    if not title:
+        title, lang_attr = _main_title(book), ' lang="de"'
+    return f'<a href="/books/{html.escape(book.id)}"{lang_attr}>{html.escape(title)}</a>'
+
+
+def language_home_page(
+    base: str, lang: Language, daily: Book | None, books: Sequence[Book], prices: Prices
+) -> SeoPage:
+    """Startseite in einer Familiensprache (/ar, /fr, /en); Deutsch bleibt "/"."""
+    if lang == Language.DE:
+        return home_page(base, daily, books, prices)
+    e = html.escape
+    copy = COPY[lang]
+    values = {
+        "single": money(lang, prices.single),
+        "monthly": money(lang, prices.monthly),
+        "yearly": money(lang, prices.yearly),
+        "trial": trial_period(lang, prices.trial_days),
+    }
+    faq = [(q, a.format(**values)) for q, a in copy.faq]
+    url = f"{base}{LANGUAGE_HOME_PATHS[lang]}"
+
+    daily_html = ""
+    if daily:
+        daily_html = (
+            f"<section><h2>{e(copy.daily_heading)} {_localized_link(daily, lang)}</h2>"
+            f"<p>{e(copy.daily_note)}</p></section>"
+        )
+    books_html = ""
+    if books:
+        items = "".join(
+            f"<li>{_localized_link(b, lang)} – "
+            f"{e(copy.ages.format(low=_ages(b)[0], high=_ages(b)[1]))}</li>"
+            for b in books
+        )
+        books_html = f"<section><h2>{e(copy.books_heading)}</h2><ul>{items}</ul></section>"
+    benefits = "".join(f"<li>{e(b)}</li>" for b in copy.benefits)
+    faq_html = "".join(f"<h3>{e(q)}</h3><p>{e(a)}</p>" for q, a in faq)
+
+    body = _wrap(
+        f"<h1>{e(copy.h1)}</h1><p>{e(copy.intro)}</p><ul>{benefits}</ul>"
+        f"{daily_html}{books_html}"
+        f'<p><a href="/pricing">{e(copy.cta.format(**values))}</a> · '
+        f'<a href="/library">{e(copy.library_link)}</a></p>'
+        f"<section><h2>{e(copy.faq_heading)}</h2>{faq_html}</section>"
+        f"{_language_switcher(copy.languages_label)}",
+        nav=_nav(copy.nav, home=LANGUAGE_HOME_PATHS[lang]),
+        lang=lang,
+    )
+    image = daily.cover_image_url if daily and daily.cover_image_url else f"{base}{DEFAULT_IMAGE}"
+    return SeoPage(
+        title=copy.title,
+        description=_clip(copy.description),
+        canonical=url,
+        image=image,
+        locale=OG_LOCALES[lang],
+        alternates=_language_alternates(base),
+        json_ld=[
+            {
+                "@type": "WebPage",
+                "@id": f"{url}#webpage",
+                "url": url,
+                "name": copy.title,
+                "description": copy.description,
+                "inLanguage": lang.value,
+                "isPartOf": {"@id": f"{base}/#website"},
+            },
+            {
+                "@type": "FAQPage",
+                "inLanguage": lang.value,
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": q,
+                        "acceptedAnswer": {"@type": "Answer", "text": a},
+                    }
+                    for q, a in faq
+                ],
+            },
+            _website(base),
+            _organization(base),
+        ],
         body_html=body,
     )
 
@@ -512,32 +649,45 @@ def noindex_page(base: str, path: str) -> SeoPage:
 # Sitemap + llms.txt
 # ---------------------------------------------------------------------------
 
+_QUOT = {'"': "&quot;"}
+
 
 def sitemap_xml(base: str, books: Sequence[Book]) -> str:
-    def url(loc: str, lastmod: str | None = None, image: str | None = None) -> str:
+    # Jede Sprachvariante der Startseite nennt alle Varianten inkl. sich selbst
+    alternates = "".join(
+        f'<xhtml:link rel="alternate" hreflang="{code}" href="{xml_escape(href, _QUOT)}"/>'
+        for code, href in _language_alternates(base)
+    )
+
+    def url(loc: str, lastmod: str | None = None, image: str | None = None, links: str = "") -> str:
         parts = [f"<loc>{xml_escape(loc)}</loc>"]
         if lastmod:
             parts.append(f"<lastmod>{lastmod}</lastmod>")
         if image:
             parts.append(f"<image:image><image:loc>{xml_escape(image)}</image:loc></image:image>")
-        return "<url>" + "".join(parts) + "</url>"
+        return "<url>" + "".join(parts) + links + "</url>"
 
     latest = max((b.published_at for b in books), default=None)
     latest_day = latest.date().isoformat() if latest else None
-    entries = [
-        url(f"{base}/", latest_day),
-        url(f"{base}/library", latest_day),
-        url(f"{base}/pricing"),
-    ] + [
-        url(f"{base}/books/{b.id}", b.published_at.date().isoformat(), b.cover_image_url)
-        for b in books
-    ]
+    entries = (
+        [
+            url(f"{base}{path}", latest_day, links=alternates)
+            for path in LANGUAGE_HOME_PATHS.values()
+        ]
+        + [
+            url(f"{base}/library", latest_day),
+            url(f"{base}/pricing"),
+        ]
+        + [
+            url(f"{base}/books/{b.id}", b.published_at.date().isoformat(), b.cover_image_url)
+            for b in books
+        ]
+    )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
-        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n'
-        + "\n".join(entries)
-        + "\n</urlset>\n"
+        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" '
+        'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' + "\n".join(entries) + "\n</urlset>\n"
     )
 
 
@@ -565,6 +715,13 @@ def llms_txt(base: str, books: Sequence[Book], prices: Prices) -> str:
         f"- [Startseite]({base}/): Buch des Tages und neue Bücher",
         f"- [Bibliothek]({base}/library): alle Bücher",
         f"- [Preise]({base}/pricing): Abo, Einzelkauf und häufige Fragen",
+        "",
+        "## Sprachversionen der Startseite",
+        "",
+        f"- [{NATIVE_NAMES[Language.DE]}]({base}/): Startseite auf Deutsch",
+        f"- [{NATIVE_NAMES[Language.AR]}]({base}/ar): الصفحة الرئيسية بالعربية",
+        f"- [{NATIVE_NAMES[Language.FR]}]({base}/fr): page d’accueil en français",
+        f"- [{NATIVE_NAMES[Language.EN]}]({base}/en): home page in English",
         "",
         "## Bücher",
         "",
