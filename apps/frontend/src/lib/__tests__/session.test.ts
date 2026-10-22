@@ -26,7 +26,18 @@ describe("restoreSession", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it("skips the refresh call for visitors who never signed in", async () => {
+    // Anonyme Besucher: kein unnötiger Request, keine 401 in der Konsole
+    await expect(restoreSession()).resolves.toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("stores user and fresh token when the refresh cookie is valid", async () => {
+    useAuthStore.setState({
+      user: USER,
+      isAuthenticated: true,
+      accessToken: null,
+    });
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ access_token: "fresh", user: USER }),
@@ -55,6 +66,11 @@ describe("restoreSession", () => {
   });
 
   it("survives network errors without throwing", async () => {
+    useAuthStore.setState({
+      user: USER,
+      isAuthenticated: true,
+      accessToken: null,
+    });
     vi.mocked(fetch).mockRejectedValue(new Error("offline"));
     await expect(restoreSession()).resolves.toBe(false);
   });
