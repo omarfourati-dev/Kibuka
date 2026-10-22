@@ -1,15 +1,27 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any, cast
 
 import stripe
+
+from ....core.ports.output.i_subscription_canceller import ISubscriptionCanceller
 
 # Stripe-Produktsteuercode "Digital Books" — Pflicht, weil Managed Payments
 # (Default bei neuen Stripe-Konten) ohne tax_code jede Session ablehnt
 _TAX_CODE_DIGITAL_BOOKS = "txcd_10302000"
 
 
-class StripeBillingAdapter:
+def period_end_of(sub: dict[str, Any]) -> datetime | None:
+    """Laufzeitende eines Stripe-Abos — neuere API-Versionen führen es am Item."""
+    ts = sub.get("current_period_end")
+    if ts is None:
+        items = (sub.get("items") or {}).get("data") or []
+        ts = items[0].get("current_period_end") if items else None
+    return datetime.fromtimestamp(int(ts), UTC) if ts else None
+
+
+class StripeBillingAdapter(ISubscriptionCanceller):
     """Handles Stripe API calls. Used directly in billing API routes."""
 
     def __init__(self, api_key: str, webhook_secret: str) -> None:
@@ -114,6 +126,13 @@ class StripeBillingAdapter:
             return None
         result: dict[str, Any] = sub.to_dict()
         return result
+
+    async def cancel_at_period_end(self, stripe_subscription_id: str) -> datetime | None:
+        """Ordentliche Kündigung: Zugang bleibt bis zum Ende der bezahlten Laufzeit."""
+        sub = await stripe.Subscription.modify_async(
+            stripe_subscription_id, cancel_at_period_end=True
+        )
+        return period_end_of(sub.to_dict())
 
     async def create_customer_portal_session(self, customer_id: str, return_url: str) -> str:
         session = await stripe.billing_portal.Session.create_async(

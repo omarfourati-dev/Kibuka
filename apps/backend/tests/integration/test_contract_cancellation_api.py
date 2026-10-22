@@ -99,9 +99,7 @@ def test_extraordinary_cancellation_requires_a_reason() -> None:
     submit = FakeSubmit()
     client = _client(submit)
 
-    missing = client.post(
-        "/api/v1/contracts/cancellation", json={**VALID, "kind": "extraordinary"}
-    )
+    missing = client.post("/api/v1/contracts/cancellation", json={**VALID, "kind": "extraordinary"})
     blank = client.post(
         "/api/v1/contracts/cancellation",
         json={**VALID, "kind": "extraordinary", "reason": "   "},

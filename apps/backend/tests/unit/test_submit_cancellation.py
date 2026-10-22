@@ -77,9 +77,7 @@ class FakeEmail:
 
 
 def _user(email: str = "omar@example.com") -> User:
-    return User(
-        id="u1", email=email, name="Omar", role=UserRole.MEMBER, status=UserStatus.ACTIVE
-    )
+    return User(id="u1", email=email, name="Omar", role=UserRole.MEMBER, status=UserStatus.ACTIVE)
 
 
 def _sub(status: BookSubscriptionStatus = BookSubscriptionStatus.ACTIVE) -> BookSubscription:

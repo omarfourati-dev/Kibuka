@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from functools import cache
 from typing import Annotated, Any, Literal
 
@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.input.api.dependencies import get_current_user, get_user_repository
-from src.adapters.output.billing.stripe_billing import StripeBillingAdapter
+from src.adapters.output.billing.stripe_billing import StripeBillingAdapter, period_end_of
 from src.adapters.output.persistence.repositories.book_repository import SqlBookRepository
 from src.adapters.output.persistence.repositories.book_subscription_repository import (
     SqlBookSubscriptionRepository,
@@ -100,15 +100,6 @@ def _stripe_status(raw: str) -> BookSubscriptionStatus:
         return BookSubscriptionStatus.INCOMPLETE
 
 
-def _period_end(sub: dict[str, Any]) -> datetime | None:
-    # Neuere Stripe-API-Versionen führen das Periodenende am Subscription-Item
-    ts = sub.get("current_period_end")
-    if ts is None:
-        items = (sub.get("items") or {}).get("data") or []
-        ts = items[0].get("current_period_end") if items else None
-    return datetime.fromtimestamp(int(ts), UTC) if ts else None
-
-
 async def _apply_subscription_event(
     sub: dict[str, Any], event_type: str, subs: IBookSubscriptionRepository
 ) -> None:
@@ -131,7 +122,7 @@ async def _apply_subscription_event(
             status=status_value,
             stripe_subscription_id=str(stripe_id),
             stripe_customer_id=str(sub.get("customer") or "") or None,
-            current_period_end=_period_end(sub),
+            current_period_end=period_end_of(sub),
             cancel_at_period_end=bool(sub.get("cancel_at_period_end")),
         )
     )

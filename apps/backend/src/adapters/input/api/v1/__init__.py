@@ -6,6 +6,7 @@ from .api_keys import router as api_keys_router
 from .auth import router as auth_router
 from .billing import router as billing_router
 from .books import router as books_router
+from .contracts import router as contracts_router
 from .health import router as health_router
 from .notifications import router as notifications_router
 from .profiles import router as profiles_router
@@ -21,6 +22,7 @@ api_router.include_router(spaces_router)
 api_router.include_router(admin_router)
 api_router.include_router(ai_router)
 api_router.include_router(billing_router)
+api_router.include_router(contracts_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(api_keys_router)
 api_router.include_router(health_router)
