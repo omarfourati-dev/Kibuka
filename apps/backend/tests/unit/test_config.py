@@ -24,3 +24,14 @@ class TestSecretKeyValidation:
     def test_development_tolerates_default_secret(self) -> None:
         settings = Settings(environment="development", secret_key=DEFAULT_SECRET_KEY)
         assert settings.secret_key == DEFAULT_SECRET_KEY
+
+
+class TestBookPricing:
+    def test_book_price_single_has_sane_default(self) -> None:
+        """Generierte Bücher dürfen nie gratis in den Shop fallen (0.0-Bug)."""
+        settings = Settings(environment="development")
+        assert settings.book_price_single_eur == 2.99
+
+    def test_book_price_single_is_configurable(self) -> None:
+        settings = Settings(environment="development", book_price_single_eur=3.49)
+        assert settings.book_price_single_eur == 3.49

@@ -373,9 +373,18 @@ class TestGetBookRead:
     def test_get_book_read_with_auth_but_not_purchased_returns_403(
         self, authed_client: TestClient
     ) -> None:
-        # book_repo has no purchase for USER_ID on book-1
-        response = authed_client.get("/api/v1/books/book-1/read")
+        # book-2 ist NICHT das Tagesbuch und nicht gekauft → kein Zugriff
+        response = authed_client.get("/api/v1/books/book-2/read")
         assert response.status_code == 403
+
+    def test_daily_book_is_free_to_read_for_authenticated_users(
+        self, authed_client: TestClient
+    ) -> None:
+        """Das Tagesbuch ist das Kernversprechen: gratis lesbar ohne Kauf."""
+        # book-1 ist das Tagesbuch (is_daily=True), USER_ID hat nichts gekauft
+        response = authed_client.get("/api/v1/books/book-1/read")
+        assert response.status_code == 200
+        assert len(response.json()["pages"]) == 3
 
     def test_get_book_read_with_purchased_returns_full_content(
         self, authed_client: TestClient, book_repo: MockBookRepository
@@ -492,7 +501,8 @@ class TestAdminAccess:
         assert response.json()["is_purchased"] is True
 
     def test_member_without_purchase_is_still_rejected(self, authed_client: TestClient) -> None:
-        response = authed_client.get("/api/v1/books/book-1/read")
+        # book-2 ist kein Tagesbuch — ohne Kauf bleibt der Zugriff gesperrt
+        response = authed_client.get("/api/v1/books/book-2/read")
 
         assert response.status_code == 403
 

@@ -149,6 +149,18 @@ class TestBookCheckout:
         assert response.status_code == 404
         assert billing.calls == []
 
+    def test_free_book_cannot_be_bought(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ein Gratis-Buch (Tagesbuch) darf keine Stripe-Session erzeugen."""
+        monkeypatch.setattr(settings, "enable_billing", True)
+        repo = FakeBookRepo()
+        repo.books["free-1"] = _make_book("free-1", price=0.0)
+        client, _, billing = _make_client(repo=repo)
+
+        response = client.post("/api/v1/billing/checkout/book", json={"book_id": "free-1"})
+
+        assert response.status_code == 400
+        assert billing.calls == []
+
 
 # ---------------------------------------------------------------------------
 # Webhook

@@ -163,6 +163,26 @@ class TestGenerateDailyBook:
         mock_book_repository.set_daily_book.assert_called_once_with(book.id)
 
     @pytest.mark.asyncio
+    async def test_generate_daily_book_uses_injected_price(
+        self, mock_openai_client, mock_book_repository, mock_tts_service, mock_image_service
+    ):
+        """price_single=0.0 machte jedes Buch gratis — der Preis kommt jetzt aus der Config."""
+        svc = BookGenerationService(
+            openai_client=mock_openai_client,
+            book_repository=mock_book_repository,
+            tts_service=mock_tts_service,
+            image_service=mock_image_service,
+            price_single=3.49,
+        )
+        book = await svc.generate_daily_book()
+        assert book.price_single == 3.49
+
+    @pytest.mark.asyncio
+    async def test_generate_daily_book_default_price_is_not_free(self, service):
+        book = await service.generate_daily_book()
+        assert book.price_single > 0
+
+    @pytest.mark.asyncio
     async def test_generate_daily_book_calls_tts_for_all_pages_and_languages(
         self, service, mock_tts_service
     ):
