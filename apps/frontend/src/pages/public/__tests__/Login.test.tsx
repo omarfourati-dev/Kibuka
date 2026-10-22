@@ -6,18 +6,25 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Switch } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import Login from "../Login";
 
-function renderLogin() {
+function renderLogin(entry = "/login") {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={["/login"]}>
-        <Login />
+      <MemoryRouter initialEntries={[entry]}>
+        <Switch>
+          <Route path="/login" component={Login} />
+          <Route
+            path="/books/:bookId"
+            render={() => <div>BookDetailTarget</div>}
+          />
+          <Route exact path="/" render={() => <div>HomeTarget</div>} />
+        </Switch>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -51,5 +58,35 @@ describe("Login branding", () => {
     expect(
       screen.getByRole("button", { name: /sign in|anmelden/i }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Login redirect", () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      accessToken: null,
+    });
+  });
+
+  it("returns the user to ?redirect= after sign in", () => {
+    useAuthStore.setState({
+      user: { id: "u1", email: "o@example.com", name: "O", role: "member" },
+      isAuthenticated: true,
+      accessToken: "t",
+    });
+    renderLogin("/login?redirect=/books/b1");
+    expect(screen.getByText("BookDetailTarget")).toBeInTheDocument();
+  });
+
+  it("ignores external redirect targets (no open redirect)", () => {
+    useAuthStore.setState({
+      user: { id: "u1", email: "o@example.com", name: "O", role: "member" },
+      isAuthenticated: true,
+      accessToken: "t",
+    });
+    renderLogin("/login?redirect=https://evil.example/phish");
+    expect(screen.getByText("HomeTarget")).toBeInTheDocument();
   });
 });

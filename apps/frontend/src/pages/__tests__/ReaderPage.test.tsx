@@ -283,7 +283,7 @@ describe("ReaderPage", () => {
     });
   });
 
-  it("navigates to /login on 401 (no or expired session)", async () => {
+  it("navigates to /login with a redirect back to the book on 401", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 401,
@@ -292,7 +292,9 @@ describe("ReaderPage", () => {
 
     renderReaderPage("book-1");
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/login");
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/login\?redirect=.*book-1/),
+      );
     });
   });
 });
