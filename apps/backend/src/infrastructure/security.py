@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
@@ -35,8 +36,13 @@ def create_access_token(user_id: str, expires_minutes: int | None = None) -> str
     return cast(str, jwt.encode(claims, settings.secret_key, algorithm=_ALGORITHM))
 
 
-def create_refresh_token(user_id: str, expires_days: int | None = None) -> str:
-    """Create a long-lived refresh token (httpOnly cookie only, never a bearer)."""
+def create_refresh_token(
+    user_id: str, expires_days: int | None = None, jti: str | None = None
+) -> str:
+    """Create a long-lived refresh token (httpOnly cookie only, never a bearer).
+
+    Der jti identifiziert das Token serverseitig (Rotation + Widerruf).
+    """
     if expires_days is None:
         expires_days = settings.refresh_token_expire_days
     now = datetime.now(UTC)
@@ -45,13 +51,14 @@ def create_refresh_token(user_id: str, expires_days: int | None = None) -> str:
         "iat": now,
         "exp": now + timedelta(days=expires_days),
         "type": "refresh",
+        "jti": jti or uuid.uuid4().hex,
     }
     return cast(str, jwt.encode(claims, settings.secret_key, algorithm=_ALGORITHM))
 
 
-def _decode(token: str, expected_type: str) -> str:
+def _decode_payload(token: str, expected_type: str) -> dict[str, object]:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
+        payload: dict[str, object] = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
     except JWTError as exc:
         raise InvalidTokenError(str(exc)) from exc
 
@@ -63,7 +70,20 @@ def _decode(token: str, expected_type: str) -> str:
     subject = payload.get("sub")
     if not isinstance(subject, str) or not subject:
         raise InvalidTokenError("Token has no subject claim")
-    return subject
+    return payload
+
+
+def _decode(token: str, expected_type: str) -> str:
+    return cast(str, _decode_payload(token, expected_type)["sub"])
+
+
+def decode_refresh_claims(token: str) -> tuple[str, str]:
+    """(user_id, jti) eines Refresh-Tokens; ohne jti ungültig."""
+    payload = _decode_payload(token, "refresh")
+    jti = payload.get("jti")
+    if not isinstance(jti, str) or not jti:
+        raise InvalidTokenError("Refresh token has no jti")
+    return cast(str, payload["sub"]), jti
 
 
 def decode_access_token(token: str) -> str:
