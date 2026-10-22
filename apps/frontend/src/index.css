@@ -1,7 +1,19 @@
+/* Ionics globales CSS bekommt eine eigene Cascade-Layer: über Tailwinds
+   Preflight (base), aber unter den Utilities. Unlayered schlug z. B.
+   normalize.css (button { padding:0; border:0; border-radius:0 }) die
+   Padding-, Rahmen- und Rundungs-Klassen auf jedem Button. */
+@layer theme, base, ionic, components, utilities;
+
+@import "@ionic/react/css/core.css" layer(ionic);
+@import "@ionic/react/css/normalize.css" layer(ionic);
+@import "@ionic/react/css/structure.css" layer(ionic);
+@import "@ionic/react/css/typography.css" layer(ionic);
 @import "tailwindcss";
 @import "./styles/design-system.css";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* dark: folgt der Systemeinstellung — wie die Design-Tokens. Die frühere
+   .dark-Klasse setzte niemand, alle dark:-Varianten waren wirkungslos. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 :root {
   --font-sans: system-ui, -apple-system, sans-serif;

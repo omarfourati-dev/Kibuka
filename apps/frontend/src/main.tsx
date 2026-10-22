@@ -4,11 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nextProvider } from "react-i18next";
 import { setupIonicReact } from "@ionic/react";
 
-import "@ionic/react/css/core.css";
-import "@ionic/react/css/normalize.css";
-import "@ionic/react/css/structure.css";
-import "@ionic/react/css/typography.css";
-
 import {
   setAuthTokenProvider,
   setUnauthorizedHandler,
@@ -18,6 +13,7 @@ import { useAuthStore } from "@omarsapp/shared-stores";
 import i18n from "./i18n/config";
 import App from "./App";
 import { restoreSession, startSessionKeepAlive } from "./lib/session";
+// Enthält auch Ionics CSS (eigene Cascade-Layer, siehe index.css)
 import "./index.css";
 
 setupIonicReact({ mode: "md" });

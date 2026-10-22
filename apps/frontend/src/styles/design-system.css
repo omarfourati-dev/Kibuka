@@ -58,6 +58,18 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+
+  /* Ionic-Flächen hängen an den Tokens oben und folgen so dem Dark Mode */
+  --ion-background-color: var(--color-background);
+  --ion-background-color-rgb: 255, 253, 247;
+  --ion-text-color: var(--color-text-primary);
+  --ion-text-color-rgb: 45, 45, 45;
+  --ion-tab-bar-background: var(--color-surface);
+  --ion-tab-bar-border-color: var(--color-border);
+  --ion-tab-bar-color: var(--color-text-secondary);
+  --ion-toolbar-background: var(--color-surface);
+  --ion-item-background: var(--color-surface);
+  color-scheme: light;
 }
 
 /* Dark mode */
@@ -70,6 +82,12 @@
     --color-text-secondary: #b0b0b0;
     --color-text-muted: #707070;
     --color-border: #2a3550;
+
+    --ion-background-color-rgb: 26, 26, 46;
+    --ion-text-color-rgb: 240, 240, 240;
+    /* Ionics Blau hat auf Nachtblau zu wenig Kontrast */
+    --ion-tab-bar-color-selected: var(--color-primary-light);
+    color-scheme: dark;
   }
 }
 
