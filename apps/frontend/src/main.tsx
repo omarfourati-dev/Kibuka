@@ -9,11 +9,17 @@ import "@ionic/react/css/normalize.css";
 import "@ionic/react/css/structure.css";
 import "@ionic/react/css/typography.css";
 
+import { setAuthTokenProvider } from "@omarsapp/shared-api";
+import { useAuthStore } from "@omarsapp/shared-stores";
+
 import i18n from "./i18n/config";
 import App from "./App";
 import "./index.css";
 
 setupIonicReact({ mode: "md" });
+
+// Der zentrale apiClient sendet den Memory-Token als Bearer-Header mit
+setAuthTokenProvider(() => useAuthStore.getState().accessToken);
 
 const queryClient = new QueryClient({
   defaultOptions: {
