@@ -10,6 +10,8 @@ from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from src.adapters.input.api.rate_limit import get_rate_limit_store
+from src.adapters.output.cache.rate_limit_store import InMemoryRateLimitStore
 
 from src.adapters.input.api.v1.auth import get_refresh_token_store, get_user_repository
 from src.adapters.input.api.v1.auth import router as auth_router
@@ -45,6 +47,8 @@ def _make_client(
     app.dependency_overrides[get_user_repository] = lambda: repo
     shared_store = store or InMemoryRefreshTokenStore()
     app.dependency_overrides[get_refresh_token_store] = lambda: shared_store
+    limits = InMemoryRateLimitStore()
+    app.dependency_overrides[get_rate_limit_store] = lambda: limits
     # https wie in Produktion — sonst schickt der Client Secure-Cookies nicht
     # mit und die Tests hingen von ENVIRONMENT ab (CI: test, lokal: development)
     return TestClient(app, base_url="https://testserver")
