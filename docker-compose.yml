@@ -155,6 +155,14 @@ services:
     image: kibuka-backend:latest
     container_name: kibuka-worker
     command: arq src.workers.arq_worker.WorkerSettings
+    # Der aus dem Backend-Image geerbte HTTP-Check (Port 8000) passt nicht —
+    # der Worker hat keinen Webserver. ARQ prüft sein eigenes Health-Signal.
+    healthcheck:
+      test: ["CMD", "arq", "--check", "src.workers.arq_worker.WorkerSettings"]
+      interval: 1m
+      timeout: 15s
+      retries: 3
+      start_period: 2m
     depends_on:
       backend:
         condition: service_started
