@@ -70,8 +70,10 @@ export default function ReaderPage() {
       .then((res) => {
         if (!res.ok) {
           if (res.status === 401) {
-            // Keine/abgelaufene Session — erst einloggen
-            history.push("/login");
+            // Keine/abgelaufene Session — einloggen und direkt zurückkommen
+            history.push(
+              `/login?redirect=${encodeURIComponent(`/books/${bookId}/read`)}`,
+            );
             return null;
           }
           if (res.status === 403) {

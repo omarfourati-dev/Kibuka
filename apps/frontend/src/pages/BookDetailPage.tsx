@@ -150,7 +150,9 @@ export default function BookDetailPage() {
         body: JSON.stringify({ book_id: book.id }),
       });
       if (res.status === 401) {
-        history.push("/login");
+        history.push(
+          `/login?redirect=${encodeURIComponent(`/books/${book.id}`)}`,
+        );
         return;
       }
       if (!res.ok) {

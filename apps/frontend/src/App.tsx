@@ -10,7 +10,12 @@ import {
   IonTabs,
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import { homeOutline, libraryOutline, pricetagsOutline } from "ionicons/icons";
+import {
+  homeOutline,
+  libraryOutline,
+  personCircleOutline,
+  pricetagsOutline,
+} from "ionicons/icons";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -28,6 +33,7 @@ const HomePageKibuka = lazy(() => import("./pages/HomePage"));
 const LibraryPage = lazy(() => import("./pages/LibraryPage"));
 const BookDetailPage = lazy(() => import("./pages/BookDetailPage"));
 const ReaderPage = lazy(() => import("./pages/ReaderPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 
 const Fallback = () => (
   <div className="flex h-screen items-center justify-center text-slate-500 dark:text-slate-400">
@@ -57,6 +63,7 @@ function MainTabs() {
           component={lazyPage(BookDetailPage)}
         />
         <Route exact path="/pricing" component={lazyPage(PricingPage)} />
+        <Route exact path="/profile" component={lazyPage(ProfilePage)} />
       </IonRouterOutlet>
       <IonTabBar slot="bottom" className="kibuka-tab-bar">
         <IonTabButton tab="home" href="/">
@@ -70,6 +77,10 @@ function MainTabs() {
         <IonTabButton tab="pricing" href="/pricing">
           <IonIcon aria-hidden="true" icon={pricetagsOutline} />
           <IonLabel>Preise</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="profile" href="/profile">
+          <IonIcon aria-hidden="true" icon={personCircleOutline} />
+          <IonLabel>Profil</IonLabel>
         </IonTabButton>
       </IonTabBar>
     </IonTabs>

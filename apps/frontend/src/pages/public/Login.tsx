@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useHistory, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import { apiClient } from "@omarsapp/shared-api";
@@ -15,8 +15,16 @@ interface AuthResponse {
   user: AuthUser;
 }
 
+/** Nur interne Pfade zulassen — kein Open Redirect auf fremde Hosts. */
+function safeRedirect(search: string): string {
+  const target = new URLSearchParams(search).get("redirect") ?? "";
+  return target.startsWith("/") && !target.startsWith("//") ? target : "/";
+}
+
 export default function Login() {
   const history = useHistory();
+  const location = useLocation();
+  const redirectTo = safeRedirect(location.search);
   const { isAuthenticated, setUser, setToken } = useAuthStore();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -32,9 +40,9 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      history.replace("/");
+      history.replace(redirectTo);
     }
-  }, [isAuthenticated, history]);
+  }, [isAuthenticated, history, redirectTo]);
 
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -54,7 +62,7 @@ export default function Login() {
     onSuccess: (data) => {
       setUser(data.user);
       setToken(data.access_token);
-      history.replace("/");
+      history.replace(redirectTo);
     },
     onError: (err: unknown) => {
       if (err instanceof Error) {
