@@ -66,6 +66,13 @@ class FakeBilling:
     def __init__(self) -> None:
         self.sub_calls: list[dict[str, Any]] = []
         self.portal_calls: list[dict[str, Any]] = []
+        # Was Stripe beim Nachschlagen als maßgeblichen Stand liefert
+        self.authoritative: dict[str, dict[str, Any]] = {}
+        self.retrieve_calls: list[str] = []
+
+    async def retrieve_subscription(self, subscription_id: str) -> dict[str, Any] | None:
+        self.retrieve_calls.append(subscription_id)
+        return self.authoritative.get(subscription_id)
 
     async def create_subscription_checkout(self, **kwargs: Any) -> str:
         self.sub_calls.append(kwargs)
@@ -195,7 +202,16 @@ def _sub_event(event_type: str, **obj: Any) -> Any:
     )
 
 
-def _post_webhook(client: TestClient, event: Any, monkeypatch: pytest.MonkeyPatch) -> int:
+def _post_webhook(
+    client: TestClient,
+    event: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    billing: FakeBilling,
+    authoritative: dict[str, Any] | None = None,
+) -> int:
+    """Standard: Stripe bestätigt beim Nachschlagen den Event-Inhalt."""
+    obj = event["data"]["object"].to_dict()
+    billing.authoritative[obj["id"]] = authoritative if authoritative is not None else obj
     monkeypatch.setattr(stripe.Webhook, "construct_event", lambda *a, **k: event)
     resp = client.post("/api/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "ok"})
     return resp.status_code
@@ -203,8 +219,10 @@ def _post_webhook(client: TestClient, event: Any, monkeypatch: pytest.MonkeyPatc
 
 class TestSubscriptionWebhook:
     def test_created_event_records_subscription(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        client, subs, _ = _client()
-        status = _post_webhook(client, _sub_event("customer.subscription.created"), monkeypatch)
+        client, subs, billing = _client()
+        status = _post_webhook(
+            client, _sub_event("customer.subscription.created"), monkeypatch, billing
+        )
 
         assert status == 200
         sub = subs.subs["sub_1"]
@@ -216,39 +234,42 @@ class TestSubscriptionWebhook:
         assert sub.current_period_end == datetime.fromtimestamp(1893456000, UTC)
 
     def test_updated_event_changes_status(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        client, subs, _ = _client()
-        _post_webhook(client, _sub_event("customer.subscription.created"), monkeypatch)
+        client, subs, billing = _client()
+        _post_webhook(client, _sub_event("customer.subscription.created"), monkeypatch, billing)
         _post_webhook(
             client,
             _sub_event("customer.subscription.updated", status="active"),
             monkeypatch,
+            billing,
         )
         assert subs.subs["sub_1"].status == BookSubscriptionStatus.ACTIVE
 
     def test_deleted_event_cancels(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        client, subs, _ = _client()
-        _post_webhook(client, _sub_event("customer.subscription.created"), monkeypatch)
+        client, subs, billing = _client()
+        _post_webhook(client, _sub_event("customer.subscription.created"), monkeypatch, billing)
         _post_webhook(
             client,
             _sub_event("customer.subscription.deleted", status="canceled"),
             monkeypatch,
+            billing,
         )
         assert not subs.subs["sub_1"].is_active
 
     def test_unknown_stripe_status_is_not_active(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """incomplete/unpaid etc. dürfen niemals Zugang gewähren."""
-        client, subs, _ = _client()
+        client, subs, billing = _client()
         _post_webhook(
             client,
             _sub_event("customer.subscription.created", status="incomplete"),
             monkeypatch,
+            billing,
         )
         assert not subs.subs["sub_1"].is_active
 
     def test_event_without_user_metadata_is_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        client, subs, _ = _client()
+        client, subs, billing = _client()
         status = _post_webhook(
-            client, _sub_event("customer.subscription.created", metadata={}), monkeypatch
+            client, _sub_event("customer.subscription.created", metadata={}), monkeypatch, billing
         )
         assert status == 200
         assert subs.subs == {}
@@ -301,3 +322,58 @@ class TestSubscriptionStatusAndPortal:
         client, _, billing = _client()
         assert client.post("/api/v1/billing/portal").status_code == 404
         assert billing.portal_calls == []
+
+
+# ---------------------------------------------------------------------------
+# Security-Review 22.10.: Event-Reihenfolge + wiederholbare Testphase
+# ---------------------------------------------------------------------------
+
+
+class TestSubscriptionWebhookIsAuthoritative:
+    def test_stale_active_event_cannot_revive_canceled_subscription(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Ein verspätet zugestelltes 'active'-Event darf ein bei Stripe
+        gekündigtes Abo nicht reaktivieren — Stripe ist die Wahrheit."""
+        client, subs, billing = _client()
+        stale = _sub_event("customer.subscription.updated", status="active")
+        truth = stale["data"]["object"].to_dict() | {"status": "canceled"}
+
+        _post_webhook(client, stale, monkeypatch, billing, authoritative=truth)
+
+        assert billing.retrieve_calls == ["sub_1"]
+        assert not subs.subs["sub_1"].is_active
+
+    def test_unverifiable_subscription_is_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        client, subs, billing = _client()
+        event = _sub_event("customer.subscription.created", status="active")
+        monkeypatch.setattr(stripe.Webhook, "construct_event", lambda *a, **k: event)
+
+        resp = client.post(
+            "/api/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "ok"}
+        )
+
+        assert resp.status_code == 200
+        assert subs.subs == {}
+
+
+class TestTrialOnlyOnce:
+    def test_first_subscription_gets_trial(self) -> None:
+        client, _, billing = _client()
+        client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+        assert billing.sub_calls[0]["trial_days"] == 14
+
+    def test_returning_customer_gets_no_trial_and_reuses_customer(self) -> None:
+        subs = FakeSubscriptionRepo()
+        subs.subs["sub_old"] = _active_sub(
+            stripe_subscription_id="sub_old", status=BookSubscriptionStatus.CANCELED
+        )
+        client, _, billing = _client(subs=subs)
+
+        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+
+        assert resp.status_code == 200
+        call = billing.sub_calls[0]
+        assert call["trial_days"] == 0
+        # Gleicher Stripe-Kunde statt neuer Kunde per E-Mail
+        assert call["customer_id"] == "cus_1"
