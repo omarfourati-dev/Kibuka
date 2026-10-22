@@ -31,7 +31,11 @@ export function BookCard({
   priceSingle,
   onClick,
 }: BookCardProps) {
-  const formattedPrice = `€${priceSingle.toFixed(2).replace(".", ",")}`;
+  // Gratis-Bücher (z.B. Tagesbuch) nie als "€0,00" anzeigen
+  const formattedPrice =
+    priceSingle === 0
+      ? "Gratis"
+      : `€${priceSingle.toFixed(2).replace(".", ",")}`;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
