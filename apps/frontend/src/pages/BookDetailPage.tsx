@@ -5,6 +5,8 @@ import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookPreview } from "../components/book/BookPreview";
 import { LanguagePicker } from "../components/reader/LanguagePicker";
+import { LegalFooter } from "../components/legal/LegalFooter";
+import { WithdrawalWaiver } from "../components/legal/WithdrawalWaiver";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { formatPrice } from "../lib/locale";
@@ -51,6 +53,8 @@ export default function BookDetailPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>(appLanguage);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [waiverMissing, setWaiverMissing] = useState(false);
   // Rückkehr von Stripe: ?checkout=success|cancel einmalig einlesen …
   const [checkoutStatus] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("checkout"),
@@ -193,12 +197,17 @@ export default function BookDetailPage() {
 
   const handlePurchase = async () => {
     setPurchaseError(null);
+    // Widerrufsverzicht (§ 356 Abs. 5 BGB) muss aktiv bestätigt sein
+    if (!waiverAccepted) {
+      setWaiverMissing(true);
+      return;
+    }
     setPurchasing(true);
     try {
       const res = await fetch("/api/v1/billing/checkout/book", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ book_id: book.id }),
+        body: JSON.stringify({ book_id: book.id, withdrawal_waiver: true }),
       });
       if (res.status === 401) {
         history.push(
@@ -393,18 +402,25 @@ export default function BookDetailPage() {
                     {t("bookDetail.processing")}
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    aria-label={
-                      purchasing ? t("bookDetail.redirectingLabel") : buyLabel
-                    }
-                    onClick={handlePurchase}
-                    disabled={purchasing}
-                    className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
-                    style={{ backgroundColor: "var(--color-primary)" }}
-                  >
-                    {purchasing ? t("bookDetail.redirecting") : buyLabel}
-                  </button>
+                  <>
+                    <WithdrawalWaiver
+                      checked={waiverAccepted}
+                      onChange={setWaiverAccepted}
+                      showError={waiverMissing}
+                    />
+                    <button
+                      type="button"
+                      aria-label={
+                        purchasing ? t("bookDetail.redirectingLabel") : buyLabel
+                      }
+                      onClick={handlePurchase}
+                      disabled={purchasing}
+                      className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+                      style={{ backgroundColor: "var(--color-primary)" }}
+                    >
+                      {purchasing ? t("bookDetail.redirecting") : buyLabel}
+                    </button>
+                  </>
                 )}
                 {purchaseError && (
                   <p className="text-sm w-full" style={{ color: "#dc2626" }}>
@@ -428,6 +444,7 @@ export default function BookDetailPage() {
             </section>
           )}
         </div>
+        <LegalFooter />
       </IonContent>
     </IonPage>
   );

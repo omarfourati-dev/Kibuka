@@ -408,3 +408,22 @@ class ReadingProgressModel(Base):
     last_read_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
     )
+
+
+class ContractCancellationModel(Base):
+    """Kündigungen über den Kündigungsbutton (§ 312k BGB) — Nachweis des
+    Zugangs; wird nie gelöscht und nie überschrieben."""
+
+    __tablename__ = "contract_cancellations"
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(sa.String(200), nullable=False)
+    email: Mapped[str] = mapped_column(sa.String(255), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    reason: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    contract_reference: Mapped[str | None] = mapped_column(sa.String(120), nullable=True)
+    received_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    outcome: Mapped[str] = mapped_column(sa.String(30), nullable=False)
+    user_id: Mapped[str | None] = mapped_column(sa.String(36), nullable=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    effective_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)

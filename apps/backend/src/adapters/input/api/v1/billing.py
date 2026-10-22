@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.input.api.dependencies import get_current_user, get_user_repository
-from src.adapters.output.billing.stripe_billing import StripeBillingAdapter
+from src.adapters.output.billing.stripe_billing import StripeBillingAdapter, period_end_of
 from src.adapters.output.persistence.repositories.book_repository import SqlBookRepository
 from src.adapters.output.persistence.repositories.book_subscription_repository import (
     SqlBookSubscriptionRepository,
@@ -64,10 +64,24 @@ def _require_billing_enabled() -> None:
 
 class BookCheckoutRequest(BaseModel):
     book_id: str
+    # Zustimmung zum sofortigen Beginn + Kenntnis vom Verlust des
+    # Widerrufsrechts (§ 356 Abs. 5 BGB) — Häkchen vor dem Kauf
+    withdrawal_waiver: bool = False
 
 
 class SubscriptionCheckoutRequest(BaseModel):
     plan: Literal["monthly", "yearly"]
+    withdrawal_waiver: bool = False
+
+
+def _require_withdrawal_waiver(accepted: bool) -> str:
+    """Zeitpunkt der Zustimmung (ISO, UTC) — geht als Nachweis zu Stripe."""
+    if not accepted:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Withdrawal waiver required",
+        )
+    return datetime.now(UTC).isoformat()
 
 
 class SubscriptionStatusResponse(BaseModel):
@@ -100,15 +114,6 @@ def _stripe_status(raw: str) -> BookSubscriptionStatus:
         return BookSubscriptionStatus.INCOMPLETE
 
 
-def _period_end(sub: dict[str, Any]) -> datetime | None:
-    # Neuere Stripe-API-Versionen führen das Periodenende am Subscription-Item
-    ts = sub.get("current_period_end")
-    if ts is None:
-        items = (sub.get("items") or {}).get("data") or []
-        ts = items[0].get("current_period_end") if items else None
-    return datetime.fromtimestamp(int(ts), UTC) if ts else None
-
-
 async def _apply_subscription_event(
     sub: dict[str, Any], event_type: str, subs: IBookSubscriptionRepository
 ) -> None:
@@ -131,7 +136,7 @@ async def _apply_subscription_event(
             status=status_value,
             stripe_subscription_id=str(stripe_id),
             stripe_customer_id=str(sub.get("customer") or "") or None,
-            current_period_end=_period_end(sub),
+            current_period_end=period_end_of(sub),
             cancel_at_period_end=bool(sub.get("cancel_at_period_end")),
         )
     )
@@ -147,6 +152,7 @@ async def create_book_checkout(
 ) -> Any:
     """Create a Stripe payment session for a single book."""
     _require_billing_enabled()
+    waiver_at = _require_withdrawal_waiver(body.withdrawal_waiver)
 
     book = await repo.get_by_id(body.book_id)
     if book is None:
@@ -169,6 +175,7 @@ async def create_book_checkout(
         amount_cents=amount_cents,
         success_url=f"{settings.app_url}/books/{book.id}?checkout=success",
         cancel_url=f"{settings.app_url}/books/{book.id}?checkout=cancel",
+        withdrawal_waiver_at=waiver_at,
     )
     return {"url": url}
 
@@ -264,6 +271,7 @@ async def create_subscription_checkout(
 ) -> Any:
     """Stripe-Checkout für Monats-/Jahresabo mit Testphase."""
     _require_billing_enabled()
+    waiver_at = _require_withdrawal_waiver(body.withdrawal_waiver)
 
     current = await subs.get_current_for_user(user_id)
     if current is not None and current.is_active:
@@ -289,6 +297,7 @@ async def create_subscription_checkout(
         customer_id=customer_id,
         success_url=f"{settings.app_url}/profile?subscription=success",
         cancel_url=f"{settings.app_url}/pricing?subscription=cancel",
+        withdrawal_waiver_at=waiver_at,
     )
     return {"url": url}
 

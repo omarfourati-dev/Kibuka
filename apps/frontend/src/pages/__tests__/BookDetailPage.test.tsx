@@ -216,6 +216,7 @@ describe("BookDetailPage", () => {
         screen.getByRole("button", { name: /kaufen/i }),
       ).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("checkbox", { name: /widerrufsrecht/i }));
     fireEvent.click(screen.getByRole("button", { name: /kaufen/i }));
 
     await waitFor(() => {
@@ -265,6 +266,7 @@ describe("BookDetailPage", () => {
     const buyButton = await screen.findByRole("button", {
       name: /kaufen|buy|€/i,
     });
+    fireEvent.click(screen.getByRole("checkbox", { name: /widerrufsrecht/i }));
     fireEvent.click(buyButton);
 
     await waitFor(() => {
@@ -276,8 +278,28 @@ describe("BookDetailPage", () => {
       expect(checkoutCall).toBeDefined();
       const [, init] = checkoutCall!;
       expect(init?.method).toBe("POST");
-      expect(String(init?.body)).toContain("book-1");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        book_id: "book-1",
+        withdrawal_waiver: true,
+      });
     });
+  });
+
+  it("does not start checkout before the withdrawal waiver is ticked", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderBookDetailPage();
+    fireEvent.click(await screen.findByRole("button", { name: /kaufen/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/bestätige/i);
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).includes("/billing/checkout")),
+    ).toBe(false);
   });
 
   it("shows read button when purchased", async () => {

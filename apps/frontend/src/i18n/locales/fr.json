@@ -49,7 +49,8 @@
     "pricing": "Tarifs – abonnement livres pour enfants | Kibuka",
     "profile": "Profil | Kibuka",
     "login": "Connexion | Kibuka",
-    "register": "Créer un compte | Kibuka"
+    "register": "Créer un compte | Kibuka",
+    "cancel": "Résilier les contrats ici | Kibuka"
   },
   "languages": {
     "de": "Allemand",
@@ -213,10 +214,7 @@
     "notLoggedInText": "Connectez-vous pour lire gratuitement l’histoire du jour et ouvrir les livres achetés.",
     "login": "Se connecter",
     "appLanguage": "Langue de l’application",
-    "legal": "Informations légales",
-    "privacySettings": "Paramètres de confidentialité",
-    "privacy": "Confidentialité",
-    "imprint": "Mentions légales"
+    "privacySettings": "Paramètres de confidentialité"
   },
   "login": {
     "welcomeBack": "Ravis de vous revoir",
@@ -233,5 +231,39 @@
     "haveAccount": "Déjà un compte ?",
     "toSignIn": "Connectez-vous",
     "failed": "La connexion a échoué. Merci de réessayer."
+  },
+  "legal": {
+    "nav": "Informations légales",
+    "imprint": "Mentions légales",
+    "privacy": "Confidentialité",
+    "cancelContracts": "Résilier les contrats ici",
+    "waiver": "J’accepte expressément que Kibuka commence à fournir le contenu numérique avant la fin du délai de rétractation. Je sais que je perds ainsi mon droit de rétractation.",
+    "waiverRequired": "Merci de cocher d’abord la case relative au droit de rétractation."
+  },
+  "cancel": {
+    "title": "Résilier les contrats ici",
+    "intro": "Résilie ton abonnement Kibuka ici – sans connexion. Dès l’envoi, tu reçois une confirmation avec la date et l’heure.",
+    "name": "Prénom et nom",
+    "email": "Adresse e-mail",
+    "emailHint": "L’adresse de ton compte Kibuka – elle nous permet de retrouver ton abonnement et de t’envoyer la confirmation.",
+    "contractReference": "Numéro de contrat ou de client (facultatif)",
+    "kindLabel": "Type de résiliation",
+    "ordinary": "Résiliation ordinaire à la prochaine échéance possible",
+    "extraordinary": "Résiliation extraordinaire sans préavis",
+    "reason": "Motif de la résiliation sans préavis",
+    "submit": "Résilier maintenant",
+    "sending": "Envoi en cours …",
+    "missingIdentity": "Merci d’indiquer ton nom et ton adresse e-mail.",
+    "missingReason": "Merci d’indiquer le motif de la résiliation sans préavis.",
+    "invalid": "Merci de vérifier tes informations – quelque chose ne va pas encore.",
+    "failed": "La résiliation n’a pas pu être envoyée. Merci de réessayer.",
+    "tooMany": "Trop de tentatives. Merci de réessayer plus tard.",
+    "receiptTitle": "Ta résiliation a bien été reçue",
+    "receiptIntro": "Enregistre ou imprime cette confirmation. Une confirmation par e-mail est en route.",
+    "receiptReference": "Numéro de dossier",
+    "receiptReceived": "Reçue le",
+    "receiptEndOrdinary": "Ton abonnement prend fin à l’issue de la période payée – d’ici là, tu peux continuer à utiliser Kibuka. La date exacte figure dans l’e-mail.",
+    "receiptEndExtraordinary": "Nous examinons ta résiliation sans préavis et te répondons rapidement par e-mail.",
+    "print": "Imprimer ou enregistrer en PDF"
   }
 }

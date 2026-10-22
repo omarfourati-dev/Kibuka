@@ -112,6 +112,7 @@ describe("PricingPage", () => {
     } as Response);
 
     renderPricingPage();
+    fireEvent.click(screen.getByRole("checkbox", { name: /widerrufsrecht/i }));
     clickCta("Jährlich");
 
     await waitFor(() => {
@@ -123,6 +124,7 @@ describe("PricingPage", () => {
     expect(url).toBe("/api/v1/billing/checkout/subscription");
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({
       plan: "yearly",
+      withdrawal_waiver: true,
     });
     expect((init as RequestInit).headers).toMatchObject({
       Authorization: "Bearer tok",
@@ -138,12 +140,27 @@ describe("PricingPage", () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false, status: 409 } as Response);
 
     renderPricingPage();
+    fireEvent.click(screen.getByRole("checkbox", { name: /widerrufsrecht/i }));
     clickCta("Monatlich");
 
     await waitFor(() => {
       expect(screen.getByText(/bereits ein aktives Abo/i)).toBeInTheDocument();
     });
     expect(assignMock).not.toHaveBeenCalled();
+  });
+
+  it("signed-in subscribe waits for the withdrawal waiver", async () => {
+    useAuthStore.setState({
+      user: { id: "u1", email: "o@example.com", name: "O", role: "member" },
+      isAuthenticated: true,
+      accessToken: "tok",
+    });
+
+    renderPricingPage();
+    clickCta("Monatlich");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/bestätige/i);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("single-book CTA leads to the library", () => {

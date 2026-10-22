@@ -65,7 +65,7 @@ export function formatPrice(amount: number, lang: Language): string {
 }
 
 // Arabisch mit westlichen Ziffern — wie die Zahlen im übrigen Text
-const DATE_LOCALES: Record<Language, string> = {
+export const DATE_LOCALES: Record<Language, string> = {
   de: "de-DE",
   ar: "ar-u-nu-latn",
   fr: "fr-FR",

@@ -98,3 +98,63 @@ async def test_subscription_checkout_builds_recurring_trial_session(
     assert sub_data["trial_period_days"] == 14
     # Der Webhook (customer.subscription.*) braucht user_id + plan
     assert sub_data["metadata"] == {"user_id": "u1", "plan": "yearly"}
+
+
+@pytest.mark.asyncio
+async def test_cancel_at_period_end_keeps_access_until_the_paid_period_ends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ordentliche Kündigung (§ 312k): Laufzeitende statt sofortigem Abbruch."""
+    updated = AsyncMock()
+    updated.to_dict = lambda: {
+        "id": "sub_123",
+        "cancel_at_period_end": True,
+        # Neuere API-Versionen führen das Periodenende am Item
+        "items": {"data": [{"current_period_end": 1795348800}]},
+    }
+    modify_async = AsyncMock(return_value=updated)
+    monkeypatch.setattr(stripe.Subscription, "modify_async", modify_async)
+
+    adapter = StripeBillingAdapter(api_key="sk_test_x", webhook_secret="whsec_x")
+    effective = await adapter.cancel_at_period_end("sub_123")
+
+    assert modify_async.call_args.args == ("sub_123",)
+    assert modify_async.call_args.kwargs == {"cancel_at_period_end": True}
+    assert effective is not None
+    assert int(effective.timestamp()) == 1795348800
+
+
+@pytest.mark.asyncio
+async def test_checkouts_record_the_withdrawal_waiver(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nachweis der Zustimmung (§ 356 Abs. 5 BGB) liegt bei Stripe am Kauf."""
+    session = AsyncMock()
+    session.url = "https://checkout.stripe.com/x"
+    create_async = AsyncMock(return_value=session)
+    monkeypatch.setattr(stripe.checkout.Session, "create_async", create_async)
+    adapter = StripeBillingAdapter(api_key="sk_test_x", webhook_secret="whsec_x")
+
+    await adapter.create_book_checkout(
+        book_id="b1",
+        user_id="u1",
+        title="T",
+        amount_cents=299,
+        success_url="https://k.example/ok",
+        cancel_url="https://k.example/cancel",
+        withdrawal_waiver_at="2026-10-22T18:30:00+00:00",
+    )
+    book_meta = create_async.call_args.kwargs["metadata"]
+    await adapter.create_subscription_checkout(
+        user_id="u1",
+        plan="monthly",
+        amount_cents=1499,
+        interval="month",
+        trial_days=0,
+        customer_email="o@example.com",
+        success_url="https://k.example/ok",
+        cancel_url="https://k.example/cancel",
+        withdrawal_waiver_at="2026-10-22T18:31:00+00:00",
+    )
+    sub_meta = create_async.call_args.kwargs["metadata"]
+
+    assert book_meta["withdrawal_waiver_at"] == "2026-10-22T18:30:00+00:00"
+    assert sub_meta["withdrawal_waiver_at"] == "2026-10-22T18:31:00+00:00"

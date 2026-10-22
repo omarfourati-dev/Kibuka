@@ -23,6 +23,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdSenseLoader } from "./components/ads/AdSenseLoader";
 import { DocumentLanguage } from "./components/DocumentLanguage";
 import { useAppLanguage } from "./hooks/useAppLanguage";
+import { CANCELLATION_PATH } from "./lib/legal";
 import { homePathFor } from "./lib/locale";
 
 const LandingPage = lazy(() => import("./pages/public/Landing"));
@@ -39,6 +40,7 @@ const LibraryPage = lazy(() => import("./pages/LibraryPage"));
 const BookDetailPage = lazy(() => import("./pages/BookDetailPage"));
 const ReaderPage = lazy(() => import("./pages/ReaderPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const CancellationPage = lazy(() => import("./pages/CancellationPage"));
 
 function Fallback() {
   const { t } = useTranslation();
@@ -67,6 +69,7 @@ const LibraryPageRoute = lazyPage(LibraryPage);
 const BookDetailPageRoute = lazyPage(BookDetailPage);
 const PricingPageRoute = lazyPage(PricingPage);
 const ProfilePageRoute = lazyPage(ProfilePage);
+const CancellationPageRoute = lazyPage(CancellationPage);
 const ReaderPageRoute = lazyPage(ReaderPage);
 const LandingPageRoute = lazyPage(LandingPage);
 const LoginPageRoute = lazyPage(LoginPage);
@@ -85,6 +88,7 @@ const TAB_PATHS = [
   "/books/:bookId",
   "/pricing",
   "/profile",
+  CANCELLATION_PATH,
 ];
 
 function MainTabs() {
@@ -106,6 +110,12 @@ function MainTabs() {
         <Route exact path="/books/:bookId" component={BookDetailPageRoute} />
         <Route exact path="/pricing" component={PricingPageRoute} />
         <Route exact path="/profile" component={ProfilePageRoute} />
+        {/* Kündigungsbutton (§ 312k BGB) — ohne Login erreichbar */}
+        <Route
+          exact
+          path={CANCELLATION_PATH}
+          component={CancellationPageRoute}
+        />
       </IonRouterOutlet>
       <IonTabBar slot="bottom" className="kibuka-tab-bar">
         <IonTabButton tab="home" href={homePath}>

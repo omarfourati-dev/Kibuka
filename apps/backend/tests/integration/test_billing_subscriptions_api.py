@@ -129,20 +129,29 @@ def _active_sub(**overrides: Any) -> BookSubscription:
 class TestSubscriptionCheckout:
     def test_requires_auth(self) -> None:
         client, _, billing = _client(authenticated=False)
-        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+        resp = client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "monthly", "withdrawal_waiver": True},
+        )
         assert resp.status_code == 401
         assert billing.sub_calls == []
 
     def test_disabled_billing_returns_404(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(settings, "enable_billing", False)
         client, _, billing = _client()
-        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+        resp = client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "monthly", "withdrawal_waiver": True},
+        )
         assert resp.status_code == 404
         assert billing.sub_calls == []
 
     def test_unknown_plan_is_rejected(self) -> None:
         client, _, billing = _client()
-        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "lifetime"})
+        resp = client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "lifetime", "withdrawal_waiver": True},
+        )
         assert resp.status_code == 422
         assert billing.sub_calls == []
 
@@ -151,7 +160,9 @@ class TestSubscriptionCheckout:
     )
     def test_creates_subscription_session(self, plan: str, cents: int, interval: str) -> None:
         client, _, billing = _client()
-        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": plan})
+        resp = client.post(
+            "/api/v1/billing/checkout/subscription", json={"plan": plan, "withdrawal_waiver": True}
+        )
 
         assert resp.status_code == 200
         assert resp.json()["url"] == "https://checkout.stripe.com/sub-session"
@@ -171,7 +182,10 @@ class TestSubscriptionCheckout:
         subs.subs["sub_1"] = _active_sub()
         client, _, billing = _client(subs=subs)
 
-        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "yearly"})
+        resp = client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "yearly", "withdrawal_waiver": True},
+        )
 
         assert resp.status_code == 409
         assert billing.sub_calls == []
@@ -360,7 +374,10 @@ class TestSubscriptionWebhookIsAuthoritative:
 class TestTrialOnlyOnce:
     def test_first_subscription_gets_trial(self) -> None:
         client, _, billing = _client()
-        client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+        client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "monthly", "withdrawal_waiver": True},
+        )
         assert billing.sub_calls[0]["trial_days"] == 14
 
     def test_returning_customer_gets_no_trial_and_reuses_customer(self) -> None:
@@ -370,10 +387,33 @@ class TestTrialOnlyOnce:
         )
         client, _, billing = _client(subs=subs)
 
-        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+        resp = client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "monthly", "withdrawal_waiver": True},
+        )
 
         assert resp.status_code == 200
         call = billing.sub_calls[0]
         assert call["trial_days"] == 0
         # Gleicher Stripe-Kunde statt neuer Kunde per E-Mail
         assert call["customer_id"] == "cus_1"
+
+
+class TestSubscriptionWithdrawalWaiver:
+    def test_subscription_checkout_without_waiver_is_rejected(self) -> None:
+        client, _, billing = _client()
+
+        resp = client.post("/api/v1/billing/checkout/subscription", json={"plan": "monthly"})
+
+        assert resp.status_code == 422
+        assert billing.sub_calls == []
+
+    def test_waiver_time_travels_to_stripe_as_proof(self) -> None:
+        client, _, billing = _client()
+
+        client.post(
+            "/api/v1/billing/checkout/subscription",
+            json={"plan": "monthly", "withdrawal_waiver": True},
+        )
+
+        assert datetime.fromisoformat(billing.sub_calls[0]["withdrawal_waiver_at"])

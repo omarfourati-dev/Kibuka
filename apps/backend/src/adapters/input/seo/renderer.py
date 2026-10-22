@@ -23,6 +23,11 @@ from ....core.domain.value_objects.language import Language
 from .landing_copy import COPY, NATIVE_NAMES, OG_LOCALES, money, trial_period
 
 SITE_NAME = "Kibuka"
+
+# Rechtliche Pflichtlinks — dieselben Ziele wie im Frontend (src/lib/legal.ts)
+IMPRINT_URL = "https://omarfourati.de/de/impressum"
+PRIVACY_URL = "https://omarfourati.de/de/datenschutz"
+CANCELLATION_PATH = "/kuendigen"
 DEFAULT_IMAGE = "/og-image.png"
 LOGO = "/logo.png"
 
@@ -255,10 +260,19 @@ def _nav(labels: tuple[str, str, str] = ("Start", "Bibliothek", "Preise"), home:
     )
 
 
+def _legal_footer() -> str:
+    # Impressum (§ 5 DDG) und Kündigungsbutton (§ 312k BGB) von jeder Seite aus
+    return (
+        f'<footer><a href="{IMPRINT_URL}">Impressum</a> · '
+        f'<a href="{PRIVACY_URL}">Datenschutz</a> · '
+        f'<a href="{CANCELLATION_PATH}">Verträge hier kündigen</a></footer>'
+    )
+
+
 def _wrap(inner: str, nav: str | None = None, lang: Language | None = None) -> str:
     # Wird von der SPA beim Start ersetzt (createRoot leert #root)
     attrs = f' lang="{lang.value}" dir="{_dir(lang)}"' if lang else ""
-    return f'<main class="kibuka-seo"{attrs}>{nav or _nav()}{inner}</main>'
+    return f'<main class="kibuka-seo"{attrs}>{nav or _nav()}{inner}{_legal_footer()}</main>'
 
 
 def _dir(lang: Language) -> str:

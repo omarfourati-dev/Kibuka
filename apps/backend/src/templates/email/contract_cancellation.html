@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+<body style="font-family: Arial, sans-serif; color: #1a1a2e; line-height: 1.5">
+  <h1 style="font-size: 20px">Eingangsbestätigung deiner Kündigung</h1>
+  <p>Hallo {{ name }},</p>
+  <p>wir haben deine Kündigung erhalten. Bitte bewahre diese E-Mail als Nachweis auf.</p>
+  <table cellpadding="4" style="border-collapse: collapse">
+    <tr><td><strong>Vorgangsnummer</strong></td><td>{{ reference }}</td></tr>
+    <tr><td><strong>Eingegangen am</strong></td><td>{{ received_at.strftime("%d.%m.%Y um %H:%M:%S") }} Uhr (UTC)</td></tr>
+    <tr><td><strong>Name</strong></td><td>{{ name }}</td></tr>
+    <tr><td><strong>Art der Kündigung</strong></td><td>{% if kind == "extraordinary" %}Außerordentliche (fristlose) Kündigung{% else %}Ordentliche Kündigung zum nächstmöglichen Zeitpunkt{% endif %}</td></tr>
+    {% if reason %}<tr><td><strong>Grund</strong></td><td>{{ reason }}</td></tr>{% endif %}
+    {% if contract_reference %}<tr><td><strong>Vertragsangabe</strong></td><td>{{ contract_reference }}</td></tr>{% endif %}
+    <tr><td><strong>Vertragsende</strong></td><td>
+      {% if effective_at %}{{ effective_at.strftime("%d.%m.%Y") }} – bis dahin kannst du Kibuka weiter nutzen.
+      {% elif kind == "extraordinary" %}Wir prüfen deine fristlose Kündigung und melden uns umgehend.
+      {% else %}Zum nächstmöglichen Zeitpunkt. Wir melden uns, falls wir dein Abo nicht zuordnen können.{% endif %}
+    </td></tr>
+  </table>
+  <p>Fragen? Antworte einfach auf diese E-Mail.</p>
+  <p>Dein Kibuka-Team</p>
+</body>
+</html>
