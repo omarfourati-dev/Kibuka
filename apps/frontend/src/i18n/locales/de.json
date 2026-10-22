@@ -49,7 +49,8 @@
     "pricing": "Preise – Kinderbuch-Abo | Kibuka",
     "profile": "Profil | Kibuka",
     "login": "Anmelden | Kibuka",
-    "register": "Registrieren | Kibuka"
+    "register": "Registrieren | Kibuka",
+    "cancel": "Verträge hier kündigen | Kibuka"
   },
   "languages": {
     "de": "Deutsch",
@@ -212,10 +213,7 @@
     "notLoggedInText": "Melde dich an, um das Tagesbuch gratis zu lesen und gekaufte Bücher zu öffnen.",
     "login": "Anmelden",
     "appLanguage": "Sprache der App",
-    "legal": "Rechtliches",
-    "privacySettings": "Datenschutzeinstellungen",
-    "privacy": "Datenschutz",
-    "imprint": "Impressum"
+    "privacySettings": "Datenschutzeinstellungen"
   },
   "login": {
     "welcomeBack": "Schön, dass du wieder da bist",
@@ -232,5 +230,39 @@
     "haveAccount": "Schon ein Konto?",
     "toSignIn": "Anmelden",
     "failed": "Anmeldung fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "legal": {
+    "nav": "Rechtliches",
+    "imprint": "Impressum",
+    "privacy": "Datenschutz",
+    "cancelContracts": "Verträge hier kündigen",
+    "waiver": "Ich stimme ausdrücklich zu, dass Kibuka vor Ablauf der Widerrufsfrist mit der Bereitstellung der digitalen Inhalte beginnt. Mir ist bekannt, dass ich dadurch mein Widerrufsrecht verliere.",
+    "waiverRequired": "Bitte bestätige zuerst das Häkchen zum Widerrufsrecht."
+  },
+  "cancel": {
+    "title": "Verträge hier kündigen",
+    "intro": "Hier kündigst du dein Kibuka-Abo – ohne Anmeldung. Nach dem Absenden bekommst du sofort eine Bestätigung mit Datum und Uhrzeit.",
+    "name": "Vor- und Nachname",
+    "email": "E-Mail-Adresse",
+    "emailHint": "Die Adresse deines Kibuka-Kontos – damit ordnen wir dein Abo zu und schicken dir die Bestätigung.",
+    "contractReference": "Vertrags- oder Kundennummer (optional)",
+    "kindLabel": "Art der Kündigung",
+    "ordinary": "Ordentliche Kündigung zum nächstmöglichen Zeitpunkt",
+    "extraordinary": "Außerordentliche (fristlose) Kündigung",
+    "reason": "Grund für die fristlose Kündigung",
+    "submit": "Jetzt kündigen",
+    "sending": "Wird gesendet …",
+    "missingIdentity": "Bitte gib deinen Namen und deine E-Mail-Adresse an.",
+    "missingReason": "Bitte gib einen Grund für die fristlose Kündigung an.",
+    "invalid": "Bitte prüfe deine Angaben – etwas stimmt noch nicht.",
+    "failed": "Die Kündigung konnte gerade nicht gesendet werden. Bitte versuche es erneut.",
+    "tooMany": "Zu viele Versuche. Bitte versuche es später noch einmal.",
+    "receiptTitle": "Deine Kündigung ist eingegangen",
+    "receiptIntro": "Speichere oder drucke diese Bestätigung. Eine Bestätigung per E-Mail ist unterwegs.",
+    "receiptReference": "Vorgangsnummer",
+    "receiptReceived": "Eingegangen am",
+    "receiptEndOrdinary": "Dein Abo endet zum Ende der bezahlten Laufzeit – bis dahin kannst du Kibuka weiter nutzen. Das genaue Datum steht in der E-Mail.",
+    "receiptEndExtraordinary": "Wir prüfen deine fristlose Kündigung und melden uns umgehend per E-Mail.",
+    "print": "Bestätigung drucken oder als PDF speichern"
   }
 }

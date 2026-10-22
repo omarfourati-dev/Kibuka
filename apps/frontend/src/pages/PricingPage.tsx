@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders, useAuthStore } from "@omarsapp/shared-stores";
+import { LegalFooter } from "../components/legal/LegalFooter";
+import { WithdrawalWaiver } from "../components/legal/WithdrawalWaiver";
 import { PricingCard } from "../components/pricing/PricingCard";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -127,6 +129,8 @@ export default function PricingPage() {
   usePageTitle(t("meta.pricing"));
   const plans = buildPlans(t, lang);
   const [pendingPlan, setPendingPlan] = useState<PlanId | null>(null);
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [waiverMissing, setWaiverMissing] = useState(false);
   // Schlüssel statt Text speichern, damit ein Sprachwechsel auch den Hinweis übersetzt
   const [notice, setNotice] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("subscription") === "cancel"
@@ -143,13 +147,18 @@ export default function PricingPage() {
       history.push(`/login?redirect=${encodeURIComponent("/pricing")}`);
       return;
     }
+    // Widerrufsverzicht (§ 356 Abs. 5 BGB) muss aktiv bestätigt sein
+    if (!waiverAccepted) {
+      setWaiverMissing(true);
+      return;
+    }
     setNotice(null);
     setPendingPlan(plan);
     try {
       const res = await fetch("/api/v1/billing/checkout/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, withdrawal_waiver: true }),
       });
       if (res.status === 401) {
         history.push(`/login?redirect=${encodeURIComponent("/pricing")}`);
@@ -240,6 +249,13 @@ export default function PricingPage() {
                 {t(notice)}
               </div>
             )}
+            <div className="mb-8 max-w-2xl mx-auto">
+              <WithdrawalWaiver
+                checked={waiverAccepted}
+                onChange={setWaiverAccepted}
+                showError={waiverMissing}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start max-w-5xl mx-auto">
               {plans.map((plan) => (
                 <PricingCard
@@ -295,12 +311,11 @@ export default function PricingPage() {
             </div>
           </section>
 
-          {/* Footer */}
-          <footer
+          <div
             className="border-t"
             style={{ borderColor: "var(--color-border)" }}
           >
-            <div className="max-w-6xl mx-auto px-6 py-8 text-center">
+            <div className="max-w-6xl mx-auto px-6 pt-8 text-center">
               <p
                 className="text-sm"
                 style={{ color: "var(--color-text-muted)" }}
@@ -309,7 +324,8 @@ export default function PricingPage() {
                 {t("pricing.rights")}
               </p>
             </div>
-          </footer>
+            <LegalFooter />
+          </div>
         </div>
       </IonContent>
     </IonPage>

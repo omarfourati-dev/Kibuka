@@ -49,7 +49,8 @@
     "pricing": "Pricing – Children’s Book Subscription | Kibuka",
     "profile": "Profile | Kibuka",
     "login": "Sign in | Kibuka",
-    "register": "Create account | Kibuka"
+    "register": "Create account | Kibuka",
+    "cancel": "Cancel contracts here | Kibuka"
   },
   "languages": {
     "de": "German",
@@ -212,10 +213,7 @@
     "notLoggedInText": "Sign in to read today’s story for free and open the books you’ve bought.",
     "login": "Sign in",
     "appLanguage": "App language",
-    "legal": "Legal",
-    "privacySettings": "Privacy settings",
-    "privacy": "Privacy policy",
-    "imprint": "Legal notice"
+    "privacySettings": "Privacy settings"
   },
   "login": {
     "welcomeBack": "Welcome back",
@@ -232,5 +230,39 @@
     "haveAccount": "Already have an account?",
     "toSignIn": "Sign in",
     "failed": "Sign-in failed. Please try again."
+  },
+  "legal": {
+    "nav": "Legal",
+    "imprint": "Legal notice",
+    "privacy": "Privacy",
+    "cancelContracts": "Cancel contracts here",
+    "waiver": "I expressly agree that Kibuka starts providing the digital content before the withdrawal period ends. I understand that I thereby lose my right of withdrawal.",
+    "waiverRequired": "Please tick the box about the right of withdrawal first."
+  },
+  "cancel": {
+    "title": "Cancel contracts here",
+    "intro": "Cancel your Kibuka subscription here – no sign-in needed. Right after sending you get a confirmation with date and time.",
+    "name": "First and last name",
+    "email": "E-mail address",
+    "emailHint": "The address of your Kibuka account – we use it to find your subscription and send the confirmation.",
+    "contractReference": "Contract or customer number (optional)",
+    "kindLabel": "Type of cancellation",
+    "ordinary": "Regular cancellation at the earliest possible date",
+    "extraordinary": "Extraordinary cancellation without notice",
+    "reason": "Reason for cancelling without notice",
+    "submit": "Cancel now",
+    "sending": "Sending …",
+    "missingIdentity": "Please enter your name and e-mail address.",
+    "missingReason": "Please give a reason for cancelling without notice.",
+    "invalid": "Please check your details – something is not right yet.",
+    "failed": "The cancellation could not be sent just now. Please try again.",
+    "tooMany": "Too many attempts. Please try again later.",
+    "receiptTitle": "Your cancellation has been received",
+    "receiptIntro": "Save or print this confirmation. A confirmation e-mail is on its way.",
+    "receiptReference": "Reference number",
+    "receiptReceived": "Received on",
+    "receiptEndOrdinary": "Your subscription ends with the paid period – until then you can keep using Kibuka. The exact date is in the e-mail.",
+    "receiptEndExtraordinary": "We will review your cancellation without notice and reply by e-mail promptly.",
+    "print": "Print or save as PDF"
   }
 }

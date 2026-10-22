@@ -10,7 +10,8 @@ import {
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { logout } from "../lib/session";
-import { IMPRINT_URL, PRIVACY_URL, resetAdConsent } from "../lib/ads";
+import { LegalFooter } from "../components/legal/LegalFooter";
+import { resetAdConsent } from "../lib/ads";
 import { formatDate, LANGUAGES, NATIVE_LANGUAGE_NAMES } from "../lib/locale";
 import { cn } from "../utils/cn";
 
@@ -319,9 +320,9 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          <nav
-            aria-label={t("profile.legal")}
-            className="flex flex-wrap justify-center gap-4 text-xs"
+          {/* Impressum, Datenschutz und Kündigen stehen in der LegalFooter */}
+          <div
+            className="flex justify-center text-xs"
             style={{ color: "var(--color-text-secondary)" }}
           >
             <button
@@ -331,24 +332,9 @@ export default function ProfilePage() {
             >
               {t("profile.privacySettings")}
             </button>
-            <a
-              href={PRIVACY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
-              {t("profile.privacy")}
-            </a>
-            <a
-              href={IMPRINT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
-              {t("profile.imprint")}
-            </a>
-          </nav>
+          </div>
         </div>
+        <LegalFooter />
       </IonContent>
     </IonPage>
   );

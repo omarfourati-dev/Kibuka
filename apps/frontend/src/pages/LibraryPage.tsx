@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookCard } from "../components/book/BookCard";
+import { LegalFooter } from "../components/legal/LegalFooter";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { LANGUAGES, pickTitle } from "../lib/locale";
@@ -326,6 +327,7 @@ export default function LibraryPage() {
             </button>
           </div>
         </div>
+        <LegalFooter />
       </IonContent>
     </IonPage>
   );

@@ -5,6 +5,7 @@ import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookHero } from "../components/book/BookHero";
 import { BookCard } from "../components/book/BookCard";
+import { LegalFooter } from "../components/legal/LegalFooter";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { pickTitle } from "../lib/locale";
@@ -216,7 +217,10 @@ export default function HomePage() {
 
   return (
     <IonPage>
-      <IonContent>{body}</IonContent>
+      <IonContent>
+        {body}
+        <LegalFooter />
+      </IonContent>
     </IonPage>
   );
 }

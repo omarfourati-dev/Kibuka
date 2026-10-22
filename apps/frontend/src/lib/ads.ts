@@ -4,8 +4,6 @@
 // Datenschutzhinweis: omarfourati.de/de/datenschutz §6.
 export const ADSENSE_CLIENT = "ca-pub-4072840905222883";
 export const ADSENSE_HOST = "kibuka.omarfourati.de";
-export const PRIVACY_URL = "https://omarfourati.de/de/datenschutz";
-export const IMPRINT_URL = "https://omarfourati.de/de/impressum";
 const SCRIPT_ID = "adsbygoogle-loader";
 
 interface AdsQueue extends Array<unknown> {

@@ -69,6 +69,15 @@ jobs:
           STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
 
+          # E-Mail (Kündigungsbestätigung § 312k BGB). Ohne SMTP_USER wird
+          # nichts versendet, nur gewarnt. Port/Absender mit Defaults, damit
+          # ein fehlendes Secret den Start nicht bricht (int-Parsing).
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORT=${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM || 'noreply@kibuka.omarfourati.de' }}
+
           # Self-hosted SeaweedFS: Uploads intern, Public-Links über die Domain
           S3_BUCKET=kibuka-assets
           S3_REGION=eu-central-1

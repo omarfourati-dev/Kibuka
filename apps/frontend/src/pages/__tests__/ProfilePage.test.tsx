@@ -220,7 +220,7 @@ describe("ProfilePage", () => {
         screen.getByRole("button", { name: ar.profile.login }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("navigation", { name: ar.profile.legal }),
+        screen.getByRole("navigation", { name: ar.legal.nav }),
       ).toBeInTheDocument();
     });
 
