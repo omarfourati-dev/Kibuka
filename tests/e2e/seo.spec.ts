@@ -143,6 +143,12 @@ test.describe('SEO — robots.txt & sitemap', () => {
     expect(html).toContain('<!--# include virtual="/__seo/head$seo_path"')
     expect(html).toContain('<!--# include virtual="/__seo/body$seo_path"')
   })
+
+  test('index.html keeps the exact <html> tag that nginx rewrites per language', async ({ page }) => {
+    // nginx.conf: sub_filter '<html lang="de">' → lang/dir für /ar, /fr, /en
+    const html = await (await page.request.get('/')).text()
+    expect(html).toContain('<html lang="de">')
+  })
 })
 
 test.describe('PWA — Installation auf dem Home-Bildschirm', () => {
