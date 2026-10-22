@@ -149,5 +149,9 @@ async def create_portal(
 
 
 @router.get("/subscription/{space_id}")
-async def get_subscription(space_id: str) -> Any:
-    return {"status": "active", "plan": "free"}
+async def get_subscription(
+    space_id: str,
+    user_id: Annotated[str, Depends(get_current_user)],
+) -> Any:
+    # Platzhalter bis Abos real sind — aber nie anonym einen Plan vorgaukeln
+    return {"status": "none", "plan": "free"}

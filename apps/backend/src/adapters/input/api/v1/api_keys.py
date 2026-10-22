@@ -3,10 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api-keys", tags=["api-keys"])
+from ..dependencies import get_current_user
+
+# Platzhalter-Routen: trotzdem nie ohne Auth erreichbar
+router = APIRouter(prefix="/api-keys", tags=["api-keys"], dependencies=[Depends(get_current_user)])
 
 
 class ApiKeyRequest(BaseModel):

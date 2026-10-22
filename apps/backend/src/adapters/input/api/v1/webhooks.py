@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+from ..dependencies import get_current_user
+
+# Platzhalter-Routen: trotzdem nie ohne Auth erreichbar
+router = APIRouter(prefix="/webhooks", tags=["webhooks"], dependencies=[Depends(get_current_user)])
 
 
 class WebhookRequest(BaseModel):
@@ -22,7 +25,9 @@ async def list_webhooks(space_id: str) -> Any:
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_webhook(space_id: str, body: WebhookRequest) -> Any:
-    return {"id": "placeholder", **body.model_dump()}
+    # Das Secret wird NIE zurückgegeben (Security-Regel: Secrets nicht echoen)
+    data = body.model_dump(exclude={"secret"})
+    return {"id": "placeholder", **data}
 
 
 @router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
