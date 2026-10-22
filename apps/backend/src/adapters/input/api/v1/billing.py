@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import cache
 from typing import Annotated, Any, Literal
 
@@ -64,10 +64,24 @@ def _require_billing_enabled() -> None:
 
 class BookCheckoutRequest(BaseModel):
     book_id: str
+    # Zustimmung zum sofortigen Beginn + Kenntnis vom Verlust des
+    # Widerrufsrechts (§ 356 Abs. 5 BGB) — Häkchen vor dem Kauf
+    withdrawal_waiver: bool = False
 
 
 class SubscriptionCheckoutRequest(BaseModel):
     plan: Literal["monthly", "yearly"]
+    withdrawal_waiver: bool = False
+
+
+def _require_withdrawal_waiver(accepted: bool) -> str:
+    """Zeitpunkt der Zustimmung (ISO, UTC) — geht als Nachweis zu Stripe."""
+    if not accepted:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Withdrawal waiver required",
+        )
+    return datetime.now(UTC).isoformat()
 
 
 class SubscriptionStatusResponse(BaseModel):
@@ -138,6 +152,7 @@ async def create_book_checkout(
 ) -> Any:
     """Create a Stripe payment session for a single book."""
     _require_billing_enabled()
+    waiver_at = _require_withdrawal_waiver(body.withdrawal_waiver)
 
     book = await repo.get_by_id(body.book_id)
     if book is None:
@@ -160,6 +175,7 @@ async def create_book_checkout(
         amount_cents=amount_cents,
         success_url=f"{settings.app_url}/books/{book.id}?checkout=success",
         cancel_url=f"{settings.app_url}/books/{book.id}?checkout=cancel",
+        withdrawal_waiver_at=waiver_at,
     )
     return {"url": url}
 
@@ -255,6 +271,7 @@ async def create_subscription_checkout(
 ) -> Any:
     """Stripe-Checkout für Monats-/Jahresabo mit Testphase."""
     _require_billing_enabled()
+    waiver_at = _require_withdrawal_waiver(body.withdrawal_waiver)
 
     current = await subs.get_current_for_user(user_id)
     if current is not None and current.is_active:
@@ -280,6 +297,7 @@ async def create_subscription_checkout(
         customer_id=customer_id,
         success_url=f"{settings.app_url}/profile?subscription=success",
         cancel_url=f"{settings.app_url}/pricing?subscription=cancel",
+        withdrawal_waiver_at=waiver_at,
     )
     return {"url": url}
 

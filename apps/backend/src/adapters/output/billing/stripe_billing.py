@@ -21,6 +21,11 @@ def period_end_of(sub: dict[str, Any]) -> datetime | None:
     return datetime.fromtimestamp(int(ts), UTC) if ts else None
 
 
+def _waiver_metadata(withdrawal_waiver_at: str | None) -> dict[str, str]:
+    """Nachweis des Widerrufsverzichts (§ 356 Abs. 5 BGB) direkt am Kauf."""
+    return {"withdrawal_waiver_at": withdrawal_waiver_at} if withdrawal_waiver_at else {}
+
+
 class StripeBillingAdapter(ISubscriptionCanceller):
     """Handles Stripe API calls. Used directly in billing API routes."""
 
@@ -40,6 +45,7 @@ class StripeBillingAdapter(ISubscriptionCanceller):
         amount_cents: int,
         success_url: str,
         cancel_url: str,
+        withdrawal_waiver_at: str | None = None,
     ) -> str:
         """One-time payment session for a single book; metadata drives the webhook."""
         session = await stripe.checkout.Session.create_async(
@@ -63,6 +69,7 @@ class StripeBillingAdapter(ISubscriptionCanceller):
                 "book_id": book_id,
                 "user_id": user_id,
                 "amount_cents": str(amount_cents),
+                **_waiver_metadata(withdrawal_waiver_at),
             },
             success_url=success_url,
             cancel_url=cancel_url,
@@ -81,6 +88,7 @@ class StripeBillingAdapter(ISubscriptionCanceller):
         success_url: str,
         cancel_url: str,
         customer_id: str | None = None,
+        withdrawal_waiver_at: str | None = None,
     ) -> str:
         """Abo-Checkout; Status kommt später über customer.subscription.*-Webhooks.
 
@@ -113,6 +121,7 @@ class StripeBillingAdapter(ISubscriptionCanceller):
             ],
             # TypedDict der SDK wird dynamisch befüllt (Testphase optional)
             subscription_data=cast(Any, subscription_data),
+            metadata=_waiver_metadata(withdrawal_waiver_at),
             success_url=success_url,
             cancel_url=cancel_url,
         )
