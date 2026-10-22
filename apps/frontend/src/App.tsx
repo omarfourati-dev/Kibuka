@@ -50,36 +50,42 @@ const lazyPage = (Page: React.LazyExoticComponent<() => JSX.Element>) =>
     );
   };
 
+// Stabile Komponenten-Identität: lazyPage() erzeugt bei jedem Aufruf einen
+// NEUEN Komponententyp. Inline im JSX hätte jedes Rendern alle Seiten neu
+// montiert — Ionic verlor dabei die Seiten für seine Übergänge und ließ die
+// Zielseite unsichtbar stehen (Bug 22.10.: Zurück zu Home ging nicht).
+const HomePageKibukaRoute = lazyPage(HomePageKibuka);
+const LibraryPageRoute = lazyPage(LibraryPage);
+const BookDetailPageRoute = lazyPage(BookDetailPage);
+const PricingPageRoute = lazyPage(PricingPage);
+const ProfilePageRoute = lazyPage(ProfilePage);
+const ReaderPageRoute = lazyPage(ReaderPage);
+const LandingPageRoute = lazyPage(LandingPage);
+const LoginPageRoute = lazyPage(LoginPage);
+const DashboardPageRoute = lazyPage(DashboardPage);
+const SpacesPageRoute = lazyPage(SpacesPage);
+const SettingsPageRoute = lazyPage(SettingsPage);
+const AdminPageRoute = lazyPage(AdminPage);
+
+const TAB_PATHS = [
+  "/",
+  "/library",
+  "/books",
+  "/books/:bookId",
+  "/pricing",
+  "/profile",
+];
+
 function MainTabs() {
   return (
     <IonTabs>
       <IonRouterOutlet>
-        <Route exact path="/" component={lazyPage(HomePageKibuka)} />
-        <Route exact path="/library" component={lazyPage(LibraryPage)} />
-        <Route exact path="/books" component={lazyPage(LibraryPage)} />
-        <Route
-          exact
-          path="/books/:bookId"
-          component={lazyPage(BookDetailPage)}
-        />
-        <Route exact path="/pricing" component={lazyPage(PricingPage)} />
-        <Route exact path="/profile" component={lazyPage(ProfilePage)} />
-        {/* 404: unbekannte Pfade zurück zur Startseite. Als explizite
-            Pfad-Negativliste statt pfadloser Catch-all-Route — die matcht
-            im IonRouterOutlet sonst vor spezifischeren Routen. */}
-        <Route
-          render={({ location }) =>
-            [
-              /^\/$/,
-              /^\/library$/,
-              /^\/books(\/|$)/,
-              /^\/pricing$/,
-              /^\/profile$/,
-            ].some((re) => re.test(location.pathname)) ? null : (
-              <Redirect to="/" />
-            )
-          }
-        />
+        <Route exact path="/" component={HomePageKibukaRoute} />
+        <Route exact path="/library" component={LibraryPageRoute} />
+        <Route exact path="/books" component={LibraryPageRoute} />
+        <Route exact path="/books/:bookId" component={BookDetailPageRoute} />
+        <Route exact path="/pricing" component={PricingPageRoute} />
+        <Route exact path="/profile" component={ProfilePageRoute} />
       </IonRouterOutlet>
       <IonTabBar slot="bottom" className="kibuka-tab-bar">
         <IonTabButton tab="home" href="/">
@@ -113,10 +119,10 @@ export default function App() {
             <Route
               exact
               path="/books/:bookId/read"
-              component={lazyPage(ReaderPage)}
+              component={ReaderPageRoute}
             />
-            <Route exact path="/landing" component={lazyPage(LandingPage)} />
-            <Route exact path="/login" component={lazyPage(LoginPage)} />
+            <Route exact path="/landing" component={LandingPageRoute} />
+            <Route exact path="/login" component={LoginPageRoute} />
 
             {/* Protected template area */}
             <ProtectedRoute path="/app">
@@ -130,25 +136,27 @@ export default function App() {
                   <Route
                     exact
                     path="/app/dashboard"
-                    component={lazyPage(DashboardPage)}
+                    component={DashboardPageRoute}
                   />
-                  <Route
-                    exact
-                    path="/app/spaces"
-                    component={lazyPage(SpacesPage)}
-                  />
+                  <Route exact path="/app/spaces" component={SpacesPageRoute} />
                   <Route
                     exact
                     path="/app/settings"
-                    component={lazyPage(SettingsPage)}
+                    component={SettingsPageRoute}
                   />
-                  <Route path="/app/admin" component={lazyPage(AdminPage)} />
+                  <Route path="/app/admin" component={AdminPageRoute} />
                 </Suspense>
               </AppLayout>
             </ProtectedRoute>
 
-            {/* Tab navigation (Home, Library, Pricing, Book Detail) */}
-            <Route path="/" component={MainTabs} />
+            {/* Tab navigation (Home, Library, Pricing, Book Detail, Profil).
+                Nur bekannte Pfade — eine pfadlose Route INNERHALB des
+                IonRouterOutlet matcht jede URL und blockierte den Wechsel
+                zurück zu Home (Bug 22.10.). */}
+            <Route exact path={TAB_PATHS} component={MainTabs} />
+
+            {/* 404: unbekannte Pfade zurück zur Startseite */}
+            <Route render={() => <Redirect to="/" />} />
           </Switch>
         </ErrorBoundary>
       </IonReactRouter>
