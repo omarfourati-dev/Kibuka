@@ -284,7 +284,8 @@ class TestGetBooksList:
     def test_get_books_list_returns_paginated_response(self, client: TestClient) -> None:
         response = client.get("/api/v1/books")
         data = response.json()
-        assert "books" in data
+        assert "items" in data
+        assert "books" not in data  # alter Feldname — das Web-Frontend liest items
         assert "total" in data
         assert "page" in data
         assert "page_size" in data
@@ -295,20 +296,20 @@ class TestGetBooksList:
         response = client.get("/api/v1/books?theme=animals")
         assert response.status_code == 200
         data = response.json()
-        for book in data["books"]:
+        for book in data["items"]:
             assert book["theme"] == "animals"
 
     def test_get_books_list_filters_by_age_range(self, client: TestClient) -> None:
         response = client.get("/api/v1/books?age_range=3-5")
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data["books"], list)
+        assert isinstance(data["items"], list)
 
     def test_get_books_list_pagination(self, client: TestClient) -> None:
         response = client.get("/api/v1/books?page=1&page_size=1")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["books"]) == 1
+        assert len(data["items"]) == 1
         assert data["page_size"] == 1
 
 
