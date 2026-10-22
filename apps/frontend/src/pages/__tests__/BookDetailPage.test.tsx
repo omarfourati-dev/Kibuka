@@ -74,9 +74,9 @@ const freeDailyBook = {
   price_single: 0,
 };
 
-function renderBookDetailPage(bookId = "book-1") {
+function renderBookDetailPage(bookId = "book-1", search = "") {
   return render(
-    <MemoryRouter initialEntries={[`/books/${bookId}`]}>
+    <MemoryRouter initialEntries={[`/books/${bookId}${search}`]}>
       <Switch>
         <Route exact path="/books/:bookId" component={BookDetailPage} />
         <Route exact path="/library" render={() => <div>Library</div>} />
@@ -146,6 +146,80 @@ describe("BookDetailPage", () => {
       expect(screen.getByTestId("book-preview")).toBeInTheDocument();
     });
     expect(screen.getByText("Vorschau")).toBeInTheDocument();
+  });
+
+  it("shows a success banner after returning from stripe with checkout=success", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(purchasedBook),
+    } as Response);
+
+    renderBookDetailPage("book-1", "?checkout=success");
+    await waitFor(() => {
+      expect(screen.getByText(/kauf erfolgreich/i)).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("button", { name: /buch lesen|jetzt lesen/i }),
+    ).toBeInTheDocument();
+    // Query-Param wird entfernt, damit das Banner bei Reload nicht wiederkommt
+    expect(mockHistory.replace).toHaveBeenCalled();
+  });
+
+  it("shows a processing note instead of the buy button while the webhook is pending", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook), // is_purchased noch false
+    } as Response);
+
+    renderBookDetailPage("book-1", "?checkout=success");
+    await waitFor(() => {
+      expect(screen.getByText(/wird verarbeitet/i)).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole("button", { name: /kaufen/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a cancel note after returning with checkout=cancel", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderBookDetailPage("book-1", "?checkout=cancel");
+    await waitFor(() => {
+      expect(screen.getByText(/kauf abgebrochen/i)).toBeInTheDocument();
+    });
+    // Kauf-Button bleibt verfügbar
+    expect(screen.getByRole("button", { name: /kaufen/i })).toBeInTheDocument();
+  });
+
+  it("disables the buy button while redirecting to stripe", async () => {
+    let resolveCheckout: ((value: Response) => void) | null = null;
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/billing/checkout/book")) {
+        return new Promise<Response>((resolve) => {
+          resolveCheckout = resolve;
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockBook),
+      } as Response);
+    });
+
+    renderBookDetailPage();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /kaufen/i }),
+      ).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /kaufen/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/weiterleitung/i)).toBeInTheDocument();
+    });
+    expect(resolveCheckout).not.toBeNull();
   });
 
   it("shows a free-read CTA instead of €0,00 kaufen for the daily book", async () => {

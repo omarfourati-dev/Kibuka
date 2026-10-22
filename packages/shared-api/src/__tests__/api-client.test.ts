@@ -6,7 +6,11 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiClient, setAuthTokenProvider } from "../api-client";
+import {
+  apiClient,
+  setAuthTokenProvider,
+  setUnauthorizedHandler,
+} from "../api-client";
 
 function mockFetch(status = 200, body: unknown = {}) {
   const fn = vi.fn().mockResolvedValue({
@@ -90,5 +94,34 @@ describe("apiClient error parsing", () => {
       status: 403,
       message: "Purchase required",
     });
+  });
+});
+
+describe("apiClient session expiry", () => {
+  afterEach(() => {
+    setUnauthorizedHandler(null);
+    vi.unstubAllGlobals();
+  });
+
+  it("notifies the unauthorized handler on 401 so the app can clear state", async () => {
+    mockFetch(401, { detail: "Authentication required" });
+    const onUnauthorized = vi.fn();
+    setUnauthorizedHandler(onUnauthorized);
+
+    await expect(apiClient.get("/users/me")).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call the handler on other errors", async () => {
+    mockFetch(404, { detail: "Not found" });
+    const onUnauthorized = vi.fn();
+    setUnauthorizedHandler(onUnauthorized);
+
+    await expect(apiClient.get("/books/x")).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(onUnauthorized).not.toHaveBeenCalled();
   });
 });

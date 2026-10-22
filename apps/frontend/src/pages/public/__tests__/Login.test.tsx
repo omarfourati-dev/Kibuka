@@ -80,6 +80,20 @@ describe("Login redirect", () => {
     expect(screen.getByText("BookDetailTarget")).toBeInTheDocument();
   });
 
+  it("stays on the form when the persisted flag is stale (no token) — bounce trap", () => {
+    // Nach Reload: user+isAuthenticated aus localStorage, Token weg.
+    // Die Login-Seite darf dann NICHT wegredirecten, sonst kommt man nie
+    // wieder an das Formular heran.
+    useAuthStore.setState({
+      user: { id: "u1", email: "o@example.com", name: "O", role: "member" },
+      isAuthenticated: true,
+      accessToken: null,
+    });
+    renderLogin("/login?redirect=/books/b1");
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.queryByText("BookDetailTarget")).not.toBeInTheDocument();
+  });
+
   it("ignores external redirect targets (no open redirect)", () => {
     useAuthStore.setState({
       user: { id: "u1", email: "o@example.com", name: "O", role: "member" },

@@ -283,6 +283,23 @@ describe("ReaderPage", () => {
     });
   });
 
+  it("offers a close button that returns to the book detail", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderReaderPage("book-1");
+    await waitFor(() => {
+      expect(screen.getByTestId("word-highlighter")).toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /schließen|reader verlassen/i }),
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/books/book-1");
+  });
+
   it("navigates to /login with a redirect back to the book on 401", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
