@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+
 from src.adapters.input.api.rate_limit import get_rate_limit_store, rate_limit
 from src.adapters.output.cache.rate_limit_store import InMemoryRateLimitStore
 

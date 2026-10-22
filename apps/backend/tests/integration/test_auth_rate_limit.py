@@ -5,9 +5,8 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.adapters.input.api.rate_limit import get_rate_limit_store
-from src.adapters.output.cache.rate_limit_store import InMemoryRateLimitStore
 
+from src.adapters.input.api.rate_limit import get_rate_limit_store
 from src.adapters.input.api.v1.auth import (
     LOGIN_ATTEMPTS_PER_WINDOW,
     REFRESH_ATTEMPTS_PER_WINDOW,
@@ -16,6 +15,7 @@ from src.adapters.input.api.v1.auth import (
     get_user_repository,
 )
 from src.adapters.input.api.v1.auth import router as auth_router
+from src.adapters.output.cache.rate_limit_store import InMemoryRateLimitStore
 from src.adapters.output.cache.refresh_token_store import InMemoryRefreshTokenStore
 from src.core.domain.entities.user import User
 

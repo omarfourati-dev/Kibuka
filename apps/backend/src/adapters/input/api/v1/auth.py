@@ -22,6 +22,7 @@ from .....infrastructure.security import (
     verify_password,
 )
 from ..dependencies import get_user_repository
+from ..rate_limit import rate_limit
 
 __all__ = ["get_refresh_token_store", "get_user_repository", "router"]
 
@@ -99,7 +100,24 @@ async def _session_response(
     return TokenResponse(access_token=create_access_token(user.id), user=_public_user(user))
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+# Großzügig genug für eine Familie hinter einem Router (Keep-Alive alle
+# 12 min pro Gerät), eng genug gegen Passwort-Raten und Massen-Registrierung
+LOGIN_ATTEMPTS_PER_WINDOW = 10
+LOGIN_WINDOW_SECONDS = 300
+REGISTRATIONS_PER_WINDOW = 5
+REGISTRATION_WINDOW_SECONDS = 3600
+REFRESH_ATTEMPTS_PER_WINDOW = 60
+REFRESH_WINDOW_SECONDS = 300
+
+
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(rate_limit("auth-register", REGISTRATIONS_PER_WINDOW, REGISTRATION_WINDOW_SECONDS))
+    ],
+)
 async def register(
     body: RegisterRequest,
     response: Response,
@@ -123,7 +141,13 @@ async def register(
     return await _session_response(response, saved, store)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    dependencies=[
+        Depends(rate_limit("auth-login", LOGIN_ATTEMPTS_PER_WINDOW, LOGIN_WINDOW_SECONDS))
+    ],
+)
 async def login(
     body: LoginRequest,
     response: Response,
@@ -143,7 +167,13 @@ async def login(
     return await _session_response(response, user, store)
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    dependencies=[
+        Depends(rate_limit("auth-refresh", REFRESH_ATTEMPTS_PER_WINDOW, REFRESH_WINDOW_SECONDS))
+    ],
+)
 async def refresh(
     request: Request,
     response: Response,

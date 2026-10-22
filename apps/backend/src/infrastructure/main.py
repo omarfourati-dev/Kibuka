@@ -6,9 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from ..adapters.input.api.v1 import api_router
 from ..adapters.input.middleware.correlation_id import CorrelationIdMiddleware
@@ -17,8 +14,6 @@ from ..adapters.input.middleware.security_headers import SecurityHeadersMiddlewa
 from .config import settings
 from .logging import configure_logging
 from .telemetry import configure_telemetry
-
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 
 @asynccontextmanager
@@ -37,9 +32,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.state.limiter = limiter
-    # slowapi's handler signature is narrower than Starlette's protocol expects
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    # Drosselung gezielt pro Endpunkt (adapters/input/api/rate_limit.py) —
+    # ein globales slowapi-Limit war registriert, aber nie wirksam
 
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)

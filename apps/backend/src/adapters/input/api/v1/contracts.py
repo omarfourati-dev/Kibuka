@@ -6,11 +6,12 @@ import logging
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.input.api.dependencies import get_user_repository
+from src.adapters.input.api.rate_limit import rate_limit
 from src.adapters.input.api.v1.billing import get_billing_adapter, get_subscription_repository
 from src.adapters.output.billing.stripe_billing import StripeBillingAdapter
 from src.adapters.output.email.logging_email_service import LoggingEmailService
@@ -25,7 +26,6 @@ from src.core.ports.output.i_user_repository import IUserRepository
 from src.core.use_cases.billing.submit_cancellation import SubmitCancellation
 from src.infrastructure.config import settings
 from src.infrastructure.database import get_db
-from src.infrastructure.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -64,26 +64,8 @@ async def get_submit_cancellation(
     )
 
 
-async def cancellation_rate_limit(request: Request) -> None:
-    """Fester Stundenzähler pro Client-IP in Redis (über alle Worker hinweg).
-    X-Real-IP setzt nginx und überschreibt dabei jeden Wert vom Client."""
-    ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "?")
-    key = f"ratelimit:contract-cancellation:{ip}"
-    try:
-        redis = get_redis_client()
-        count = int(await redis.incr(key))
-        if count == 1:
-            await redis.expire(key, 3600)
-    except Exception:
-        # Fail open: eine Kündigung darf nicht an Redis scheitern
-        logger.warning("Rate limit store unavailable — cancellation not throttled")
-        return
-    if count > CANCELLATIONS_PER_IP_PER_HOUR:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests",
-            headers={"Retry-After": "3600"},
-        )
+# Fester Stundenzähler pro Client-IP (siehe rate_limit.py)
+cancellation_rate_limit = rate_limit("contract-cancellation", CANCELLATIONS_PER_IP_PER_HOUR, 3600)
 
 
 def _blank_to_none(value: str | None) -> str | None:
