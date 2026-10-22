@@ -1,6 +1,7 @@
 import { IonContent, IonPage } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
+import { logout } from "../lib/session";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Administrator",
@@ -11,7 +12,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ProfilePage() {
   const history = useHistory();
-  const { user, isAuthenticated, clearUser } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   return (
     <IonPage>
@@ -61,7 +62,7 @@ export default function ProfilePage() {
 
               <button
                 type="button"
-                onClick={() => clearUser()}
+                onClick={() => void logout()}
                 className="self-start px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
                 style={{ backgroundColor: "var(--color-primary)" }}
               >

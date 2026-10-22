@@ -9,7 +9,15 @@ from pydantic import BaseModel, EmailStr, Field
 
 from .....core.domain.entities.user import User, UserRole, UserStatus
 from .....core.ports.output.i_user_repository import IUserRepository
-from .....infrastructure.security import create_access_token, hash_password, verify_password
+from .....infrastructure.config import settings
+from .....infrastructure.security import (
+    InvalidTokenError,
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    hash_password,
+    verify_password,
+)
 from ..dependencies import get_user_repository
 
 __all__ = ["get_user_repository", "router"]
@@ -46,13 +54,37 @@ class TokenResponse(BaseModel):
     user: PublicUser | None = None
 
 
+REFRESH_COOKIE = "refresh_token"
+# Cookie geht nur an /auth-Endpunkte — nie an den Rest der API
+_REFRESH_COOKIE_PATH = "/api/v1/auth"
+
+
 def _public_user(user: User) -> PublicUser:
     return PublicUser(id=user.id, email=user.email, name=user.name, role=user.role.value)
+
+
+def _set_refresh_cookie(response: Response, user_id: str) -> None:
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=create_refresh_token(user_id),
+        max_age=settings.refresh_token_expire_days * 24 * 3600,
+        path=_REFRESH_COOKIE_PATH,
+        httponly=True,
+        secure=settings.environment != "development",
+        samesite="lax",
+    )
+
+
+def _session_response(response: Response, user: User) -> TokenResponse:
+    """Access-Token im Body (Memory-only im Client), Refresh-Token als Cookie."""
+    _set_refresh_cookie(response, user.id)
+    return TokenResponse(access_token=create_access_token(user.id), user=_public_user(user))
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     body: RegisterRequest,
+    response: Response,
     repo: Annotated[IUserRepository, Depends(get_user_repository)],
 ) -> Any:
     """Register a new user and return a signed access token."""
@@ -69,12 +101,13 @@ async def register(
         hashed_password=hash_password(body.password),
     )
     saved = await repo.save(user)
-    return TokenResponse(access_token=create_access_token(saved.id), user=_public_user(saved))
+    return _session_response(response, saved)
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
     body: LoginRequest,
+    response: Response,
     repo: Annotated[IUserRepository, Depends(get_user_repository)],
 ) -> Any:
     """Login with email/password and return a signed access token."""
@@ -87,18 +120,35 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
-    return TokenResponse(access_token=create_access_token(user.id), user=_public_user(user))
+    return _session_response(response, user)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(request: Request) -> Any:
-    """Refresh access token using httpOnly refresh cookie."""
-    raise HTTPException(status_code=501, detail="Refresh flow not implemented yet")
+async def refresh(
+    request: Request,
+    response: Response,
+    repo: Annotated[IUserRepository, Depends(get_user_repository)],
+) -> Any:
+    """Neuer Access-Token aus dem httpOnly-Refresh-Cookie (rotiert das Cookie)."""
+    unauthorized = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
+    token = request.cookies.get(REFRESH_COOKIE)
+    if not token:
+        raise unauthorized
+    try:
+        user_id = decode_refresh_token(token)
+    except InvalidTokenError as exc:
+        raise unauthorized from exc
+
+    # Gesperrte/gelöschte Nutzer verlieren ihre Sitzung beim nächsten Refresh
+    user = await repo.get_by_id(user_id)
+    if user is None or not user.is_active:
+        raise unauthorized
+    return _session_response(response, user)
 
 
 @router.post("/logout")
 async def logout(response: Response) -> Any:
-    response.delete_cookie("refresh_token")
+    response.delete_cookie(REFRESH_COOKIE, path=_REFRESH_COOKIE_PATH)
     return {"status": "logged out"}
 
 

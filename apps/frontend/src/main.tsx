@@ -17,6 +17,7 @@ import { useAuthStore } from "@omarsapp/shared-stores";
 
 import i18n from "./i18n/config";
 import App from "./App";
+import { restoreSession, startSessionKeepAlive } from "./lib/session";
 import "./index.css";
 
 setupIonicReact({ mode: "md" });
@@ -33,12 +34,17 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <I18nextProvider i18n={i18n}>
-        <App />
-      </I18nextProvider>
-    </QueryClientProvider>
-  </StrictMode>,
-);
+// Sitzung VOR dem ersten Render wiederherstellen — sonst laufen Deep-Links
+// (z.B. direkt in den Reader) ohne Token in einen 401
+void restoreSession().finally(() => {
+  startSessionKeepAlive();
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <I18nextProvider i18n={i18n}>
+          <App />
+        </I18nextProvider>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+});

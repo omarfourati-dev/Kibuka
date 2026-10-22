@@ -35,20 +35,49 @@ def create_access_token(user_id: str, expires_minutes: int | None = None) -> str
     return cast(str, jwt.encode(claims, settings.secret_key, algorithm=_ALGORITHM))
 
 
-def decode_access_token(token: str) -> str:
-    """Validate a JWT access token and return the user id (subject).
+def create_refresh_token(user_id: str, expires_days: int | None = None) -> str:
+    """Create a long-lived refresh token (httpOnly cookie only, never a bearer)."""
+    if expires_days is None:
+        expires_days = settings.refresh_token_expire_days
+    now = datetime.now(UTC)
+    claims = {
+        "sub": user_id,
+        "iat": now,
+        "exp": now + timedelta(days=expires_days),
+        "type": "refresh",
+    }
+    return cast(str, jwt.encode(claims, settings.secret_key, algorithm=_ALGORITHM))
 
-    Raises InvalidTokenError on expiry, bad signature or missing subject.
-    """
+
+def _decode(token: str, expected_type: str) -> str:
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
     except JWTError as exc:
         raise InvalidTokenError(str(exc)) from exc
 
+    # Typ-Trennung: ein 7-Tage-Refresh-Token darf nie als Bearer gelten
+    # (und umgekehrt)
+    if payload.get("type") != expected_type:
+        raise InvalidTokenError(f"Expected a {expected_type} token")
+
     subject = payload.get("sub")
     if not isinstance(subject, str) or not subject:
         raise InvalidTokenError("Token has no subject claim")
     return subject
+
+
+def decode_access_token(token: str) -> str:
+    """Validate a JWT access token and return the user id (subject).
+
+    Raises InvalidTokenError on expiry, bad signature, wrong token type or
+    missing subject.
+    """
+    return _decode(token, "access")
+
+
+def decode_refresh_token(token: str) -> str:
+    """Validate a refresh token and return the user id (subject)."""
+    return _decode(token, "refresh")
 
 
 def hash_password(password: str) -> str:
