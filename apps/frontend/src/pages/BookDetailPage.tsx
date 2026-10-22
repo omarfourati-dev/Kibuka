@@ -25,7 +25,7 @@ interface BookDetail {
   page_count: number;
   price_single: number;
   titles: Record<string, string>;
-  pages: BookPage[];
+  preview_pages: BookPage[];
   is_purchased: boolean;
 }
 
@@ -157,7 +157,11 @@ export default function BookDetailPage() {
         setPurchaseError("Kauf ist derzeit nicht verfügbar.");
         return;
       }
-      const data = (await res.json()) as { url: string };
+      const data = (await res.json()) as { url?: string };
+      if (!data.url) {
+        setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+        return;
+      }
       window.location.assign(data.url);
     } catch {
       setPurchaseError("Kauf ist derzeit nicht verfügbar.");
@@ -174,12 +178,14 @@ export default function BookDetailPage() {
     (k) => book.titles[k],
   );
 
-  const previewPages = book.pages.slice(0, 2).map((p) => ({
+  const previewPages = (book.preview_pages ?? []).map((p) => ({
     pageNumber: p.page_number,
     text: p.texts[selectedLanguage] ?? p.texts.de ?? "",
     illustrationUrl: p.illustration_url ?? undefined,
   }));
 
+  // Das Tagesbuch (bzw. ein Buch ohne Preis) ist gratis lesbar — kein Kauf-CTA
+  const isFree = book.is_daily_book || book.price_single === 0;
   const formattedPrice = `€${book.price_single.toFixed(2).replace(".", ",")} kaufen`;
 
   return (
@@ -260,10 +266,14 @@ export default function BookDetailPage() {
 
               {/* CTA */}
               <div className="mt-auto flex gap-3 flex-wrap">
-                {book.is_purchased ? (
+                {book.is_purchased || isFree ? (
                   <button
                     type="button"
-                    aria-label="Buch lesen"
+                    aria-label={
+                      isFree && !book.is_purchased
+                        ? "Gratis lesen"
+                        : "Buch lesen"
+                    }
                     onClick={() =>
                       history.push(
                         `/books/${book.id}/read?language=${selectedLanguage}`,
@@ -272,7 +282,9 @@ export default function BookDetailPage() {
                     className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95"
                     style={{ backgroundColor: "var(--color-primary)" }}
                   >
-                    Jetzt lesen
+                    {isFree && !book.is_purchased
+                      ? "Gratis lesen"
+                      : "Jetzt lesen"}
                   </button>
                 ) : (
                   <button

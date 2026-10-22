@@ -69,6 +69,11 @@ export default function ReaderPage() {
     fetch(`/api/v1/books/${bookId}/read`, { headers: getAuthHeaders() })
       .then((res) => {
         if (!res.ok) {
+          if (res.status === 401) {
+            // Keine/abgelaufene Session — erst einloggen
+            history.push("/login");
+            return null;
+          }
           if (res.status === 403) {
             history.push(`/books/${bookId}`);
             return null;

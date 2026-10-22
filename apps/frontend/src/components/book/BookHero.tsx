@@ -33,6 +33,8 @@ export function BookHero({
   selectedLanguage,
 }: BookHeroProps) {
   const formattedPrice = `€${book.priceSingle.toFixed(2).replace(".", ",")}`;
+  // Tagesbuch/Gratis-Buch: lesen statt kaufen — niemals "€0,00 kaufen" zeigen
+  const isFree = book.priceSingle === 0;
 
   return (
     <section
@@ -107,14 +109,14 @@ export function BookHero({
 
         {/* CTAs */}
         <div className="flex gap-3 flex-wrap mt-auto">
-          {isPurchased ? (
+          {isPurchased || isFree ? (
             <button
               type="button"
               onClick={onRead}
               className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all duration-200 hover:opacity-90 active:scale-95"
               style={{ backgroundColor: "var(--color-primary)" }}
             >
-              Jetzt lesen
+              {isFree && !isPurchased ? "Gratis lesen" : "Jetzt lesen"}
             </button>
           ) : (
             <button
@@ -130,6 +132,7 @@ export function BookHero({
 
           <button
             type="button"
+            onClick={onRead}
             className="px-6 py-3 rounded-xl font-bold text-base border-2 transition-all duration-200 hover:opacity-80"
             style={{
               borderColor: "var(--color-primary)",
