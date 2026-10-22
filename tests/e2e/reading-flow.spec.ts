@@ -107,12 +107,13 @@ test.describe('Library Page', () => {
 })
 
 test.describe('Pricing Page', () => {
-  test('shows all four pricing plans', async ({ page }) => {
+  test('shows the three real plans', async ({ page }) => {
     await page.goto('/pricing')
     await expect(page.getByText('Monatlich')).toBeVisible()
     await expect(page.getByText('Jährlich')).toBeVisible()
     await expect(page.getByText('Einzelbuch')).toBeVisible()
-    await expect(page.getByText('Wochenpaket')).toBeVisible()
+    await expect(page.getByText('Wochenpaket')).toHaveCount(0)
+    await expect(page.getByText(/inkl\. MwSt/)).toBeVisible()
   })
 
   test('shows FAQ section with Kann ich kündigen question', async ({ page }) => {
