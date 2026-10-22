@@ -58,12 +58,15 @@ describe("BookHero", () => {
     expect(handlePurchase).toHaveBeenCalledTimes(1);
   });
 
-  it("renders language selector buttons", () => {
+  it("renders languages as non-interactive badges (no dead buttons)", () => {
     render(<BookHero book={defaultBook} />);
-    expect(screen.getByRole("button", { name: "DE" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "AR" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "FR" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "EN" })).toBeInTheDocument();
+    for (const label of ["DE", "AR", "FR", "EN"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+      // Vorher waren das <button> ohne onClick — tote Controls
+      expect(
+        screen.queryByRole("button", { name: label }),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it("renders Vorschau lesen secondary CTA", () => {
@@ -73,11 +76,19 @@ describe("BookHero", () => {
     ).toBeInTheDocument();
   });
 
-  it("Vorschau lesen navigates via onRead", () => {
+  it("Vorschau lesen navigates via its own onPreview handler", () => {
     const handleRead = vi.fn();
-    render(<BookHero book={defaultBook} onRead={handleRead} />);
+    const handlePreview = vi.fn();
+    render(
+      <BookHero
+        book={defaultBook}
+        onRead={handleRead}
+        onPreview={handlePreview}
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /Vorschau lesen/i }));
-    expect(handleRead).toHaveBeenCalledTimes(1);
+    expect(handlePreview).toHaveBeenCalledTimes(1);
+    expect(handleRead).not.toHaveBeenCalled();
   });
 
   it("shows Gratis lesen instead of €0,00 kaufen for a free book", () => {
@@ -110,11 +121,5 @@ describe("BookHero", () => {
   it("renders placeholder when no cover image", () => {
     render(<BookHero book={defaultBook} />);
     expect(screen.getByText("📚")).toBeInTheDocument();
-  });
-
-  it("highlights selectedLanguage button", () => {
-    render(<BookHero book={defaultBook} selectedLanguage="de" />);
-    const deButton = screen.getByRole("button", { name: /DE/i });
-    expect(deButton).toHaveAttribute("aria-pressed", "true");
   });
 });

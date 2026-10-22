@@ -1,13 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
+import { useAuthStore } from "@omarsapp/shared-stores";
 import LibraryPage from "../LibraryPage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
 vi.mock("../../components/book/BookCard", () => ({
-  BookCard: ({ title, onClick }: { title: string; onClick?: () => void }) => (
+  BookCard: ({
+    title,
+    onClick,
+    isPurchased,
+  }: {
+    title: string;
+    onClick?: () => void;
+    isPurchased?: boolean;
+  }) => (
     <div data-testid="book-card" onClick={onClick}>
       {title}
+      {isPurchased ? <span>Gekauft</span> : null}
     </div>
   ),
 }));
@@ -61,6 +71,11 @@ describe("LibraryPage", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     mockNavigate.mockReset();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      accessToken: null,
+    });
   });
 
   afterEach(() => {
@@ -102,6 +117,57 @@ describe("LibraryPage", () => {
     expect(screen.getByText("Zweites Buch")).toBeInTheDocument();
   });
 
+  it("shows an error state with retry instead of a fake empty state", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("network down"));
+
+    renderLibraryPage();
+    await waitFor(() => {
+      expect(screen.getByText(/schiefgelaufen/i)).toBeInTheDocument();
+    });
+    // Kein getarnter Empty State
+    expect(screen.queryByText(/keine bücher/i)).not.toBeInTheDocument();
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({ items: bookList, total: 2, page: 1, page_size: 12 }),
+    } as Response);
+    fireEvent.click(screen.getByRole("button", { name: /erneut versuchen/i }));
+    await waitFor(() => {
+      expect(screen.getAllByTestId("book-card")).toHaveLength(2);
+    });
+  });
+
+  it("sends auth headers and marks purchased books", async () => {
+    useAuthStore.setState({
+      user: { id: "u1", email: "o@example.com", name: "O", role: "member" },
+      isAuthenticated: true,
+      accessToken: "token-xyz",
+    });
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          items: [
+            { ...bookList[0], is_purchased: true },
+            { ...bookList[1], is_purchased: false },
+          ],
+          total: 2,
+          page: 1,
+          page_size: 12,
+        }),
+    } as Response);
+
+    renderLibraryPage();
+    await waitFor(() => {
+      expect(screen.getByText("Gekauft")).toBeInTheDocument();
+    });
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(
+      (init as RequestInit | undefined)?.headers as Record<string, string>,
+    ).toMatchObject({ Authorization: "Bearer token-xyz" });
+  });
+
   it("requests the list with the backend's snake_case page_size param", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
@@ -113,6 +179,7 @@ describe("LibraryPage", () => {
     await waitFor(() => {
       expect(vi.mocked(fetch)).toHaveBeenCalledWith(
         expect.stringContaining("page_size="),
+        expect.anything(),
       );
     });
   });

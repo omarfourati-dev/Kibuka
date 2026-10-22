@@ -157,6 +157,21 @@ test.describe('RTL Support', () => {
   })
 })
 
+test.describe('404 Handling', () => {
+  test('unknown routes land back on the start page', async ({ page }) => {
+    await page.route('/api/v1/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [], total: 0, page: 1, page_size: 6 }),
+      })
+    )
+
+    await page.goto('/diese-seite-gibt-es-nicht')
+    await page.waitForURL('/', { timeout: 5000 })
+  })
+})
+
 test.describe('Reader Page', () => {
   test('reader page stays on URL or redirects — does not crash', async ({ page }) => {
     await page.route('/api/v1/**', (route) =>

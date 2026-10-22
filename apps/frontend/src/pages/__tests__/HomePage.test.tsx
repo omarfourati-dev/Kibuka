@@ -5,8 +5,20 @@ import HomePage from "../HomePage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
 vi.mock("../../components/book/BookHero", () => ({
-  BookHero: ({ book }: { book: { title: string } }) => (
-    <div data-testid="book-hero">{book.title}</div>
+  BookHero: ({
+    book,
+    onRead,
+    onPreview,
+  }: {
+    book: { title: string };
+    onRead?: () => void;
+    onPreview?: () => void;
+  }) => (
+    <div data-testid="book-hero">
+      {book.title}
+      <button onClick={onRead}>HeroRead</button>
+      <button onClick={onPreview}>HeroPreview</button>
+    </div>
   ),
 }));
 
@@ -92,6 +104,61 @@ describe("HomePage", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
+  it("free daily book hero CTA goes straight to the reader", async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/daily")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ...dailyBook, price_single: 0 }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ items: [], total: 0, page: 1, page_size: 6 }),
+      } as Response);
+    });
+
+    renderHomePage();
+    await waitFor(() => {
+      expect(screen.getByTestId("book-hero")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("HeroRead"));
+    expect(mockNavigate).toHaveBeenCalledWith("/books/daily-1/read");
+
+    fireEvent.click(screen.getByText("HeroPreview"));
+    expect(mockNavigate).toHaveBeenCalledWith("/books/daily-1");
+  });
+
+  it("shows an error state with retry instead of a fake empty state", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("down"));
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("down"));
+
+    renderHomePage();
+    await waitFor(() => {
+      expect(screen.getByText(/schiefgelaufen/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/keine bücher/i)).not.toBeInTheDocument();
+
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/daily")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(dailyBook),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ items: bookList, total: 2, page: 1, page_size: 6 }),
+      } as Response);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /erneut versuchen/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("book-hero")).toBeInTheDocument();
+    });
+  });
+
   it("requests the book grid with the backend's snake_case page_size param", async () => {
     vi.mocked(fetch).mockImplementation((url) => {
       if (String(url).includes("/daily")) {
@@ -108,6 +175,7 @@ describe("HomePage", () => {
     await waitFor(() => {
       expect(vi.mocked(fetch)).toHaveBeenCalledWith(
         expect.stringContaining("page_size=6"),
+        expect.anything(),
       );
     });
   });

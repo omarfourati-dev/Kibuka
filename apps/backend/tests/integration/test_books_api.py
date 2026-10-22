@@ -312,6 +312,20 @@ class TestGetBooksList:
         assert len(data["items"]) == 1
         assert data["page_size"] == 1
 
+    def test_list_marks_purchased_books_for_authed_user(
+        self, authed_client: TestClient, book_repo: MockBookRepository
+    ) -> None:
+        """Die Bibliothek muss zeigen, was dem Nutzer schon gehört."""
+        book_repo.set_purchased("book-2", USER_ID)
+        data = authed_client.get("/api/v1/books").json()
+        purchased = {b["id"]: b["is_purchased"] for b in data["items"]}
+        assert purchased["book-2"] is True
+        assert purchased["book-1"] is False
+
+    def test_list_is_purchased_false_for_anonymous(self, client: TestClient) -> None:
+        data = client.get("/api/v1/books").json()
+        assert all(b["is_purchased"] is False for b in data["items"])
+
 
 class TestGetBookDetail:
     def test_get_book_detail_returns_200(self, client: TestClient) -> None:
