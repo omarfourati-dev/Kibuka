@@ -67,6 +67,9 @@ async def create_book_checkout(
         body.book_id,
     )
     amount_cents = round(book.price_single * 100)
+    if amount_cents <= 0:
+        # Gratis-Bücher (z.B. Tagesbuch) haben keinen Checkout
+        raise HTTPException(status_code=400, detail="Book is free")
 
     # Redirect-Ziele werden bewusst serverseitig gebaut (kein Open Redirect)
     url = await billing.create_book_checkout(

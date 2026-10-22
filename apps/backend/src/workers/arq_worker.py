@@ -82,6 +82,7 @@ async def startup(ctx: dict) -> None:  # type: ignore[type-arg]
         book_repository=book_repository,
         tts_service=tts_service,
         image_service=image_service,
+        price_single=settings.book_price_single_eur,
     )
 
     ctx["book_generation_service"] = book_generation_service

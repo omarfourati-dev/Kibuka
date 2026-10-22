@@ -236,13 +236,16 @@ async def read_book(
     user_id: Annotated[str, Depends(get_current_user)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
 ) -> BookFullResponse:
-    """Return full book content. Requires auth + purchase, subscription or admin."""
+    """Return full book content. Daily book is free for signed-in users;
+    otherwise purchase, subscription or admin is required."""
     book = await repo.get_by_id(book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    has_access = await _is_active_admin(user_repo, user_id) or (
-        await repo.is_purchased_by_user(book_id, user_id)
+    has_access = (
+        book.is_daily_book
+        or await _is_active_admin(user_repo, user_id)
+        or await repo.is_purchased_by_user(book_id, user_id)
     )
     if not has_access:
         raise HTTPException(

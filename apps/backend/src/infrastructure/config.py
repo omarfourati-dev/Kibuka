@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://omar:omar@localhost:5432/myapp_dev"
 
+    # Einzelkaufpreis (EUR) für neu generierte Bücher — nie 0, sonst ist
+    # jedes Buch gratis und der Billing-Flow ins Leere gebaut
+    book_price_single_eur: float = 2.99
+
     # Redis
     redis_url: str = "redis://localhost:6379/0"
     redis_host: str = "localhost"

@@ -99,11 +99,13 @@ class BookGenerationService:
         book_repository: IBookRepository,
         tts_service: ITTSService,
         image_service: IImageService,
+        price_single: float = 2.99,
     ) -> None:
         self._openai = openai_client
         self._repo = book_repository
         self._tts = tts_service
         self._images = image_service
+        self._price_single = price_single
 
     # ------------------------------------------------------------------
     # Public API
@@ -222,7 +224,7 @@ class BookGenerationService:
             theme=theme,
             age_range=age_range,
             page_count=len(pages),
-            price_single=0.0,
+            price_single=self._price_single,
             published_at=datetime.now(UTC),
             is_daily_book=True,
             cover_image_url=cover_url,
