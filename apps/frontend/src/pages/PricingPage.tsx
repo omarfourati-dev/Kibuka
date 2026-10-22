@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useHistory, useLocation } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
+import { getAuthHeaders, useAuthStore } from "@omarsapp/shared-stores";
 import { PricingCard } from "../components/pricing/PricingCard";
 import { cn } from "../utils/cn";
 
@@ -15,7 +16,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Kann ich kündigen?",
     answer:
-      "Ja, jederzeit ohne Mindestlaufzeit. Du kannst dein Abo in den Einstellungen mit einem Klick beenden. Es entstehen keine weiteren Kosten.",
+      "Ja, jederzeit ohne Mindestlaufzeit. Im Profil unter „Abo verwalten“ kündigst du mit wenigen Klicks — das Abo läuft dann bis zum Ende der bezahlten Periode.",
   },
   {
     question: "Welche Sprachen sind enthalten?",
@@ -25,12 +26,12 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Für welches Alter sind die Bücher geeignet?",
     answer:
-      "Kibuka ist für Kinder von 3 bis 8 Jahren konzipiert. Unsere KI erstellt altersgerechte Geschichten mit einfacher Sprache und bunten Illustrationen.",
+      "Kibuka ist für Kinder von 3 bis 10 Jahren konzipiert. Unsere KI erstellt altersgerechte Geschichten mit einfacher Sprache und bunten Illustrationen.",
   },
   {
     question: "Gibt es eine Probezeit?",
     answer:
-      "Ja! Du kannst Kibuka 14 Tage kostenlos testen. Keine Kreditkarte erforderlich für die Testphase.",
+      "Ja! Dein erstes Abo startet mit 14 Tagen kostenloser Testphase. Du hinterlegst beim Abschluss eine Zahlungsmethode, abgebucht wird aber erst nach Ablauf der Testphase — kündigst du vorher, zahlst du nichts.",
   },
   {
     question: "Auf welchen Geräten kann ich Kibuka nutzen?",
@@ -41,8 +42,10 @@ const FAQ_ITEMS: FaqItem[] = [
 
 // ─── Pricing Plans ───────────────────────────────────────────────────────────
 
+type PlanId = "yearly" | "monthly" | "single";
+
 interface PricingPlan {
-  id: string;
+  id: PlanId;
   title: string;
   price: string;
   priceNote?: string;
@@ -53,6 +56,14 @@ interface PricingPlan {
   ctaLabel: string;
 }
 
+const SUBSCRIPTION_FEATURES = [
+  "Alle Bücher unbegrenzt lesen",
+  "4 Sprachen: DE, AR, FR, EN",
+  "Audio-Vorlese-Funktion",
+  "Wort-Highlighting (Karaoke)",
+  "Jeden Tag ein neues Buch",
+];
+
 const PLANS: PricingPlan[] = [
   // Yearly shown first (anchor price, best value)
   {
@@ -61,14 +72,7 @@ const PLANS: PricingPlan[] = [
     price: "€99",
     priceNote: "pro Jahr",
     savings: "Spare 2 Monate",
-    features: [
-      "Alle Bücher unbegrenzt",
-      "4 Sprachen: DE, AR, FR, EN",
-      "Audio-Vorlese-Funktion",
-      "Wort-Highlighting (Karaoke)",
-      "Offline verfügbar",
-      "Neue Bücher täglich",
-    ],
+    features: SUBSCRIPTION_FEATURES,
     isHighlighted: false,
     badge: "Bestes Preis-Leistungs-Verhältnis",
     ctaLabel: "Jetzt starten",
@@ -79,39 +83,16 @@ const PLANS: PricingPlan[] = [
     title: "Monatlich",
     price: "€14,99",
     priceNote: "pro Monat",
-    features: [
-      "Alle Bücher unbegrenzt",
-      "4 Sprachen: DE, AR, FR, EN",
-      "Audio-Vorlese-Funktion",
-      "Wort-Highlighting (Karaoke)",
-      "Offline verfügbar",
-      "Neue Bücher täglich",
-    ],
+    features: SUBSCRIPTION_FEATURES,
     isHighlighted: true,
     badge: "Beliebteste Wahl",
     ctaLabel: "Jetzt starten",
   },
-  // Wochenpaket
-  {
-    id: "weekly",
-    title: "Wochenpaket",
-    price: "€7,99",
-    priceNote: "7 Bücher",
-    savings: "Spare €6 vs. Einzelkauf",
-    features: [
-      "7 Bücher zur freien Auswahl",
-      "4 Sprachen: DE, AR, FR, EN",
-      "Audio-Vorlese-Funktion",
-      "Gültig 7 Tage",
-    ],
-    isHighlighted: false,
-    ctaLabel: "Jetzt starten",
-  },
-  // Einzelbuch
+  // Einzelbuch — Kauf passiert direkt auf der Buchseite
   {
     id: "single",
     title: "Einzelbuch",
-    price: "€1,99",
+    price: "€2,99",
     priceNote: "pro Buch",
     features: [
       "1 Buch deiner Wahl",
@@ -161,10 +142,63 @@ function FaqAccordionItem({ question, answer }: FaqItem) {
 
 export default function PricingPage() {
   const history = useHistory();
+  const location = useLocation();
+  const { isAuthenticated, accessToken } = useAuthStore();
+  const [pendingPlan, setPendingPlan] = useState<PlanId | null>(null);
+  const [notice, setNotice] = useState<string | null>(() =>
+    new URLSearchParams(location.search).get("subscription") === "cancel"
+      ? "Abo-Abschluss abgebrochen — es wurde nichts berechnet."
+      : null,
+  );
 
   useEffect(() => {
     document.title = "Preise — Kibuka";
   }, []);
+
+  const handleCta = async (plan: PlanId) => {
+    if (plan === "single") {
+      history.push("/library");
+      return;
+    }
+    if (!isAuthenticated || !accessToken) {
+      history.push(`/login?redirect=${encodeURIComponent("/pricing")}`);
+      return;
+    }
+    setNotice(null);
+    setPendingPlan(plan);
+    try {
+      const res = await fetch("/api/v1/billing/checkout/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ plan }),
+      });
+      if (res.status === 401) {
+        history.push(`/login?redirect=${encodeURIComponent("/pricing")}`);
+        return;
+      }
+      if (res.status === 409) {
+        setNotice(
+          "Du hast bereits ein aktives Abo — verwalte es in deinem Profil.",
+        );
+        setPendingPlan(null);
+        return;
+      }
+      const data = (await res.json().catch(() => ({}))) as { url?: string };
+      if (!res.ok || !data.url) {
+        setNotice(
+          "Abo-Abschluss ist gerade nicht möglich. Bitte versuche es später erneut.",
+        );
+        setPendingPlan(null);
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setNotice(
+        "Abo-Abschluss ist gerade nicht möglich. Bitte versuche es später erneut.",
+      );
+      setPendingPlan(null);
+    }
+  };
 
   return (
     <IonPage>
@@ -222,7 +256,20 @@ export default function PricingPage() {
 
           {/* Pricing cards */}
           <section className="max-w-6xl mx-auto px-6 pb-16">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
+            {notice && (
+              <div
+                role="status"
+                className="mb-8 max-w-2xl mx-auto rounded-2xl px-5 py-4 text-center font-medium"
+                style={{
+                  backgroundColor: "rgba(255, 217, 61, 0.18)",
+                  border: "2px solid #FFD93D",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                {notice}
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start max-w-5xl mx-auto">
               {PLANS.map((plan) => (
                 <PricingCard
                   key={plan.id}
@@ -233,8 +280,12 @@ export default function PricingPage() {
                   features={plan.features}
                   isHighlighted={plan.isHighlighted}
                   badge={plan.badge}
-                  ctaLabel={plan.ctaLabel}
-                  onCta={() => history.push("/library")}
+                  ctaLabel={
+                    pendingPlan === plan.id
+                      ? "Weiterleitung zu Stripe …"
+                      : plan.ctaLabel
+                  }
+                  onCta={() => void handleCta(plan.id)}
                 />
               ))}
             </div>
@@ -244,8 +295,8 @@ export default function PricingPage() {
               className="text-center text-sm mt-8"
               style={{ color: "var(--color-text-muted)" }}
             >
-              14 Tage kostenlos testen &mdash; keine Kreditkarte erforderlich.
-              Jederzeit kündbar.
+              Alle Preise inkl. MwSt. &mdash; 14 Tage kostenlos testen beim
+              ersten Abo. Jederzeit kündbar.
             </p>
           </section>
 
