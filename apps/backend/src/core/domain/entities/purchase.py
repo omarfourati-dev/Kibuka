@@ -17,6 +17,11 @@ class BookSubscriptionStatus(StrEnum):
     ACTIVE = "active"
     PAST_DUE = "past_due"
     CANCELED = "canceled"
+    # Weitere Stripe-Zustände — keiner davon gewährt Zugang
+    INCOMPLETE = "incomplete"
+    INCOMPLETE_EXPIRED = "incomplete_expired"
+    UNPAID = "unpaid"
+    PAUSED = "paused"
 
 
 @dataclass
@@ -38,6 +43,7 @@ class BookSubscription:
     plan: str  # "monthly" | "yearly"
     status: BookSubscriptionStatus
     stripe_subscription_id: str | None = None
+    stripe_customer_id: str | None = None
     current_period_end: datetime | None = None
     cancel_at_period_end: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

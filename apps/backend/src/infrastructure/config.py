@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # jedes Buch gratis und der Billing-Flow ins Leere gebaut
     book_price_single_eur: float = 2.99
 
+    # Abo-Endpreise inkl. MwSt (EUR) + Testphase
+    subscription_price_monthly_eur: float = 14.99
+    subscription_price_yearly_eur: float = 99.0
+    subscription_trial_days: int = 14
+
     # Redis
     redis_url: str = "redis://localhost:6379/0"
     redis_host: str = "localhost"

@@ -356,6 +356,7 @@ class BookSubscriptionModel(Base):
     stripe_subscription_id: Mapped[str | None] = mapped_column(
         sa.String(255), unique=True, nullable=True
     )
+    stripe_customer_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     plan: Mapped[str] = mapped_column(sa.String(20), nullable=False)
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="trialing")
     current_period_end: Mapped[datetime | None] = mapped_column(

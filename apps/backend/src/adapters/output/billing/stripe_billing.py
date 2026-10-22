@@ -38,6 +38,8 @@ class StripeBillingAdapter:
                     "price_data": {
                         "currency": "eur",
                         "unit_amount": amount_cents,
+                        # B2C-Endpreis inkl. MwSt (PAngV)
+                        "tax_behavior": "inclusive",
                         "product_data": {
                             "name": title,
                             "tax_code": _TAX_CODE_DIGITAL_BOOKS,
@@ -55,23 +57,43 @@ class StripeBillingAdapter:
         )
         return session.url or ""
 
-    async def create_checkout_session(
+    async def create_subscription_checkout(
         self,
+        *,
+        user_id: str,
+        plan: str,
+        amount_cents: int,
+        interval: str,
+        trial_days: int,
         customer_email: str,
-        price_id: str,
         success_url: str,
         cancel_url: str,
-        metadata: dict[str, str] | None = None,
     ) -> str:
-        # Keine payment_method_types mehr — Stripe wählt die Methoden über die
-        # Dashboard-Konfiguration (neue SDK-Signatur kennt den Parameter nicht).
+        """Abo-Checkout; Status kommt später über customer.subscription.*-Webhooks."""
         session = await stripe.checkout.Session.create_async(
-            customer_email=customer_email,
-            line_items=[{"price": price_id, "quantity": 1}],
             mode="subscription",
+            customer_email=customer_email,
+            line_items=[
+                {
+                    "quantity": 1,
+                    "price_data": {
+                        "currency": "eur",
+                        "unit_amount": amount_cents,
+                        "recurring": {"interval": interval},
+                        "tax_behavior": "inclusive",
+                        "product_data": {
+                            "name": f"Kibuka Abo ({'Jährlich' if plan == 'yearly' else 'Monatlich'})",
+                            "tax_code": _TAX_CODE_DIGITAL_BOOKS,
+                        },
+                    },
+                }
+            ],
+            subscription_data={
+                "trial_period_days": trial_days,
+                "metadata": {"user_id": user_id, "plan": plan},
+            },
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata=metadata or {},
         )
         return session.url or ""
 

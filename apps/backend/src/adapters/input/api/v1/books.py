@@ -16,6 +16,9 @@ from src.adapters.input.api.dependencies import (
     get_user_repository,
 )
 from src.adapters.output.persistence.repositories.book_repository import SqlBookRepository
+from src.adapters.output.persistence.repositories.book_subscription_repository import (
+    SqlBookSubscriptionRepository,
+)
 from src.adapters.output.persistence.repositories.reading_progress_repository import (
     SqlReadingProgressRepository,
 )
@@ -23,6 +26,7 @@ from src.core.domain.entities.book import Book, BookPage
 from src.core.domain.entities.child_profile import ReadingProgress
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
+from src.core.ports.output.i_book_subscription_repository import IBookSubscriptionRepository
 from src.core.ports.output.i_reading_progress_repository import IReadingProgressRepository
 from src.core.ports.output.i_user_repository import IUserRepository
 from src.infrastructure.database import get_db
@@ -42,6 +46,13 @@ async def get_book_repository(
 ) -> IBookRepository:
     """Real SQL wiring; tests replace this via dependency override."""
     return SqlBookRepository(session=session)
+
+
+async def get_book_subscription_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> IBookSubscriptionRepository:
+    """Abo-Status für den Lesezugriff; tests replace this via dependency override."""
+    return SqlBookSubscriptionRepository(session=session)
 
 
 async def get_progress_repository(
@@ -182,6 +193,7 @@ async def get_daily_book(
 async def list_books(
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
+    subs: Annotated[IBookSubscriptionRepository, Depends(get_book_subscription_repository)],
     user_id: Annotated[str | None, Depends(get_optional_current_user)] = None,
     language: Annotated[Language | None, Query()] = None,
     age_range: Annotated[AgeRange | None, Query()] = None,
@@ -198,11 +210,11 @@ async def list_books(
         page=page,
         page_size=page_size,
     )
-    is_admin = bool(user_id) and await _is_active_admin(user_repo, user_id or "")
+    full_access = bool(user_id) and await _has_full_access(user_id or "", user_repo, subs)
     items: list[BookSummaryResponse] = []
     for b in books:
         purchased = bool(user_id) and (
-            is_admin or await repo.is_purchased_by_user(b.id, user_id or "")
+            full_access or await repo.is_purchased_by_user(b.id, user_id or "")
         )
         items.append(_book_to_summary(b, is_purchased=purchased))
     return PaginatedBooksResponse(
@@ -219,11 +231,22 @@ async def _is_active_admin(user_repo: IUserRepository, user_id: str) -> bool:
     return user is not None and user.is_active and user.is_admin
 
 
+async def _has_full_access(
+    user_id: str, user_repo: IUserRepository, subs: IBookSubscriptionRepository
+) -> bool:
+    """Vollzugriff auf alle Bücher: aktive Admins und aktive Abonnenten."""
+    if await _is_active_admin(user_repo, user_id):
+        return True
+    sub = await subs.get_current_for_user(user_id)
+    return sub is not None and sub.is_active
+
+
 @router.get("/{book_id}", response_model=BookDetailResponse)
 async def get_book_detail(
     book_id: str,
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
+    subs: Annotated[IBookSubscriptionRepository, Depends(get_book_subscription_repository)],
     user_id: Annotated[str | None, Depends(get_optional_current_user)] = None,
 ) -> BookDetailResponse:
     """Return book detail with first 2 preview pages. Public endpoint."""
@@ -233,7 +256,7 @@ async def get_book_detail(
 
     is_purchased = False
     if user_id:
-        is_purchased = await _is_active_admin(user_repo, user_id) or (
+        is_purchased = await _has_full_access(user_id, user_repo, subs) or (
             await repo.is_purchased_by_user(book_id, user_id)
         )
 
@@ -251,6 +274,7 @@ async def read_book(
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
     user_id: Annotated[str, Depends(get_current_user)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repository)],
+    subs: Annotated[IBookSubscriptionRepository, Depends(get_book_subscription_repository)],
 ) -> BookFullResponse:
     """Return full book content. Daily book is free for signed-in users;
     otherwise purchase, subscription or admin is required."""
@@ -260,7 +284,7 @@ async def read_book(
 
     has_access = (
         book.is_daily_book
-        or await _is_active_admin(user_repo, user_id)
+        or await _has_full_access(user_id, user_repo, subs)
         or await repo.is_purchased_by_user(book_id, user_id)
     )
     if not has_access:
