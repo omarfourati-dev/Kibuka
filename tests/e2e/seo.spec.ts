@@ -113,3 +113,33 @@ test.describe('SEO — robots.txt & sitemap', () => {
     expect(response.status()).toBeLessThan(404)
   })
 })
+
+test.describe('PWA — Installation auf dem Home-Bildschirm', () => {
+  test('links a web app manifest with name, standalone display and icons', async ({ page }) => {
+    await page.goto('/')
+    const href = await page.locator('link[rel="manifest"]').getAttribute('href')
+    expect(href).toBeTruthy()
+
+    const res = await page.request.get(href!)
+    expect(res.status()).toBe(200)
+    const manifest = await res.json()
+    expect(manifest.name).toContain('Kibuka')
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.start_url).toBe('/')
+    const sizes = (manifest.icons as Array<{ sizes: string }>).map((i) => i.sizes)
+    expect(sizes).toEqual(expect.arrayContaining(['192x192', '512x512']))
+  })
+
+  test('has an iOS home-screen icon and full-screen meta tags', async ({ page }) => {
+    await page.goto('/')
+    const icon = await page.locator('link[rel="apple-touch-icon"]').getAttribute('href')
+    expect(icon).toBeTruthy()
+    expect((await page.request.get(icon!)).status()).toBe(200)
+
+    await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute('content', 'yes')
+    await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute('content', 'Kibuka')
+    await expect(page.locator('meta[name="theme-color"]')).toHaveCount(1)
+    // Notch/Dynamic Island: Inhalt bis an den Rand, Ionic setzt die Safe Areas
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', /viewport-fit=cover/)
+  })
+})
