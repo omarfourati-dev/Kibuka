@@ -240,3 +240,35 @@ async def test_email_failure_does_not_lose_the_cancellation() -> None:
     assert result.outcome == CancellationOutcome.SCHEDULED
     assert canceller.calls == ["sub_123"]
     assert saved.saved == [result]
+
+
+@pytest.mark.asyncio
+async def test_unknown_address_gets_a_fixed_text_without_form_input() -> None:
+    """Kein Spam-Relais: Freitext aus dem Formular (Name, Grund, Vertragsangabe)
+    geht nie an Adressen, zu denen es kein Kibuka-Konto gibt."""
+    use_case, _, _, email = _use_case(users=FakeUsers([]))
+
+    await use_case.execute(
+        CancellationRequest(
+            name="Besuche evil.example",
+            email="fremd@example.com",
+            kind=CancellationKind.EXTRAORDINARY,
+            reason="Gratis-Gewinn unter evil.example",
+            contract_reference="evil.example",
+        )
+    )
+
+    (mail,) = email.sent
+    ctx = mail["context"]
+    assert ctx["matched"] is False
+    assert "evil.example" not in repr(ctx)
+
+
+@pytest.mark.asyncio
+async def test_account_owner_gets_the_full_content() -> None:
+    use_case, _, _, email = _use_case()
+
+    await use_case.execute(_request())
+
+    assert email.sent[0]["context"]["matched"] is True
+    assert email.sent[0]["context"]["name"] == "Omar Fourati"

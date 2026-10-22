@@ -47,3 +47,10 @@ def test_user_input_is_escaped() -> None:
     html = _render(name="<script>x</script>")
     assert "<script>x</script>" not in html
     assert "&lt;script&gt;" in html
+
+
+def test_unmatched_confirmation_explains_without_echoing_input() -> None:
+    html = _render(matched=False, name=None, reason=None, contract_reference=None)
+    assert "11111111-2222-3333-4444-555555555555" in html
+    assert "kein Kibuka-Konto" in html
+    assert "Hallo ," not in html
