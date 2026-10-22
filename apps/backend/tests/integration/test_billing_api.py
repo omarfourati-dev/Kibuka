@@ -173,18 +173,33 @@ def _event(
     payment_intent: str = "pi_123",
     payment_status: str = "paid",
     amount_total: int = 199,
-) -> dict:
-    return {
-        "type": event_type,
-        "data": {
-            "object": {
-                "metadata": metadata,
-                "payment_intent": payment_intent,
-                "payment_status": payment_status,
-                "amount_total": amount_total,
-            }
+) -> Any:
+    """Baut ein ECHTES Stripe-Event-Objekt (StripeObject, kein dict).
+
+    Live-Lektion vom 22.10.: event["data"]["object"] ist ein
+    stripe.checkout.Session-StripeObject — .get() darauf wirft
+    AttributeError ("'get' is a dict method"). Reine dict-Mocks hatten
+    den Crash versteckt.
+    """
+    import stripe
+
+    return stripe.Event.construct_from(
+        {
+            "id": "evt_test_1",
+            "object": "event",
+            "type": event_type,
+            "data": {
+                "object": {
+                    "object": "checkout.session",
+                    "metadata": metadata,
+                    "payment_intent": payment_intent,
+                    "payment_status": payment_status,
+                    "amount_total": amount_total,
+                }
+            },
         },
-    }
+        "sk_test_x",
+    )
 
 
 @pytest.fixture(autouse=True)
