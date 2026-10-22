@@ -11,8 +11,9 @@ from datetime import UTC, datetime
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.adapters.input.api.v1.auth import get_user_repository
+from src.adapters.input.api.v1.auth import get_refresh_token_store, get_user_repository
 from src.adapters.input.api.v1.auth import router as auth_router
+from src.adapters.output.cache.refresh_token_store import InMemoryRefreshTokenStore
 from src.core.domain.entities.user import User, UserStatus
 from src.infrastructure.security import decode_access_token
 
@@ -36,10 +37,14 @@ class FakeUserRepository:
         return user
 
 
-def _make_client(repo: FakeUserRepository) -> TestClient:
+def _make_client(
+    repo: FakeUserRepository, store: InMemoryRefreshTokenStore | None = None
+) -> TestClient:
     app = FastAPI()
     app.include_router(auth_router, prefix="/api/v1")
     app.dependency_overrides[get_user_repository] = lambda: repo
+    shared_store = store or InMemoryRefreshTokenStore()
+    app.dependency_overrides[get_refresh_token_store] = lambda: shared_store
     return TestClient(app)
 
 
@@ -241,4 +246,45 @@ class TestRefreshFlow:
 
         client.post("/api/v1/auth/logout")
 
+        assert client.post("/api/v1/auth/refresh").status_code == 401
+
+
+class TestRefreshTokenRevocation:
+    """Security-Review 22.10.: zustandslose Refresh-Tokens waren nach Logout
+    noch 7 Tage gültig. Jetzt: jti serverseitig, Rotation, Widerruf."""
+
+    def test_replaying_a_token_after_logout_is_rejected(self) -> None:
+        client = _make_client(FakeUserRepository())
+        _registered(client)
+        stolen = client.cookies.get("refresh_token")
+        assert stolen
+
+        client.post("/api/v1/auth/logout")
+        client.cookies.clear()
+        client.cookies.set("refresh_token", stolen, path="/api/v1/auth")
+
+        assert client.post("/api/v1/auth/refresh").status_code == 401
+
+    def test_rotated_token_cannot_be_reused(self) -> None:
+        client = _make_client(FakeUserRepository())
+        _registered(client)
+        first = client.cookies.get("refresh_token")
+        assert first
+
+        assert client.post("/api/v1/auth/refresh").status_code == 200  # rotiert
+        client.cookies.clear()
+        client.cookies.set("refresh_token", first, path="/api/v1/auth")
+
+        assert client.post("/api/v1/auth/refresh").status_code == 401
+
+    def test_validly_signed_token_unknown_to_server_is_rejected(self) -> None:
+        """Ein korrekt signiertes Token ohne Server-Eintrag gilt nicht."""
+        from src.infrastructure.security import create_refresh_token
+
+        repo = FakeUserRepository()
+        client = _make_client(repo)
+        _registered(client)
+        user_id = next(iter(repo.users))
+        client.cookies.clear()
+        client.cookies.set("refresh_token", create_refresh_token(user_id), path="/api/v1/auth")
         assert client.post("/api/v1/auth/refresh").status_code == 401
