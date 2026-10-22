@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useHistory } from "react-router-dom";
+import { useParams, useHistory, useLocation } from "react-router-dom";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookPreview } from "../components/book/BookPreview";
@@ -31,21 +31,40 @@ interface BookDetail {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+const MAX_WEBHOOK_POLLS = 10;
+
 export default function BookDetailPage() {
   const { bookId } = useParams<{ bookId: string }>();
   const history = useHistory();
+  const location = useLocation();
 
   const [book, setBook] = useState<BookDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState("de");
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  // Rückkehr von Stripe: ?checkout=success|cancel einmalig einlesen …
+  const [checkoutStatus] = useState<string | null>(() =>
+    new URLSearchParams(location.search).get("checkout"),
+  );
+  const [pollCount, setPollCount] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // … und sofort aus der URL entfernen, damit das Banner einen Reload
+  // nicht überlebt
+  useEffect(() => {
+    if (checkoutStatus) {
+      history.replace(location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!bookId) return;
 
     let cancelled = false;
-    setLoading(true);
+    if (reloadKey === 0) setLoading(true);
     setError(null);
 
     fetch(`/api/v1/books/${bookId}`, { headers: getAuthHeaders() })
@@ -67,7 +86,24 @@ export default function BookDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [bookId]);
+  }, [bookId, reloadKey]);
+
+  // Nach checkout=success kommt die Freischaltung asynchron per Webhook —
+  // kurz nachladen, bis is_purchased umspringt
+  const awaitingWebhook =
+    checkoutStatus === "success" &&
+    book !== null &&
+    !book.is_purchased &&
+    pollCount < MAX_WEBHOOK_POLLS;
+
+  useEffect(() => {
+    if (!awaitingWebhook) return;
+    const timer = setTimeout(() => {
+      setPollCount((c) => c + 1);
+      setReloadKey((k) => k + 1);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [awaitingWebhook, pollCount]);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -143,6 +179,7 @@ export default function BookDetailPage() {
 
   const handlePurchase = async () => {
     setPurchaseError(null);
+    setPurchasing(true);
     try {
       const res = await fetch("/api/v1/billing/checkout/book", {
         method: "POST",
@@ -157,16 +194,20 @@ export default function BookDetailPage() {
       }
       if (!res.ok) {
         setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+        setPurchasing(false);
         return;
       }
       const data = (await res.json()) as { url?: string };
       if (!data.url) {
         setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+        setPurchasing(false);
         return;
       }
+      // purchasing bleibt true — die Seite verlässt uns gleich Richtung Stripe
       window.location.assign(data.url);
     } catch {
       setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+      setPurchasing(false);
     }
   };
 
@@ -204,6 +245,47 @@ export default function BookDetailPage() {
           >
             ← Zurück
           </button>
+
+          {/* Rückkehr von Stripe: klares Feedback statt stummem Kauf-Button */}
+          {checkoutStatus === "success" && (
+            <div
+              role="status"
+              className="flex items-center gap-3 rounded-2xl px-5 py-4 font-semibold"
+              style={{
+                backgroundColor: "rgba(78, 205, 196, 0.15)",
+                color: "var(--color-text-primary)",
+                border: "2px solid #4ECDC4",
+              }}
+            >
+              <span className="text-2xl select-none" aria-hidden="true">
+                🎉
+              </span>
+              <span>
+                Kauf erfolgreich!{" "}
+                {book.is_purchased
+                  ? "Viel Spaß beim Lesen."
+                  : "Dein Buch wird gerade freigeschaltet …"}
+              </span>
+            </div>
+          )}
+          {checkoutStatus === "cancel" && (
+            <div
+              role="status"
+              className="flex items-center gap-3 rounded-2xl px-5 py-4 font-medium"
+              style={{
+                backgroundColor: "rgba(255, 217, 61, 0.18)",
+                color: "var(--color-text-primary)",
+                border: "2px solid #FFD93D",
+              }}
+            >
+              <span className="text-2xl select-none" aria-hidden="true">
+                ℹ️
+              </span>
+              <span>
+                Kauf abgebrochen — du kannst es jederzeit erneut versuchen.
+              </span>
+            </div>
+          )}
 
           {/* Hero section */}
           <div className="flex flex-col sm:flex-row gap-6">
@@ -288,15 +370,32 @@ export default function BookDetailPage() {
                       ? "Gratis lesen"
                       : "Jetzt lesen"}
                   </button>
+                ) : checkoutStatus === "success" ? (
+                  <div
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold"
+                    style={{
+                      backgroundColor: "var(--color-surface-raised)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                      aria-hidden="true"
+                    />
+                    Zahlung wird verarbeitet …
+                  </div>
                 ) : (
                   <button
                     type="button"
-                    aria-label={formattedPrice}
+                    aria-label={
+                      purchasing ? "Weiterleitung zu Stripe" : formattedPrice
+                    }
                     onClick={handlePurchase}
-                    className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95"
+                    disabled={purchasing}
+                    className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
                     style={{ backgroundColor: "var(--color-primary)" }}
                   >
-                    {formattedPrice}
+                    {purchasing ? "Weiterleitung zu Stripe …" : formattedPrice}
                   </button>
                 )}
                 {purchaseError && (

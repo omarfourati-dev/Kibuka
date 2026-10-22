@@ -18,6 +18,16 @@ export function setAuthTokenProvider(provider: AuthTokenProvider | null): void {
   authTokenProvider = provider;
 }
 
+/**
+ * Wird bei jeder 401-Antwort aufgerufen (Sitzung abgelaufen/ungültig),
+ * damit die App zentral aufräumen kann (Auth-Store leeren, Hinweis zeigen).
+ */
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
 class ApiClientError extends Error {
   constructor(
     public readonly status: number,
@@ -42,6 +52,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      unauthorizedHandler?.();
+    }
     // Vertrag ist {error, code}; FastAPIs HTTPException liefert {detail}
     const body = (await response
       .json()

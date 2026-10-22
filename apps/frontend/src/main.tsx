@@ -9,7 +9,10 @@ import "@ionic/react/css/normalize.css";
 import "@ionic/react/css/structure.css";
 import "@ionic/react/css/typography.css";
 
-import { setAuthTokenProvider } from "@omarsapp/shared-api";
+import {
+  setAuthTokenProvider,
+  setUnauthorizedHandler,
+} from "@omarsapp/shared-api";
 import { useAuthStore } from "@omarsapp/shared-stores";
 
 import i18n from "./i18n/config";
@@ -20,6 +23,9 @@ setupIonicReact({ mode: "md" });
 
 // Der zentrale apiClient sendet den Memory-Token als Bearer-Header mit
 setAuthTokenProvider(() => useAuthStore.getState().accessToken);
+// Sitzung abgelaufen → Zustand zentral aufräumen (verhindert "angemeldet,
+// aber alles schlägt fehl" und die Login-Bounce-Falle)
+setUnauthorizedHandler(() => useAuthStore.getState().clearUser());
 
 const queryClient = new QueryClient({
   defaultOptions: {

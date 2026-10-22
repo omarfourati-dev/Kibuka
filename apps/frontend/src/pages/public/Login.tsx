@@ -25,7 +25,7 @@ export default function Login() {
   const history = useHistory();
   const location = useLocation();
   const redirectTo = safeRedirect(location.search);
-  const { isAuthenticated, setUser, setToken } = useAuthStore();
+  const { isAuthenticated, accessToken, setUser, setToken } = useAuthStore();
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -39,10 +39,14 @@ export default function Login() {
   }, [mode]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Nur wegnavigieren, wenn WIRKLICH ein Token existiert. Nach einem
+    // Reload ist isAuthenticated aus dem localStorage noch true, der
+    // Memory-Token aber weg — sonst Bounce-Falle: das Formular wäre
+    // nie wieder erreichbar.
+    if (isAuthenticated && accessToken) {
       history.replace(redirectTo);
     }
-  }, [isAuthenticated, history, redirectTo]);
+  }, [isAuthenticated, accessToken, history, redirectTo]);
 
   const mutation = useMutation({
     mutationFn: (payload: {

@@ -233,6 +233,22 @@ export default function ReaderPage() {
             />
           </div>
 
+          {/* Exit — der Reader ist fullscreen ohne Tab-Bar, ohne diesen
+              Button säße man in der nativen App im Buch fest */}
+          <button
+            type="button"
+            aria-label="Reader verlassen"
+            onClick={() => history.push(`/books/${bookId}`)}
+            className="absolute top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold shadow-sm transition-all duration-200 hover:opacity-80 active:scale-95"
+            style={{
+              backgroundColor: "var(--color-surface-raised)",
+              color: "var(--color-text-primary)",
+              insetInlineEnd: "0.75rem",
+            }}
+          >
+            ✕
+          </button>
+
           {/* Main content */}
           <main
             className="flex-1 flex flex-col gap-6 px-4 py-6 max-w-2xl mx-auto w-full"
