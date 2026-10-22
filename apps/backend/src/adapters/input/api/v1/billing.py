@@ -108,7 +108,10 @@ async def stripe_webhook(
         "checkout.session.completed",
         "checkout.session.async_payment_succeeded",
     ):
-        session_obj = event["data"]["object"]
+        raw = event["data"]["object"]
+        # Echte Events liefern ein StripeObject, KEIN dict — .get() darauf
+        # wirft AttributeError ("'get' is a dict method"). Live-Bug 22.10.
+        session_obj: dict[str, Any] = raw.to_dict() if hasattr(raw, "to_dict") else dict(raw)
         # Zugriff nur bei bestätigter Zahlung — "completed" kann unpaid sein
         # (verzögerte Zahlarten), dann folgt später async_payment_succeeded
         if session_obj.get("payment_status") != "paid":
