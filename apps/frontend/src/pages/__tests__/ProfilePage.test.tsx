@@ -7,6 +7,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Switch } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
+import { useUIStore } from "@omarsapp/shared-stores";
+import i18n from "../../i18n/config";
+import ar from "../../i18n/locales/ar.json";
 import ProfilePage from "../ProfilePage";
 
 function renderProfile(entry = "/profile") {
@@ -182,5 +185,68 @@ describe("ProfilePage", () => {
   it("does not query billing for anonymous users", () => {
     renderProfile();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("lets the user choose the app language", () => {
+    renderProfile();
+    const group = screen.getByRole("group", { name: "Sprache der App" });
+    expect(group).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "العربية" }));
+    expect(useUIStore.getState().language).toBe("ar");
+    expect(screen.getByRole("button", { name: "العربية" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    useUIStore.getState().setLanguage("de");
+  });
+
+  describe("auf Arabisch", () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage("ar");
+      useUIStore.setState({ language: "ar" });
+    });
+
+    afterEach(() => {
+      useUIStore.setState({ language: "de" });
+    });
+
+    it("talks to anonymous users in Arabic", () => {
+      renderProfile();
+      expect(
+        screen.getByRole("heading", { name: ar.profile.title }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(ar.profile.notLoggedIn)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.profile.login }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("navigation", { name: ar.profile.legal }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the subscription with an Arabic date", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        subscriptionResponse({
+          status: "active",
+          plan: "monthly",
+          current_period_end: "2026-11-22T00:00:00Z",
+          cancel_at_period_end: false,
+          is_active: true,
+        }),
+      );
+      useAuthStore.setState(SIGNED_IN);
+
+      renderProfile();
+      expect(
+        await screen.findByText("الاشتراك الشهري فعّال"),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/يتجدّد في 22 نوفمبر 2026/)).toBeInTheDocument();
+      expect(screen.getByText(ar.profile.roleMember)).toBeInTheDocument();
+    });
+
+    it("puts the Arabic profile title in the browser tab", () => {
+      renderProfile();
+      expect(document.title).toBe(ar.meta.profile);
+    });
   });
 });

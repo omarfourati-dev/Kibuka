@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
+import i18n from "../../i18n/config";
+import ar from "../../i18n/locales/ar.json";
+import de from "../../i18n/locales/de.json";
 import HomePage from "../HomePage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
@@ -272,7 +275,7 @@ describe("HomePage", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/books/book-1");
   });
 
-  it("shows titles in the preset language of a language landing page", async () => {
+  it("shows book titles in the app language", async () => {
     vi.mocked(fetch).mockImplementation((url) => {
       if (String(url).includes("/daily")) {
         return Promise.resolve({
@@ -302,9 +305,10 @@ describe("HomePage", () => {
       } as Response);
     });
 
+    await i18n.changeLanguage("ar");
     render(
       <MemoryRouter initialEntries={["/ar"]}>
-        <HomePage lang="ar" />
+        <HomePage />
       </MemoryRouter>,
     );
     await waitFor(() => {
@@ -316,5 +320,70 @@ describe("HomePage", () => {
     expect(screen.getByText("الكتاب الأول")).toBeInTheDocument();
     // Ohne arabische Übersetzung bleibt der deutsche Titel stehen
     expect(screen.getByText("Zweites Buch")).toBeInTheDocument();
+  });
+
+  describe("auf Arabisch", () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage("ar");
+    });
+
+    it("labels the book grid in Arabic", async () => {
+      vi.mocked(fetch).mockImplementation((url) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              String(url).includes("/daily")
+                ? dailyBook
+                : { items: bookList, total: 2, page: 1, page_size: 6 },
+            ),
+        } as Response),
+      );
+
+      renderHomePage();
+      expect(
+        await screen.findByRole("heading", { name: ar.home.allBooks }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(de.home.allBooks)).not.toBeInTheDocument();
+    });
+
+    it("explains a loading error in Arabic", async () => {
+      vi.mocked(fetch).mockRejectedValue(new Error("down"));
+
+      renderHomePage();
+      expect(await screen.findByText(ar.states.errorTitle)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.states.retry }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the empty state in Arabic", async () => {
+      vi.mocked(fetch).mockImplementation((url) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              String(url).includes("/daily")
+                ? null
+                : { items: [], total: 0, page: 1, page_size: 6 },
+            ),
+        } as Response),
+      );
+
+      renderHomePage();
+      expect(await screen.findByText(ar.home.emptyTitle)).toBeInTheDocument();
+    });
+
+    it("puts the Arabic home title in the browser tab", () => {
+      vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
+      renderHomePage();
+      expect(document.title).toBe(ar.meta.home);
+    });
+  });
+
+  it("puts the German home title in the browser tab", () => {
+    vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
+    renderHomePage();
+    expect(document.title).toBe(de.meta.home);
   });
 });

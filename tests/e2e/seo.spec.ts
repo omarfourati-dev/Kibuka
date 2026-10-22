@@ -80,9 +80,9 @@ test.describe('SEO — Sprach-Landingpages', () => {
     })
   }
 
-  test('leaving a language page restores German', async ({ page }) => {
-    await page.goto('/ar')
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  test('a fresh visitor (e.g. a crawler) gets the other pages in German', async ({ page }) => {
+    // Nutzer behalten ihre gewählte Sprache (siehe i18n.spec.ts) — ohne
+    // gespeicherte Wahl bleibt alles außer /ar, /fr, /en deutsch
     await page.goto('/library')
     await expect(page.locator('html')).toHaveAttribute('lang', 'de')
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')

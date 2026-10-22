@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
+import i18n from "../../i18n/config";
+import ar from "../../i18n/locales/ar.json";
 import LibraryPage from "../LibraryPage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
@@ -253,6 +255,73 @@ describe("LibraryPage", () => {
 
     await waitFor(() => {
       expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+  });
+
+  describe("auf Arabisch", () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage("ar");
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            items: [
+              {
+                ...bookList[0],
+                titles: { de: "Erstes Buch", ar: "الكتاب الأول" },
+              },
+              bookList[1],
+            ],
+            total: 2,
+            page: 1,
+            page_size: 12,
+          }),
+      } as Response);
+    });
+
+    it("shows heading, filters and paging in Arabic", async () => {
+      renderLibraryPage();
+      await waitFor(() => {
+        expect(screen.getAllByTestId("book-card")).toHaveLength(2);
+      });
+
+      expect(
+        screen.getByRole("heading", { name: ar.library.title }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: ar.library.language }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: ar.library.age }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: ar.library.theme }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("option", { name: ar.languages.fr }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("option", { name: ar.themes.animals }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("option", { name: "3–5 سنوات" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.library.nextLabel }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("الصفحة 1 من 1")).toBeInTheDocument();
+    });
+
+    it("shows book titles in Arabic where available", async () => {
+      renderLibraryPage();
+      expect(await screen.findByText("الكتاب الأول")).toBeInTheDocument();
+      // Ohne arabischen Titel bleibt der deutsche stehen
+      expect(screen.getByText("Zweites Buch")).toBeInTheDocument();
+    });
+
+    it("puts the Arabic library title in the browser tab", () => {
+      renderLibraryPage();
+      expect(document.title).toBe(ar.meta.library);
     });
   });
 });

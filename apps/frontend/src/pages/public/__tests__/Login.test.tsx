@@ -4,10 +4,13 @@
  * der live 501 liefert (toter Link für Nutzer).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { fireEvent } from "@testing-library/react";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Switch } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
+import i18n from "../../../i18n/config";
+import ar from "../../../i18n/locales/ar.json";
 import Login from "../Login";
 
 function renderLogin(entry = "/login") {
@@ -53,7 +56,7 @@ describe("Login branding", () => {
 
   it("still offers email sign in", () => {
     renderLogin();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password|passwort/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /sign in|anmelden/i }),
@@ -90,7 +93,7 @@ describe("Login redirect", () => {
       accessToken: null,
     });
     renderLogin("/login?redirect=/books/b1");
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument();
     expect(screen.queryByText("BookDetailTarget")).not.toBeInTheDocument();
   });
 
@@ -102,5 +105,60 @@ describe("Login redirect", () => {
     });
     renderLogin("/login?redirect=https://evil.example/phish");
     expect(screen.getByText("HomeTarget")).toBeInTheDocument();
+  });
+});
+
+describe("Login — Sprache", () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      accessToken: null,
+    });
+  });
+
+  it("speaks German to German users", () => {
+    renderLogin();
+    expect(screen.getByLabelText("E-Mail")).toBeInTheDocument();
+    expect(screen.getByLabelText("Passwort")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Anmelden" }),
+    ).toBeInTheDocument();
+    expect(document.title).toBe("Anmelden | Kibuka");
+  });
+
+  it("switches to registration with its own title", () => {
+    renderLogin();
+    fireEvent.click(screen.getByRole("button", { name: "Registrieren" }));
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Konto erstellen" }),
+    ).toBeInTheDocument();
+    expect(document.title).toBe("Registrieren | Kibuka");
+  });
+
+  it("speaks Arabic and keeps e-mail and password left-to-right", async () => {
+    await i18n.changeLanguage("ar");
+    renderLogin();
+    const email = screen.getByLabelText(ar.login.email);
+    expect(email).toHaveAttribute("dir", "ltr");
+    expect(screen.getByLabelText(ar.login.password)).toHaveAttribute(
+      "dir",
+      "ltr",
+    );
+    expect(
+      screen.getByRole("button", { name: ar.login.signIn }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(ar.login.welcomeBack)).toBeInTheDocument();
+    expect(document.title).toBe(ar.meta.login);
+  });
+
+  it("leads the logo back to the home page of the app language", async () => {
+    await i18n.changeLanguage("ar");
+    renderLogin();
+    expect(screen.getByRole("link", { name: "Kibuka" })).toHaveAttribute(
+      "href",
+      "/ar",
+    );
   });
 });

@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BookCard } from "../BookCard";
+import i18n from "../../../i18n/config";
+import ar from "../../../i18n/locales/ar.json";
 
 const defaultProps = {
   id: "book-1",
@@ -110,5 +112,35 @@ describe("BookCard", () => {
     render(<BookCard {...defaultProps} />);
     const card = screen.getByRole("article");
     expect(card).toHaveAttribute("tabindex", "0");
+  });
+});
+
+describe("BookCard auf Arabisch", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ar");
+  });
+
+  it("labels price, age and badges in Arabic", () => {
+    render(<BookCard {...defaultProps} isDailyBook />);
+    expect(screen.getByText("1.99 يورو")).toBeInTheDocument();
+    expect(screen.getByText("3-5 سنوات")).toBeInTheDocument();
+    expect(screen.getByText(ar.book.daily)).toBeInTheDocument();
+    expect(
+      screen.getByRole("article", { name: "كتاب: Das Abenteuer im Wald" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows free and purchased books in Arabic", () => {
+    const { rerender } = render(<BookCard {...defaultProps} priceSingle={0} />);
+    expect(screen.getByText(ar.book.free)).toBeInTheDocument();
+    rerender(<BookCard {...defaultProps} isPurchased />);
+    expect(screen.getByText(ar.book.purchased)).toBeInTheDocument();
+  });
+
+  it("pins the daily badge to the reading start (right in Arabic)", () => {
+    render(<BookCard {...defaultProps} isDailyBook />);
+    const badge = screen.getByText(ar.book.daily);
+    expect(badge.className).toContain("start-2");
+    expect(badge.className).not.toContain("left-2");
   });
 });
