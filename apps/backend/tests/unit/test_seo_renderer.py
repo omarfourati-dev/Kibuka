@@ -236,3 +236,33 @@ class TestLlmsTxt:
             assert fact in txt
         assert f"({BASE}/books/b1)" in txt
         assert f"({BASE}/pricing)" in txt
+
+
+# ---------------------------------------------------------------------------
+# Rechtliche Pflichtangaben
+# ---------------------------------------------------------------------------
+
+
+class TestLegalFooter:
+    """Impressum (§ 5 DDG) muss von jeder Seite aus unmittelbar erreichbar
+    sein, der Kündigungsbutton (§ 312k BGB) ständig verfügbar — auch in der
+    Fassung, die Crawler ohne JavaScript sehen."""
+
+    def _pages(self) -> dict[str, str]:
+        return {
+            "home": home_page(BASE, _book(daily=True), [_book()], PRICES).body_html,
+            "library": library_page(BASE, [_book()], PRICES).body_html,
+            "book": book_page(BASE, _book(), PRICES).body_html,
+            "pricing": pricing_page(BASE, PRICES).body_html,
+        }
+
+    def test_every_page_links_imprint_privacy_and_cancellation(self) -> None:
+        for name, body in self._pages().items():
+            assert '<a href="https://omarfourati.de/de/impressum">Impressum</a>' in body, name
+            assert '<a href="https://omarfourati.de/de/datenschutz">Datenschutz</a>' in body, name
+            assert '<a href="/kuendigen">Verträge hier kündigen</a>' in body, name
+
+    def test_footer_sits_inside_the_replaced_root_content(self) -> None:
+        body = pricing_page(BASE, PRICES).body_html
+        assert body.startswith('<main class="kibuka-seo"')
+        assert body.index("<footer") < body.rindex("</main>")

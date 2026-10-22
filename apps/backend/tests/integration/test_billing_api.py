@@ -70,9 +70,11 @@ class FakeBillingAdapter:
         amount_cents: int,
         success_url: str,
         cancel_url: str,
+        withdrawal_waiver_at: str,
     ) -> str:
         self.calls.append(
             {
+                "withdrawal_waiver_at": withdrawal_waiver_at,
                 "book_id": book_id,
                 "user_id": user_id,
                 "title": title,
@@ -109,7 +111,9 @@ class TestBookCheckout:
     def test_returns_404_when_billing_disabled(self) -> None:
         client, _, billing = _make_client()
 
-        response = client.post("/api/v1/billing/checkout/book", json={"book_id": "book-1"})
+        response = client.post(
+            "/api/v1/billing/checkout/book", json={"book_id": "book-1", "withdrawal_waiver": True}
+        )
 
         assert response.status_code == 404
         assert billing.calls == []
@@ -118,7 +122,9 @@ class TestBookCheckout:
         monkeypatch.setattr(settings, "enable_billing", True)
         client, _, billing = _make_client(authenticated=False)
 
-        response = client.post("/api/v1/billing/checkout/book", json={"book_id": "book-1"})
+        response = client.post(
+            "/api/v1/billing/checkout/book", json={"book_id": "book-1", "withdrawal_waiver": True}
+        )
 
         assert response.status_code == 401
         assert billing.calls == []
@@ -127,7 +133,9 @@ class TestBookCheckout:
         monkeypatch.setattr(settings, "enable_billing", True)
         client, _, billing = _make_client()
 
-        response = client.post("/api/v1/billing/checkout/book", json={"book_id": "book-1"})
+        response = client.post(
+            "/api/v1/billing/checkout/book", json={"book_id": "book-1", "withdrawal_waiver": True}
+        )
 
         assert response.status_code == 200
         assert response.json()["url"] == "https://checkout.stripe.com/test-session"
@@ -144,7 +152,9 @@ class TestBookCheckout:
         monkeypatch.setattr(settings, "enable_billing", True)
         client, _, billing = _make_client()
 
-        response = client.post("/api/v1/billing/checkout/book", json={"book_id": "nope"})
+        response = client.post(
+            "/api/v1/billing/checkout/book", json={"book_id": "nope", "withdrawal_waiver": True}
+        )
 
         assert response.status_code == 404
         assert billing.calls == []
@@ -156,7 +166,9 @@ class TestBookCheckout:
         repo.books["free-1"] = _make_book("free-1", price=0.0)
         client, _, billing = _make_client(repo=repo)
 
-        response = client.post("/api/v1/billing/checkout/book", json={"book_id": "free-1"})
+        response = client.post(
+            "/api/v1/billing/checkout/book", json={"book_id": "free-1", "withdrawal_waiver": True}
+        )
 
         assert response.status_code == 400
         assert billing.calls == []
@@ -342,3 +354,36 @@ class TestStripeWebhook:
 
         assert response.status_code == 200
         assert repo.purchases == []
+
+
+class TestWithdrawalWaiver:
+    """Digitale Inhalte: Ohne ausdrückliche Zustimmung zum vorzeitigen Beginn
+    und Bestätigung des Verlusts des Widerrufsrechts (§ 356 Abs. 5 BGB)
+    gibt es keinen Checkout."""
+
+    @pytest.mark.parametrize("payload", [{}, {"withdrawal_waiver": False}])
+    def test_checkout_without_waiver_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch, payload: dict[str, Any]
+    ) -> None:
+        monkeypatch.setattr(settings, "enable_billing", True)
+        client, _, billing = _make_client()
+
+        response = client.post(
+            "/api/v1/billing/checkout/book", json={"book_id": "book-1", **payload}
+        )
+
+        assert response.status_code == 422
+        assert billing.calls == []
+
+    def test_waiver_time_travels_to_stripe_as_proof(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(settings, "enable_billing", True)
+        client, _, billing = _make_client()
+        before = datetime.now(UTC)
+
+        client.post(
+            "/api/v1/billing/checkout/book",
+            json={"book_id": "book-1", "withdrawal_waiver": True},
+        )
+
+        waived = datetime.fromisoformat(billing.calls[0]["withdrawal_waiver_at"])
+        assert before <= waived <= datetime.now(UTC)

@@ -122,3 +122,39 @@ async def test_cancel_at_period_end_keeps_access_until_the_paid_period_ends(
     assert modify_async.call_args.kwargs == {"cancel_at_period_end": True}
     assert effective is not None
     assert int(effective.timestamp()) == 1795348800
+
+
+@pytest.mark.asyncio
+async def test_checkouts_record_the_withdrawal_waiver(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nachweis der Zustimmung (§ 356 Abs. 5 BGB) liegt bei Stripe am Kauf."""
+    session = AsyncMock()
+    session.url = "https://checkout.stripe.com/x"
+    create_async = AsyncMock(return_value=session)
+    monkeypatch.setattr(stripe.checkout.Session, "create_async", create_async)
+    adapter = StripeBillingAdapter(api_key="sk_test_x", webhook_secret="whsec_x")
+
+    await adapter.create_book_checkout(
+        book_id="b1",
+        user_id="u1",
+        title="T",
+        amount_cents=299,
+        success_url="https://k.example/ok",
+        cancel_url="https://k.example/cancel",
+        withdrawal_waiver_at="2026-10-22T18:30:00+00:00",
+    )
+    book_meta = create_async.call_args.kwargs["metadata"]
+    await adapter.create_subscription_checkout(
+        user_id="u1",
+        plan="monthly",
+        amount_cents=1499,
+        interval="month",
+        trial_days=0,
+        customer_email="o@example.com",
+        success_url="https://k.example/ok",
+        cancel_url="https://k.example/cancel",
+        withdrawal_waiver_at="2026-10-22T18:31:00+00:00",
+    )
+    sub_meta = create_async.call_args.kwargs["metadata"]
+
+    assert book_meta["withdrawal_waiver_at"] == "2026-10-22T18:30:00+00:00"
+    assert sub_meta["withdrawal_waiver_at"] == "2026-10-22T18:31:00+00:00"
