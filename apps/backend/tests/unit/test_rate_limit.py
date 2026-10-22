@@ -11,7 +11,7 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from src.adapters.input.api.rate_limit import get_rate_limit_store, rate_limit
-from src.adapters.output.cache.rate_limit_store import InMemoryRateLimitStore
+from src.adapters.output.cache.rate_limit_store import InMemoryRateLimitStore, RedisRateLimitStore
 
 
 class BrokenStore:
@@ -75,3 +75,55 @@ async def test_in_memory_window_expires(monkeypatch: pytest.MonkeyPatch) -> None
     assert await store.hit("k", 60) == 2
     now[0] += 61
     assert await store.hit("k", 60) == 1
+
+
+class FakePipeline:
+    def __init__(self, redis: FakeRedis) -> None:
+        self._redis = redis
+        self._ops: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+    def incr(self, key: str) -> None:
+        self._ops.append(("incr", (key,), {}))
+
+    def expire(self, key: str, seconds: int, **kwargs: object) -> None:
+        self._ops.append(("expire", (key, seconds), kwargs))
+
+    async def execute(self) -> list[object]:
+        self._redis.executed.append(self._ops)
+        results: list[object] = []
+        for name, args, _ in self._ops:
+            if name == "incr":
+                self._redis.counts[str(args[0])] = self._redis.counts.get(str(args[0]), 0) + 1
+                results.append(self._redis.counts[str(args[0])])
+            else:
+                results.append(True)
+        return results
+
+
+class FakeRedis:
+    def __init__(self) -> None:
+        self.counts: dict[str, int] = {}
+        self.executed: list[list[tuple[str, tuple[object, ...], dict[str, object]]]] = []
+        self.transactions: list[bool] = []
+
+    def pipeline(self, transaction: bool = True) -> FakePipeline:
+        self.transactions.append(transaction)
+        return FakePipeline(self)
+
+
+@pytest.mark.asyncio
+async def test_redis_counter_and_expiry_are_set_atomically() -> None:
+    """INCR und EXPIRE in einer Transaktion, EXPIRE NX bei jedem Treffer —
+    ein Absturz zwischen beiden darf nie einen Zähler ohne Ablauf hinterlassen
+    (sonst dauerhafte Sperre)."""
+    redis = FakeRedis()
+    store = RedisRateLimitStore(redis)
+
+    assert await store.hit("login:1.1.1.1", 300) == 1
+    assert await store.hit("login:1.1.1.1", 300) == 2
+
+    assert redis.transactions == [True, True]
+    for ops in redis.executed:
+        assert [op[0] for op in ops] == ["incr", "expire"]
+        assert ops[1][1] == ("ratelimit:login:1.1.1.1", 300)
+        assert ops[1][2] == {"nx": True}

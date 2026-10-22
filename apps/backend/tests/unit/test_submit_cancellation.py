@@ -226,7 +226,6 @@ async def test_confirmation_email_contains_what_the_law_requires() -> None:
     ctx = mail["context"]
     assert ctx["reference"] == result.id
     assert ctx["received_at"] == result.received_at
-    assert ctx["name"] == "Omar Fourati"
     assert ctx["kind"] == "ordinary"
     assert ctx["effective_at"] == PERIOD_END
 
@@ -265,10 +264,22 @@ async def test_unknown_address_gets_a_fixed_text_without_form_input() -> None:
 
 
 @pytest.mark.asyncio
-async def test_account_owner_gets_the_full_content() -> None:
+async def test_account_addresses_get_no_form_input_either() -> None:
+    """Wer die Adresse eines echten Kunden kennt, darf ihm über das Formular
+    keinen eigenen Text (Phishing) zuschicken lassen — Details stehen nur auf
+    der Bestätigungsseite."""
     use_case, _, _, email = _use_case()
 
-    await use_case.execute(_request())
+    await use_case.execute(
+        CancellationRequest(
+            name="Konto gesperrt, bitte hier anmelden: evil.example",
+            email="omar@example.com",
+            kind=CancellationKind.EXTRAORDINARY,
+            reason="evil.example",
+            contract_reference="evil.example",
+        )
+    )
 
-    assert email.sent[0]["context"]["matched"] is True
-    assert email.sent[0]["context"]["name"] == "Omar Fourati"
+    ctx = email.sent[0]["context"]
+    assert ctx["matched"] is True
+    assert "evil.example" not in repr(ctx)

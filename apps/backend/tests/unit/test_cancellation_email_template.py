@@ -36,17 +36,18 @@ def test_confirmation_names_receipt_time_reference_and_end_date() -> None:
     assert "22.11.2026" in html
 
 
-def test_extraordinary_confirmation_states_reason_and_review() -> None:
-    html = _render(kind="extraordinary", reason="Umzug", effective_at=None)
+def test_extraordinary_confirmation_states_review() -> None:
+    html = _render(kind="extraordinary", effective_at=None)
     assert "Außerordentliche" in html
-    assert "Umzug" in html
     assert "prüfen" in html
 
 
-def test_user_input_is_escaped() -> None:
-    html = _render(name="<script>x</script>")
-    assert "<script>x</script>" not in html
-    assert "&lt;script&gt;" in html
+def test_form_input_is_never_rendered() -> None:
+    # Freitext aus einem Formular ohne Login gehört in keine E-Mail
+    html = _render(
+        name="Besuche evil.example", reason="evil.example", contract_reference="evil.example"
+    )
+    assert "evil.example" not in html
 
 
 def test_unmatched_confirmation_explains_without_echoing_input() -> None:
