@@ -47,7 +47,8 @@ const mockBook = {
     fr: "La Grande Aventure",
     en: "The Big Adventure",
   },
-  pages: [
+  // Der echte Backend-Vertrag: Detail liefert preview_pages, nicht pages
+  preview_pages: [
     {
       page_number: 1,
       texts: { de: "Seite 1", ar: "", fr: "", en: "" },
@@ -67,6 +68,11 @@ const mockBook = {
 };
 
 const purchasedBook = { ...mockBook, is_purchased: true };
+const freeDailyBook = {
+  ...mockBook,
+  is_daily_book: true,
+  price_single: 0,
+};
 
 function renderBookDetailPage(bookId = "book-1") {
   return render(
@@ -127,6 +133,41 @@ describe("BookDetailPage", () => {
     expect(
       screen.queryByRole("button", { name: /lesen|read/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders the preview from the backend's preview_pages field", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderBookDetailPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("book-preview")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Vorschau")).toBeInTheDocument();
+  });
+
+  it("shows a free-read CTA instead of €0,00 kaufen for the daily book", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(freeDailyBook),
+    } as Response);
+
+    renderBookDetailPage();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /gratis lesen/i }),
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole("button", { name: /kaufen/i }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /gratis lesen/i }));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.stringContaining("/books/book-1/read"),
+    );
   });
 
   it("starts stripe checkout when buy button is clicked", async () => {

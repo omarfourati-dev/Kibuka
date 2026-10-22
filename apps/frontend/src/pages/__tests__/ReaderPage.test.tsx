@@ -282,4 +282,17 @@ describe("ReaderPage", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/books/book-1");
     });
   });
+
+  it("navigates to /login on 401 (no or expired session)", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ error: "Unauthorized" }),
+    } as Response);
+
+    renderReaderPage("book-1");
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/login");
+    });
+  });
 });

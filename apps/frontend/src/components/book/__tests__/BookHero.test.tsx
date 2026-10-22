@@ -73,6 +73,30 @@ describe("BookHero", () => {
     ).toBeInTheDocument();
   });
 
+  it("Vorschau lesen navigates via onRead", () => {
+    const handleRead = vi.fn();
+    render(<BookHero book={defaultBook} onRead={handleRead} />);
+    fireEvent.click(screen.getByRole("button", { name: /Vorschau lesen/i }));
+    expect(handleRead).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Gratis lesen instead of €0,00 kaufen for a free book", () => {
+    const handleRead = vi.fn();
+    render(
+      <BookHero
+        book={{ ...defaultBook, priceSingle: 0 }}
+        isPurchased={false}
+        onRead={handleRead}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /kaufen/i }),
+    ).not.toBeInTheDocument();
+    const freeButton = screen.getByRole("button", { name: /Gratis lesen/i });
+    fireEvent.click(freeButton);
+    expect(handleRead).toHaveBeenCalledTimes(1);
+  });
+
   it("renders cover image when provided", () => {
     render(
       <BookHero
