@@ -4,6 +4,10 @@ from typing import Any
 
 import stripe
 
+# Stripe-Produktsteuercode "Digital Books" — Pflicht, weil Managed Payments
+# (Default bei neuen Stripe-Konten) ohne tax_code jede Session ablehnt
+_TAX_CODE_DIGITAL_BOOKS = "txcd_10302000"
+
 
 class StripeBillingAdapter:
     """Handles Stripe API calls. Used directly in billing API routes."""
@@ -34,7 +38,10 @@ class StripeBillingAdapter:
                     "price_data": {
                         "currency": "eur",
                         "unit_amount": amount_cents,
-                        "product_data": {"name": title},
+                        "product_data": {
+                            "name": title,
+                            "tax_code": _TAX_CODE_DIGITAL_BOOKS,
+                        },
                     },
                 }
             ],
