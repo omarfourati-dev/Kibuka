@@ -63,3 +63,19 @@ class TestCustomEndpoint:
         url = await svc.get_public_url("books/b1/cover.png")
 
         assert url == "https://kibuka.omarfourati.de/kibuka-assets/books/b1/cover.png"
+
+
+class TestUploadCaching:
+    @pytest.mark.asyncio
+    async def test_uploads_are_cacheable_for_a_year(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Buch-Assets haben feste Keys pro Buch-ID — Browser dürfen sie
+        dauerhaft cachen (schnellerer Seitenaufbau, weniger Traffic)."""
+        client = MagicMock()
+        monkeypatch.setattr(boto3, "client", lambda *a, **k: client)
+        svc = S3StorageService(bucket="kibuka-assets", endpoint_url="http://s3:8333")
+
+        await svc.upload_image(b"x", "books/b1/cover.webp", "image/webp")
+
+        kwargs = client.put_object.call_args.kwargs
+        assert kwargs["ContentType"] == "image/webp"
+        assert kwargs["CacheControl"] == "public, max-age=31536000, immutable"

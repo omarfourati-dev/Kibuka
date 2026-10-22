@@ -7,6 +7,7 @@ service decodes b64_json instead of downloading a temporary URL.
 from __future__ import annotations
 
 import base64
+import io
 import re
 from unittest.mock import AsyncMock, MagicMock
 
@@ -28,9 +29,22 @@ def _make_openai_image_response(image_bytes: bytes) -> MagicMock:
     return response
 
 
+def _png(width: int = 64, height: int = 64, color: tuple[int, int, int] = (255, 107, 53)) -> bytes:
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (width, height), color).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _is_webp(data: bytes) -> bool:
+    return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+
+
 def _make_service(
-    image_bytes: bytes = b"fake-png-bytes", upload_url: str = "https://cdn.example.com/img.png"
+    image_bytes: bytes | None = None, upload_url: str = "https://cdn.example.com/img.webp"
 ):
+    image_bytes = image_bytes if image_bytes is not None else _png()
     from src.adapters.output.ai.image_service import OpenAIImageService
 
     mock_storage = AsyncMock()
@@ -78,7 +92,7 @@ class TestGenerateIllustration:
         )
 
         s3_key = mock_storage.upload_image.call_args[0][1]
-        assert s3_key == "books/book-42/illustrations/page_005.png"
+        assert s3_key == "books/book-42/illustrations/page_005.webp"
 
     @pytest.mark.asyncio
     async def test_s3_key_zero_padded_to_three_digits(self) -> None:
@@ -93,12 +107,12 @@ class TestGenerateIllustration:
         )
 
         s3_key = mock_storage.upload_image.call_args[0][1]
-        assert s3_key == "books/book-1/illustrations/page_000.png"
+        assert s3_key == "books/book-1/illustrations/page_000.webp"
 
     @pytest.mark.asyncio
     async def test_decoded_b64_bytes_are_uploaded(self) -> None:
         """The base64 payload from gpt-image-1 must be decoded and uploaded."""
-        image_bytes = b"decoded-png-data-12345"
+        image_bytes = _png(color=(10, 200, 80))
         service, _, mock_storage = _make_service(image_bytes=image_bytes)
 
         await service.generate_illustration(
@@ -110,7 +124,9 @@ class TestGenerateIllustration:
         )
 
         uploaded_bytes = mock_storage.upload_image.call_args[0][0]
-        assert uploaded_bytes == image_bytes
+        # gpt-image-1 liefert PNG (~1,7 MB) — hochgeladen wird WebP
+        assert _is_webp(uploaded_bytes)
+        assert mock_storage.upload_image.call_args[0][2] == "image/webp"
 
     @pytest.mark.asyncio
     async def test_calls_gpt_image_1(self) -> None:
@@ -182,11 +198,11 @@ class TestGenerateCover:
         )
 
         s3_key = mock_storage.upload_image.call_args[0][1]
-        assert s3_key == "books/book-77/cover.png"
+        assert s3_key == "books/book-77/cover.webp"
 
     @pytest.mark.asyncio
     async def test_decoded_b64_bytes_are_uploaded(self) -> None:
-        cover_bytes = b"cover-image-data-xyz"
+        cover_bytes = _png(color=(78, 205, 196))
         service, _, mock_storage = _make_service(image_bytes=cover_bytes)
 
         await service.generate_cover(
@@ -197,7 +213,8 @@ class TestGenerateCover:
         )
 
         uploaded_bytes = mock_storage.upload_image.call_args[0][0]
-        assert uploaded_bytes == cover_bytes
+        assert _is_webp(uploaded_bytes)
+        assert mock_storage.upload_image.call_args[0][2] == "image/webp"
 
 
 # ---------------------------------------------------------------------------
