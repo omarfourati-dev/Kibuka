@@ -57,6 +57,26 @@ describe("DocumentLanguage", () => {
     expect(i18n.language).toBe("en");
   });
 
+  it("sends '/' on to the home page of the remembered language", () => {
+    // PWA-Start-URL, Login- und 404-Redirects landen auf "/" — URL, Home-Tab
+    // und Sprache sollen danach zusammenpassen
+    act(() => useUIStore.getState().setLanguage("ar"));
+    const history = renderAt("/");
+    expect(history.location.pathname).toBe("/ar");
+    expect(history.length).toBe(1); // ersetzt, kein Zurück auf "/"
+  });
+
+  it("leaves '/' alone for German", () => {
+    const history = renderAt("/");
+    expect(history.location.pathname).toBe("/");
+  });
+
+  it("leaves other pages alone in any language", () => {
+    act(() => useUIStore.getState().setLanguage("fr"));
+    const history = renderAt("/library");
+    expect(history.location.pathname).toBe("/library");
+  });
+
   it("follows a language change made in the app", () => {
     renderAt("/library");
     act(() => useUIStore.getState().setLanguage("ar"));

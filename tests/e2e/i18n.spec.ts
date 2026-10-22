@@ -78,6 +78,15 @@ test.describe('Sprache der App', () => {
     await expect(page.getByRole('heading', { name: 'أسئلة شائعة' })).toBeVisible({ timeout: 10000 })
   })
 
+  test('opening / later (e.g. the installed app) leads to /ar', async ({ page }) => {
+    await page.goto('/ar')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+
+    await page.goto('/')
+    await expect(page).toHaveURL(/\/ar$/)
+    await expect(page.getByText('قصة اليوم').first()).toBeVisible({ timeout: 10000 })
+  })
+
   test('the browser tab title follows SPA navigation (/fr → Tarifs)', async ({ page }) => {
     await page.goto('/fr')
     await expect(page).toHaveTitle('Kibuka – Livres pour enfants bilingues : une histoire par jour')
