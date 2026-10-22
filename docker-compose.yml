@@ -26,6 +26,39 @@ services:
     networks:
       - app_network
 
+  # Tägliches pg_dump nach /var/backups/kibuka (14 Tage Aufbewahrung).
+  # Bewusst AUSSERHALB von /home/kibuka — der Deploy-rsync --delete leert das.
+  db-backup:
+    image: pgvector/pgvector:pg16
+    container_name: kibuka-db-backup
+    entrypoint: ["sh", "/backup.sh"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kibuka}
+      POSTGRES_USER: ${POSTGRES_USER:-kibuka}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      PGHOST: db
+      BACKUP_KEEP_DAYS: "14"
+    volumes:
+      - ./deploy/db-backup.sh:/backup.sh:ro
+      - /var/backups/kibuka:/backups
+    healthcheck:
+      # gesund = es gibt ein Backup, das jünger als 26 h ist
+      test:
+        [
+          "CMD-SHELL",
+          "find /backups -name 'kibuka-*.dump' -mmin -1560 | grep -q .",
+        ]
+      interval: 1h
+      timeout: 10s
+      retries: 1
+      start_period: 10m
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app_network
+
   redis:
     image: redis:7-alpine
     container_name: kibuka-redis
