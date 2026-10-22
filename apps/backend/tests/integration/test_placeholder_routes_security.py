@@ -70,7 +70,7 @@ class TestPlaceholderRoutesRequireAuth:
         assert c.delete("/api/v1/api-keys/k1").status_code == 401
 
     def test_billing_subscription_requires_auth(self) -> None:
-        assert _client().get("/api/v1/billing/subscription/s1").status_code == 401
+        assert _client().get("/api/v1/billing/subscription/me").status_code == 401
 
 
 class TestWebhookSecretNotEchoed:

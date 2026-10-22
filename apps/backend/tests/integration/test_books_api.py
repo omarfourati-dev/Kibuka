@@ -16,6 +16,7 @@ from src.core.domain.entities.book import (
     WordTimestamp,
 )
 from src.core.domain.entities.child_profile import ReadingProgress
+from src.core.domain.entities.purchase import BookSubscription, BookSubscriptionStatus
 from src.core.domain.entities.user import User, UserRole, UserStatus
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
@@ -198,16 +199,33 @@ def progress_repo() -> FakeProgressRepo:
     return FakeProgressRepo()
 
 
+class FakeBookSubscriptionRepo:
+    def __init__(self, active_users: set[str] | None = None) -> None:
+        self.active_users = active_users or set()
+
+    async def get_current_for_user(self, user_id: str) -> BookSubscription | None:
+        if user_id not in self.active_users:
+            return None
+        return BookSubscription(
+            id="s1",
+            user_id=user_id,
+            plan="monthly",
+            status=BookSubscriptionStatus.ACTIVE,
+        )
+
+
 def _build_client(
     book_repo: MockBookRepository,
     optional_user: str | None,
     auth_user: str = USER_ID,
     user_repo: FakeUserRepo | None = None,
     progress_repo: FakeProgressRepo | None = None,
+    subscription_repo: FakeBookSubscriptionRepo | None = None,
 ) -> TestClient:
     from src.adapters.input.api.dependencies import get_user_repository
     from src.adapters.input.api.v1.books import (
         get_book_repository,
+        get_book_subscription_repository,
         get_current_user,
         get_optional_current_user,
         get_progress_repository,
@@ -223,6 +241,9 @@ def _build_client(
     app.dependency_overrides[get_current_user] = lambda: auth_user
     app.dependency_overrides[get_user_repository] = lambda: user_repo or FakeUserRepo()
     app.dependency_overrides[get_progress_repository] = lambda: shared_progress
+    app.dependency_overrides[get_book_subscription_repository] = lambda: (
+        subscription_repo or FakeBookSubscriptionRepo()
+    )
 
     return TestClient(app, raise_server_exceptions=True)
 
@@ -579,3 +600,29 @@ class TestPageResponseShape:
         page = response.json()["pages"][0]
         assert "texts" in page and "audio_urls" in page and "word_timestamps" in page
         assert "contents" not in page
+
+
+class TestSubscriberAccess:
+    """Aktive Abonnenten lesen JEDES Buch — dafür zahlen sie."""
+
+    @pytest.fixture()
+    def subscriber_client(self, book_repo: MockBookRepository) -> TestClient:
+        return _build_client(
+            book_repo,
+            optional_user=USER_ID,
+            subscription_repo=FakeBookSubscriptionRepo(active_users={USER_ID}),
+        )
+
+    def test_subscriber_reads_unpurchased_book(self, subscriber_client: TestClient) -> None:
+        response = subscriber_client.get("/api/v1/books/book-2/read")
+        assert response.status_code == 200
+
+    def test_subscriber_sees_books_as_owned_in_detail_and_list(
+        self, subscriber_client: TestClient
+    ) -> None:
+        assert subscriber_client.get("/api/v1/books/book-2").json()["is_purchased"] is True
+        items = subscriber_client.get("/api/v1/books").json()["items"]
+        assert all(b["is_purchased"] for b in items)
+
+    def test_non_subscriber_still_blocked(self, authed_client: TestClient) -> None:
+        assert authed_client.get("/api/v1/books/book-2/read").status_code == 403
