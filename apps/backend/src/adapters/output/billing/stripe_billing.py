@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import stripe
 
@@ -68,11 +68,22 @@ class StripeBillingAdapter:
         customer_email: str,
         success_url: str,
         cancel_url: str,
+        customer_id: str | None = None,
     ) -> str:
-        """Abo-Checkout; Status kommt später über customer.subscription.*-Webhooks."""
+        """Abo-Checkout; Status kommt später über customer.subscription.*-Webhooks.
+
+        Wiederkehrende Kunden laufen über ihre bestehende Stripe-Kunden-ID
+        (customer) statt eines neuen Kunden per E-Mail.
+        """
+        customer_args: dict[str, Any] = (
+            {"customer": customer_id} if customer_id else {"customer_email": customer_email}
+        )
+        subscription_data: dict[str, Any] = {"metadata": {"user_id": user_id, "plan": plan}}
+        if trial_days > 0:
+            subscription_data["trial_period_days"] = trial_days
         session = await stripe.checkout.Session.create_async(
             mode="subscription",
-            customer_email=customer_email,
+            **customer_args,
             line_items=[
                 {
                     "quantity": 1,
@@ -88,14 +99,21 @@ class StripeBillingAdapter:
                     },
                 }
             ],
-            subscription_data={
-                "trial_period_days": trial_days,
-                "metadata": {"user_id": user_id, "plan": plan},
-            },
+            # TypedDict der SDK wird dynamisch befüllt (Testphase optional)
+            subscription_data=cast(Any, subscription_data),
             success_url=success_url,
             cancel_url=cancel_url,
         )
         return session.url or ""
+
+    async def retrieve_subscription(self, subscription_id: str) -> dict[str, Any] | None:
+        """Maßgeblicher Abo-Stand direkt von Stripe (nicht aus dem Event)."""
+        try:
+            sub = await stripe.Subscription.retrieve_async(subscription_id)
+        except stripe.InvalidRequestError:
+            return None
+        result: dict[str, Any] = sub.to_dict()
+        return result
 
     async def create_customer_portal_session(self, customer_id: str, return_url: str) -> str:
         session = await stripe.billing_portal.Session.create_async(

@@ -178,6 +178,7 @@ async def stripe_webhook(
     request: Request,
     repo: Annotated[IBookRepository, Depends(get_billing_book_repository)],
     subs: Annotated[IBookSubscriptionRepository, Depends(get_subscription_repository)],
+    billing: Annotated[StripeBillingAdapter, Depends(get_billing_adapter)],
     stripe_signature: Annotated[str | None, Header(alias="stripe-signature")] = None,
 ) -> Any:
     """Stripe webhook — signature-verified; records book purchases and
@@ -236,10 +237,19 @@ async def stripe_webhook(
 
     elif event["type"] in _SUBSCRIPTION_EVENTS:
         raw_sub = event["data"]["object"]
-        sub_obj: dict[str, Any] = (
+        # Kein .get() direkt auf dem StripeObject (crasht) — erst nach dict
+        event_sub: dict[str, Any] = (
             raw_sub.to_dict() if hasattr(raw_sub, "to_dict") else dict(raw_sub)
         )
-        await _apply_subscription_event(sub_obj, str(event["type"]), subs)
+        stripe_id = event_sub.get("id")
+        # Events können verspätet/doppelt/in falscher Reihenfolge kommen —
+        # deshalb den maßgeblichen Stand bei Stripe nachschlagen statt dem
+        # Event-Inhalt zu glauben (Security-Review 22.10.)
+        truth = await billing.retrieve_subscription(str(stripe_id)) if stripe_id else None
+        if truth is None:
+            logger.warning("Subscription %s not retrievable from Stripe — ignored", stripe_id)
+        else:
+            await _apply_subscription_event(truth, str(event["type"]), subs)
 
     return {"received": True}
 
@@ -258,6 +268,11 @@ async def create_subscription_checkout(
     current = await subs.get_current_for_user(user_id)
     if current is not None and current.is_active:
         raise HTTPException(status_code=409, detail="Subscription already active")
+    # Testphase nur beim allerersten Abo (Security-Review 22.10.) —
+    # wiederkehrende Kunden laufen über ihre bestehende Stripe-Kunden-ID
+    is_returning = current is not None
+    trial_days = 0 if is_returning else settings.subscription_trial_days
+    customer_id = current.stripe_customer_id if current is not None else None
 
     user = await users.get_by_id(user_id)
     if user is None or not user.is_active:
@@ -269,8 +284,9 @@ async def create_subscription_checkout(
         plan=body.plan,
         amount_cents=amount_cents,
         interval=interval,
-        trial_days=settings.subscription_trial_days,
+        trial_days=trial_days,
         customer_email=user.email,
+        customer_id=customer_id,
         success_url=f"{settings.app_url}/profile?subscription=success",
         cancel_url=f"{settings.app_url}/pricing?subscription=cancel",
     )

@@ -50,4 +50,12 @@ class BookSubscription:
 
     @property
     def is_active(self) -> bool:
-        return self.status in (BookSubscriptionStatus.TRIALING, BookSubscriptionStatus.ACTIVE)
+        if self.status not in (BookSubscriptionStatus.TRIALING, BookSubscriptionStatus.ACTIVE):
+            return False
+        if self.current_period_end is None:
+            return True
+        end = self.current_period_end
+        if end.tzinfo is None:  # SQLite liefert naive Werte (UTC)
+            end = end.replace(tzinfo=UTC)
+        # Abgelaufene Periode gewährt nie Zugang — auch bei verpasstem Webhook
+        return end > datetime.now(UTC)
