@@ -271,4 +271,50 @@ describe("HomePage", () => {
     fireEvent.click(screen.getByText("Erstes Buch"));
     expect(mockNavigate).toHaveBeenCalledWith("/books/book-1");
   });
+
+  it("shows titles in the preset language of a language landing page", async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/daily")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              ...dailyBook,
+              titles: { ...dailyBook.titles, ar: "المغامرة اليومية" },
+            }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            items: [
+              {
+                ...bookList[0],
+                titles: { de: "Erstes Buch", ar: "الكتاب الأول" },
+              },
+              bookList[1],
+            ],
+            total: 2,
+            page: 1,
+            page_size: 6,
+          }),
+      } as Response);
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/ar"]}>
+        <HomePage lang="ar" />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(screen.getAllByTestId("book-card")).toHaveLength(2);
+    });
+    expect(screen.getByTestId("book-hero")).toHaveTextContent(
+      "المغامرة اليومية",
+    );
+    expect(screen.getByText("الكتاب الأول")).toBeInTheDocument();
+    // Ohne arabische Übersetzung bleibt der deutsche Titel stehen
+    expect(screen.getByText("Zweites Buch")).toBeInTheDocument();
+  });
 });

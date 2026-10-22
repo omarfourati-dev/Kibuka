@@ -111,3 +111,41 @@ class TestSitemapAndLlms:
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/plain")
         assert "Lilly entdeckt die Jahreszeiten" in resp.text
+
+
+class TestLanguageLandingPages:
+    """/ar, /fr, /en: eigene indexierbare Startseiten pro Sprache."""
+
+    @pytest.mark.parametrize("lang", ["ar", "fr", "en"])
+    def test_head_has_own_canonical_and_hreflang_set(self, lang: str) -> None:
+        text = _client().get(f"/api/v1/seo/head/{lang}").text
+        assert f'<link rel="canonical" href="https://kibuka.omarfourati.de/{lang}">' in text
+        assert 'content="noindex' not in text
+        for code in ("de", "ar", "fr", "en", "x-default"):
+            assert f'hreflang="{code}"' in text
+
+    def test_trailing_slash_is_the_same_language_page(self) -> None:
+        text = _client().get("/api/v1/seo/head/fr/").text
+        assert 'rel="canonical" href="https://kibuka.omarfourati.de/fr"' in text
+
+    def test_arabic_body_is_rtl(self) -> None:
+        text = _client().get("/api/v1/seo/body/ar").text
+        assert 'lang="ar" dir="rtl"' in text
+        assert 'href="/books/b2"' in text
+
+    def test_german_home_links_the_language_variants(self) -> None:
+        text = _client().get("/api/v1/seo/head/").text
+        assert 'hreflang="ar" href="https://kibuka.omarfourati.de/ar"' in text
+
+    def test_unknown_language_prefix_stays_noindex(self) -> None:
+        for path in ("es", "ar/books", "arx"):
+            assert 'content="noindex' in _client().get(f"/api/v1/seo/head/{path}").text
+
+    def test_sitemap_contains_hreflang_alternates(self) -> None:
+        text = _client().get("/api/v1/seo/sitemap.xml").text
+        assert 'xmlns:xhtml="http://www.w3.org/1999/xhtml"' in text
+        assert "<loc>https://kibuka.omarfourati.de/ar</loc>" in text
+        assert (
+            '<xhtml:link rel="alternate" hreflang="fr" href="https://kibuka.omarfourati.de/fr"/>'
+            in text
+        )
