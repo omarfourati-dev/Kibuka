@@ -173,3 +173,72 @@ class TestLogin:
         )
 
         assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Refresh-Flow: Sitzung muss Reload/Browser-Neustart überleben
+# ---------------------------------------------------------------------------
+
+
+def _registered(client: TestClient) -> None:
+    client.post(
+        "/api/v1/auth/register",
+        json={"email": "omar@example.com", "name": "Omar", "password": "s3cret-pass"},
+    )
+
+
+class TestRefreshFlow:
+    def test_login_sets_httponly_refresh_cookie_scoped_to_auth(self) -> None:
+        client = _make_client(FakeUserRepository())
+        _registered(client)
+
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "omar@example.com", "password": "s3cret-pass"},
+        )
+
+        cookie = response.headers.get("set-cookie", "")
+        assert "refresh_token=" in cookie
+        assert "HttpOnly" in cookie
+        assert "Path=/api/v1/auth" in cookie
+        assert "samesite=lax" in cookie.lower()
+
+    def test_refresh_with_cookie_returns_new_access_token_and_user(self) -> None:
+        client = _make_client(FakeUserRepository())
+        _registered(client)  # TestClient behält das Cookie
+
+        response = client.post("/api/v1/auth/refresh")
+
+        assert response.status_code == 200
+        data = response.json()
+        user_id = decode_access_token(data["access_token"])
+        assert data["user"]["id"] == user_id
+        assert data["user"]["email"] == "omar@example.com"
+
+    def test_refresh_without_cookie_returns_401(self) -> None:
+        client = _make_client(FakeUserRepository())
+        assert client.post("/api/v1/auth/refresh").status_code == 401
+
+    def test_refresh_with_access_token_as_cookie_is_rejected(self) -> None:
+        from src.infrastructure.security import create_access_token
+
+        client = _make_client(FakeUserRepository())
+        client.cookies.set("refresh_token", create_access_token("whoever"), path="/api/v1/auth")
+        assert client.post("/api/v1/auth/refresh").status_code == 401
+
+    def test_refresh_rejects_suspended_user(self) -> None:
+        repo = FakeUserRepository()
+        client = _make_client(repo)
+        _registered(client)
+        user = next(iter(repo.users.values()))
+        user.status = UserStatus.SUSPENDED
+
+        assert client.post("/api/v1/auth/refresh").status_code == 401
+
+    def test_logout_clears_refresh_cookie(self) -> None:
+        client = _make_client(FakeUserRepository())
+        _registered(client)
+
+        client.post("/api/v1/auth/logout")
+
+        assert client.post("/api/v1/auth/refresh").status_code == 401

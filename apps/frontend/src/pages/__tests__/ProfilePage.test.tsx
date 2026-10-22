@@ -3,8 +3,8 @@
  * Profil, kein Abmelden-Knopf. Der Profil-Tab zeigt, wer angemeldet ist,
  * und bietet An-/Abmelden.
  */
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Switch } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import ProfilePage from "../ProfilePage";
@@ -52,7 +52,9 @@ describe("ProfilePage", () => {
     expect(screen.getByText("omar@example.com")).toBeInTheDocument();
   });
 
-  it("logout clears the auth store and shows the anonymous state", () => {
+  it("logout also tells the server to drop the refresh cookie", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true } as Response);
+    vi.stubGlobal("fetch", fetchMock);
     useAuthStore.setState({
       user: {
         id: "u1",
@@ -65,8 +67,34 @@ describe("ProfilePage", () => {
     });
     renderProfile();
     fireEvent.click(screen.getByRole("button", { name: /abmelden/i }));
-    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/v1/auth/logout",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+    vi.unstubAllGlobals();
+  });
+
+  it("logout clears the auth store and shows the anonymous state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true } as Response));
+    useAuthStore.setState({
+      user: {
+        id: "u1",
+        email: "omar@example.com",
+        name: "Omar",
+        role: "member",
+      },
+      isAuthenticated: true,
+      accessToken: "t",
+    });
+    renderProfile();
+    fireEvent.click(screen.getByRole("button", { name: /abmelden/i }));
+    await waitFor(() => {
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
     expect(useAuthStore.getState().accessToken).toBeNull();
     expect(screen.getByText(/nicht angemeldet/i)).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 });

@@ -51,3 +51,33 @@ class TestPasswordHashing:
 
     def test_hash_is_not_plaintext(self) -> None:
         assert "s3cret-pass" not in hash_password("s3cret-pass")
+
+
+class TestRefreshToken:
+    """Refresh-Tokens (7 Tage, httpOnly-Cookie) — streng getrennt von Access-Tokens."""
+
+    def test_refresh_roundtrip_returns_user_id(self) -> None:
+        from src.infrastructure.security import create_refresh_token, decode_refresh_token
+
+        token = create_refresh_token("user-42")
+        assert decode_refresh_token(token) == "user-42"
+
+    def test_refresh_token_is_not_accepted_as_access_token(self) -> None:
+        """Sonst wäre ein 7-Tage-Token ein vollwertiger Bearer-Token."""
+        from src.infrastructure.security import create_refresh_token
+
+        with pytest.raises(InvalidTokenError):
+            decode_access_token(create_refresh_token("user-42"))
+
+    def test_access_token_is_not_accepted_as_refresh_token(self) -> None:
+        from src.infrastructure.security import decode_refresh_token
+
+        with pytest.raises(InvalidTokenError):
+            decode_refresh_token(create_access_token("user-42"))
+
+    def test_expired_refresh_token_is_rejected(self) -> None:
+        from src.infrastructure.security import create_refresh_token, decode_refresh_token
+
+        token = create_refresh_token("user-42", expires_days=-1)
+        with pytest.raises(InvalidTokenError):
+            decode_refresh_token(token)
