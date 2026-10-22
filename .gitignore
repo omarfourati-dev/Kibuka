@@ -102,3 +102,6 @@ logs/
 coverage/
 test-results/
 playwright-report/
+
+# Heruntergeladene Mobile-Builds (CI-Artefakte)
+mobile-builds/
