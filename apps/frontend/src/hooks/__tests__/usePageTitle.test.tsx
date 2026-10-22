@@ -1,12 +1,25 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { act, render } from "@testing-library/react";
-import { MemoryRouter, Route, useHistory } from "react-router-dom";
+import type { ComponentType } from "react";
+import {
+  MemoryRouter,
+  Route,
+  useHistory,
+  type match,
+  type RouteProps,
+} from "react-router-dom";
 import { usePageTitle } from "../usePageTitle";
 
 function Page({ title }: { title: string }) {
   usePageTitle(title);
   return null;
 }
+
+// Ionic reicht gecachten Seiten ihren eigenen Match als computedMatch durch —
+// react-router kennt die Prop, seine Typings nicht
+const CachedRoute = Route as unknown as ComponentType<
+  RouteProps & { computedMatch: match }
+>;
 
 let history: ReturnType<typeof useHistory>;
 function CaptureHistory() {
@@ -49,7 +62,7 @@ describe("usePageTitle", () => {
     render(
       <MemoryRouter initialEntries={["/ar"]}>
         <CaptureHistory />
-        <Route
+        <CachedRoute
           exact
           path="/ar"
           computedMatch={homeMatch}
