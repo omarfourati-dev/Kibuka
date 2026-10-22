@@ -15,3 +15,13 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Werbefrei (Abonnenten, Reader): von AdSense Auto-Ads bereits eingefügte
+   Anzeigen ausblenden. !important ist hier nötig, weil Google die Elemente
+   mit eigenen Inline-Styles einfügt. */
+body.kibuka-no-ads ins.adsbygoogle,
+body.kibuka-no-ads .google-auto-placed,
+body.kibuka-no-ads iframe[id^="aswift_"],
+body.kibuka-no-ads iframe[id^="google_ads_iframe"] {
+  display: none !important;
+}

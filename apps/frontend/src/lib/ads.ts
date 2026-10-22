@@ -12,12 +12,19 @@ interface AdsQueue extends Array<unknown> {
   requestNonPersonalizedAds?: number;
 }
 
-/** Login und der geschützte Bereich (/app) haben keine Inhalte für Werbung; alle anderen Ansichten schon. */
+const READER_PATH = /^\/books\/[^/]+\/read\/?$/;
+
+/**
+ * Login und der geschützte Bereich (/app) haben keine Inhalte für Werbung.
+ * Der Reader bleibt werbefrei: dort lesen Kinder, und ein Antippen soll nie
+ * auf eine Anzeige führen.
+ */
 export function adsAllowedOn(pathname: string): boolean {
   return (
     pathname !== "/login" &&
     pathname !== "/app" &&
-    !pathname.startsWith("/app/")
+    !pathname.startsWith("/app/") &&
+    !READER_PATH.test(pathname)
   );
 }
 
