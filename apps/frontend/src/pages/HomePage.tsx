@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookHero } from "../components/book/BookHero";
 import { BookCard } from "../components/book/BookCard";
+import { useAppLanguage } from "../hooks/useAppLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { pickTitle } from "../lib/locale";
-import type { Language } from "../lib/rtl";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,13 +33,12 @@ interface BooksListResponse {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-interface HomePageProps {
-  /** Voreingestellte Sprache der Sprach-Landingpages (/ar, /fr, /en) */
-  lang?: Language;
-}
-
-export default function HomePage({ lang = "de" }: HomePageProps = {}) {
+export default function HomePage() {
   const history = useHistory();
+  const { t } = useTranslation();
+  // /ar, /fr, /en setzen die App-Sprache (DocumentLanguage) — Buchtitel folgen ihr
+  const lang = useAppLanguage();
+  usePageTitle(t("meta.home"));
 
   const [dailyBook, setDailyBook] = useState<BookSummary | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
@@ -84,7 +85,7 @@ export default function HomePage({ lang = "de" }: HomePageProps = {}) {
     body = (
       <div
         role="status"
-        aria-label="Lade Startseite..."
+        aria-label={t("home.loading")}
         className="flex flex-col gap-10 p-6 max-w-4xl mx-auto"
       >
         {/* Hero skeleton */}
@@ -112,14 +113,13 @@ export default function HomePage({ lang = "de" }: HomePageProps = {}) {
           className="text-lg font-semibold"
           style={{ color: "var(--color-text-primary)" }}
         >
-          Etwas ist schiefgelaufen
+          {t("states.errorTitle")}
         </p>
         <p
           className="text-sm text-center"
           style={{ color: "var(--color-text-secondary)" }}
         >
-          Die Bücher konnten nicht geladen werden. Prüfe deine Verbindung und
-          versuche es noch einmal.
+          {t("home.errorText")}
         </p>
         <button
           type="button"
@@ -127,7 +127,7 @@ export default function HomePage({ lang = "de" }: HomePageProps = {}) {
           className="px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
           style={{ backgroundColor: "var(--color-primary)" }}
         >
-          Erneut versuchen
+          {t("states.retry")}
         </button>
       </div>
     );
@@ -139,13 +139,13 @@ export default function HomePage({ lang = "de" }: HomePageProps = {}) {
           className="text-lg font-semibold"
           style={{ color: "var(--color-text-primary)" }}
         >
-          Keine Bücher verfügbar
+          {t("home.emptyTitle")}
         </p>
         <p
           className="text-sm text-center"
           style={{ color: "var(--color-text-secondary)" }}
         >
-          Schau bald wieder vorbei — neue Bücher erscheinen täglich!
+          {t("home.emptyText")}
         </p>
       </div>
     );
@@ -187,7 +187,7 @@ export default function HomePage({ lang = "de" }: HomePageProps = {}) {
               className="text-xl font-bold mb-4"
               style={{ color: "var(--color-text-primary)" }}
             >
-              Alle Bücher
+              {t("home.allBooks")}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {books.map((book) => (

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { getDir } from "../../lib/rtl";
 
 interface PreviewPage {
@@ -18,6 +19,7 @@ function isSupportedLanguage(lang: string): lang is SupportedLanguage {
 }
 
 export function BookPreview({ pages, language }: BookPreviewProps) {
+  const { t } = useTranslation();
   const dir = isSupportedLanguage(language) ? getDir(language) : "ltr";
 
   return (
@@ -33,7 +35,7 @@ export function BookPreview({ pages, language }: BookPreviewProps) {
             <div className="w-full aspect-video overflow-hidden rounded-xl">
               <img
                 src={page.illustrationUrl}
-                alt={`Seite ${page.pageNumber}`}
+                alt={t("book.pageAlt", { page: page.pageNumber })}
                 className="w-full h-full object-cover"
               />
             </div>

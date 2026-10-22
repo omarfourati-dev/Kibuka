@@ -1,4 +1,7 @@
 import { KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { useAppLanguage } from "../../hooks/useAppLanguage";
+import { formatPrice } from "../../lib/locale";
 import { cn } from "../../utils/cn";
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -31,11 +34,11 @@ export function BookCard({
   priceSingle,
   onClick,
 }: BookCardProps) {
+  const { t } = useTranslation();
+  const lang = useAppLanguage();
   // Gratis-Bücher (z.B. Tagesbuch) nie als "€0,00" anzeigen
   const formattedPrice =
-    priceSingle === 0
-      ? "Gratis"
-      : `€${priceSingle.toFixed(2).replace(".", ",")}`;
+    priceSingle === 0 ? t("book.free") : formatPrice(priceSingle, lang);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -47,7 +50,7 @@ export function BookCard({
   return (
     <div
       role="article"
-      aria-label={`Buch: ${title}`}
+      aria-label={t("book.cardLabel", { title })}
       tabIndex={0}
       onClick={onClick}
       onKeyDown={handleKeyDown}
@@ -73,10 +76,10 @@ export function BookCard({
         {/* Daily badge overlay */}
         {isDailyBook && (
           <span
-            className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+            className="absolute top-2 start-2 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
             style={{ backgroundColor: "var(--color-primary)" }}
           >
-            Täglich
+            {t("book.daily")}
           </span>
         )}
       </div>
@@ -115,7 +118,7 @@ export function BookCard({
               color: "var(--color-text-secondary)",
             }}
           >
-            {ageRange} Jahre
+            {t("book.ages", { range: ageRange })}
           </span>
 
           {isPurchased ? (
@@ -126,7 +129,7 @@ export function BookCard({
                 color: "#fff",
               }}
             >
-              Gekauft
+              {t("book.purchased")}
             </span>
           ) : (
             <span

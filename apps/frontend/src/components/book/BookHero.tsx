@@ -1,3 +1,6 @@
+import { useTranslation } from "react-i18next";
+import { useAppLanguage } from "../../hooks/useAppLanguage";
+import { formatPrice } from "../../lib/locale";
 import { cn } from "../../utils/cn";
 
 interface BookHeroBook {
@@ -34,7 +37,9 @@ export function BookHero({
   isPurchased = false,
   selectedLanguage,
 }: BookHeroProps) {
-  const formattedPrice = `€${book.priceSingle.toFixed(2).replace(".", ",")}`;
+  const { t } = useTranslation();
+  const lang = useAppLanguage();
+  const formattedPrice = formatPrice(book.priceSingle, lang);
   // Tagesbuch/Gratis-Buch: lesen statt kaufen — niemals "€0,00 kaufen" zeigen
   const isFree = book.priceSingle === 0;
 
@@ -63,7 +68,7 @@ export function BookHero({
           className="inline-flex self-start px-3 py-1 rounded-full text-sm font-bold text-white"
           style={{ backgroundColor: "var(--color-primary)" }}
         >
-          Buch des Tages
+          {t("hero.badge")}
         </span>
 
         {/* Title */}
@@ -76,7 +81,10 @@ export function BookHero({
 
         {/* Verfügbare Sprachen — reine Info-Badges, keine toten Buttons.
             Die Sprachwahl passiert auf der Detailseite bzw. im Reader. */}
-        <div className="flex gap-2 flex-wrap" aria-label="Verfügbare Sprachen">
+        <div
+          className="flex gap-2 flex-wrap"
+          aria-label={t("hero.languagesLabel")}
+        >
           {book.languages.map((lang) => {
             const label = LANGUAGE_LABELS[lang] ?? lang.toUpperCase();
             const isSelected = lang === selectedLanguage;
@@ -114,17 +122,17 @@ export function BookHero({
               className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all duration-200 hover:opacity-90 active:scale-95"
               style={{ backgroundColor: "var(--color-primary)" }}
             >
-              {isFree && !isPurchased ? "Gratis lesen" : "Jetzt lesen"}
+              {isFree && !isPurchased ? t("hero.readFree") : t("hero.readNow")}
             </button>
           ) : (
             <button
               type="button"
               onClick={onPurchase}
-              aria-label={`${formattedPrice} kaufen`}
+              aria-label={t("hero.buy", { price: formattedPrice })}
               className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all duration-200 hover:opacity-90 active:scale-95"
               style={{ backgroundColor: "var(--color-primary)" }}
             >
-              {formattedPrice} kaufen
+              {t("hero.buy", { price: formattedPrice })}
             </button>
           )}
 
@@ -137,7 +145,7 @@ export function BookHero({
               color: "var(--color-primary)",
             }}
           >
-            Vorschau lesen
+            {t("hero.preview")}
           </button>
         </div>
       </div>

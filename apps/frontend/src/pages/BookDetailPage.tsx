@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useHistory, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookPreview } from "../components/book/BookPreview";
 import { LanguagePicker } from "../components/reader/LanguagePicker";
+import { useAppLanguage } from "../hooks/useAppLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { formatPrice } from "../lib/locale";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,11 +41,14 @@ export default function BookDetailPage() {
   const { bookId } = useParams<{ bookId: string }>();
   const history = useHistory();
   const location = useLocation();
+  const { t } = useTranslation();
+  const appLanguage = useAppLanguage();
 
   const [book, setBook] = useState<BookDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState("de");
+  // Das Buch öffnet in der App-Sprache; der LanguagePicker wechselt nur das Buch
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(appLanguage);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   // Rückkehr von Stripe: ?checkout=success|cancel einmalig einlesen …
@@ -76,8 +83,7 @@ export default function BookDetailPage() {
         if (!cancelled) setBook(data);
       })
       .catch((err: unknown) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Fehler beim Laden");
+        if (!cancelled) setError(err instanceof Error ? err.message : "");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -105,6 +111,14 @@ export default function BookDetailPage() {
     return () => clearTimeout(timer);
   }, [awaitingWebhook, pollCount]);
 
+  const title = book
+    ? book.titles[selectedLanguage] ||
+      book.titles.de ||
+      Object.values(book.titles).find(Boolean) ||
+      ""
+    : "";
+  usePageTitle(title ? t("meta.book", { title }) : t("meta.bookFallback"));
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -113,7 +127,7 @@ export default function BookDetailPage() {
         <IonContent>
           <div
             role="status"
-            aria-label="Lade Buch..."
+            aria-label={t("bookDetail.loading")}
             className="flex flex-col gap-6 p-6 max-w-3xl mx-auto animate-pulse"
           >
             <div
@@ -155,7 +169,7 @@ export default function BookDetailPage() {
               className="text-lg font-semibold"
               style={{ color: "var(--color-text-primary)" }}
             >
-              Fehler beim Laden
+              {t("bookDetail.loadError")}
             </p>
             <p
               className="text-sm"
@@ -169,7 +183,7 @@ export default function BookDetailPage() {
               className="px-4 py-2 rounded-lg font-medium text-white"
               style={{ backgroundColor: "var(--color-primary)" }}
             >
-              Zur Bibliothek
+              {t("bookDetail.toLibrary")}
             </button>
           </div>
         </IonContent>
@@ -193,29 +207,23 @@ export default function BookDetailPage() {
         return;
       }
       if (!res.ok) {
-        setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+        setPurchaseError(t("bookDetail.buyUnavailable"));
         setPurchasing(false);
         return;
       }
       const data = (await res.json()) as { url?: string };
       if (!data.url) {
-        setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+        setPurchaseError(t("bookDetail.buyUnavailable"));
         setPurchasing(false);
         return;
       }
       // purchasing bleibt true — die Seite verlässt uns gleich Richtung Stripe
       window.location.assign(data.url);
     } catch {
-      setPurchaseError("Kauf ist derzeit nicht verfügbar.");
+      setPurchaseError(t("bookDetail.buyUnavailable"));
       setPurchasing(false);
     }
   };
-
-  const title =
-    book.titles[selectedLanguage] ??
-    book.titles.de ??
-    Object.values(book.titles)[0] ??
-    "";
 
   const availableLanguages = Object.keys(book.titles).filter(
     (k) => book.titles[k],
@@ -223,13 +231,15 @@ export default function BookDetailPage() {
 
   const previewPages = (book.preview_pages ?? []).map((p) => ({
     pageNumber: p.page_number,
-    text: p.texts[selectedLanguage] ?? p.texts.de ?? "",
+    text: p.texts[selectedLanguage] || p.texts.de || "",
     illustrationUrl: p.illustration_url ?? undefined,
   }));
 
   // Das Tagesbuch (bzw. ein Buch ohne Preis) ist gratis lesbar — kein Kauf-CTA
   const isFree = book.is_daily_book || book.price_single === 0;
-  const formattedPrice = `€${book.price_single.toFixed(2).replace(".", ",")} kaufen`;
+  const buyLabel = t("bookDetail.buy", {
+    price: formatPrice(book.price_single, appLanguage),
+  });
 
   return (
     <IonPage>
@@ -238,12 +248,12 @@ export default function BookDetailPage() {
           {/* Back button */}
           <button
             type="button"
-            aria-label="Zurück zur Bibliothek"
+            aria-label={t("bookDetail.backLabel")}
             onClick={() => history.push("/library")}
             className="self-start flex items-center gap-1 text-sm font-medium hover:opacity-70 transition-opacity"
             style={{ color: "var(--color-text-secondary)" }}
           >
-            ← Zurück
+            {t("bookDetail.back")}
           </button>
 
           {/* Rückkehr von Stripe: klares Feedback statt stummem Kauf-Button */}
@@ -261,10 +271,10 @@ export default function BookDetailPage() {
                 🎉
               </span>
               <span>
-                Kauf erfolgreich!{" "}
+                {t("bookDetail.purchaseSuccess")}{" "}
                 {book.is_purchased
-                  ? "Viel Spaß beim Lesen."
-                  : "Dein Buch wird gerade freigeschaltet …"}
+                  ? t("bookDetail.enjoy")
+                  : t("bookDetail.unlocking")}
               </span>
             </div>
           )}
@@ -281,9 +291,7 @@ export default function BookDetailPage() {
               <span className="text-2xl select-none" aria-hidden="true">
                 ℹ️
               </span>
-              <span>
-                Kauf abgebrochen — du kannst es jederzeit erneut versuchen.
-              </span>
+              <span>{t("bookDetail.cancelled")}</span>
             </div>
           )}
 
@@ -319,7 +327,7 @@ export default function BookDetailPage() {
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  {book.age_range} Jahre
+                  {t("book.ages", { range: book.age_range })}
                 </span>
                 <span
                   className="text-xs px-2 py-1 rounded-full font-medium"
@@ -328,7 +336,7 @@ export default function BookDetailPage() {
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  {book.page_count} Seiten
+                  {t("book.pages", { count: book.page_count })}
                 </span>
                 <span
                   className="text-xs px-2 py-1 rounded-full font-medium capitalize"
@@ -337,7 +345,7 @@ export default function BookDetailPage() {
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  {book.theme}
+                  {t(`themes.${book.theme}`, { defaultValue: book.theme })}
                 </span>
               </div>
 
@@ -355,8 +363,8 @@ export default function BookDetailPage() {
                     type="button"
                     aria-label={
                       isFree && !book.is_purchased
-                        ? "Gratis lesen"
-                        : "Buch lesen"
+                        ? t("bookDetail.readFree")
+                        : t("bookDetail.readLabel")
                     }
                     onClick={() =>
                       history.push(
@@ -367,8 +375,8 @@ export default function BookDetailPage() {
                     style={{ backgroundColor: "var(--color-primary)" }}
                   >
                     {isFree && !book.is_purchased
-                      ? "Gratis lesen"
-                      : "Jetzt lesen"}
+                      ? t("bookDetail.readFree")
+                      : t("bookDetail.readNow")}
                   </button>
                 ) : checkoutStatus === "success" ? (
                   <div
@@ -382,20 +390,20 @@ export default function BookDetailPage() {
                       className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
                       aria-hidden="true"
                     />
-                    Zahlung wird verarbeitet …
+                    {t("bookDetail.processing")}
                   </div>
                 ) : (
                   <button
                     type="button"
                     aria-label={
-                      purchasing ? "Weiterleitung zu Stripe" : formattedPrice
+                      purchasing ? t("bookDetail.redirectingLabel") : buyLabel
                     }
                     onClick={handlePurchase}
                     disabled={purchasing}
                     className="px-6 py-3 rounded-xl font-bold text-white text-base transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
                     style={{ backgroundColor: "var(--color-primary)" }}
                   >
-                    {purchasing ? "Weiterleitung zu Stripe …" : formattedPrice}
+                    {purchasing ? t("bookDetail.redirecting") : buyLabel}
                   </button>
                 )}
                 {purchaseError && (
@@ -414,7 +422,7 @@ export default function BookDetailPage() {
                 className="text-lg font-bold mb-4"
                 style={{ color: "var(--color-text-primary)" }}
               >
-                Vorschau
+                {t("bookDetail.preview")}
               </h2>
               <BookPreview pages={previewPages} language={selectedLanguage} />
             </section>

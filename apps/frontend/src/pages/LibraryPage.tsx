@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookCard } from "../components/book/BookCard";
+import { useAppLanguage } from "../hooks/useAppLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { LANGUAGES, pickTitle } from "../lib/locale";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -26,29 +30,9 @@ interface BooksListResponse {
   page_size: number;
 }
 
-const LANGUAGE_OPTIONS = [
-  { value: "", label: "Alle Sprachen" },
-  { value: "de", label: "Deutsch" },
-  { value: "ar", label: "Arabisch" },
-  { value: "fr", label: "Französisch" },
-  { value: "en", label: "Englisch" },
-];
+const AGE_RANGES = ["3-5", "6-8", "9-12"];
 
-const AGE_OPTIONS = [
-  { value: "", label: "Alle Altersgruppen" },
-  { value: "3-5", label: "3–5 Jahre" },
-  { value: "6-8", label: "6–8 Jahre" },
-  { value: "9-12", label: "9–12 Jahre" },
-];
-
-const THEME_OPTIONS = [
-  { value: "", label: "Alle Themen" },
-  { value: "adventure", label: "Abenteuer" },
-  { value: "animals", label: "Tiere" },
-  { value: "nature", label: "Natur" },
-  { value: "family", label: "Familie" },
-  { value: "fantasy", label: "Fantasie" },
-];
+const THEMES = ["adventure", "animals", "nature", "family", "fantasy"];
 
 const PAGE_SIZE = 12;
 
@@ -56,6 +40,25 @@ const PAGE_SIZE = 12;
 
 export default function LibraryPage() {
   const history = useHistory();
+  const { t } = useTranslation();
+  const lang = useAppLanguage();
+  usePageTitle(t("meta.library"));
+
+  const languageOptions = [
+    { value: "", label: t("library.allLanguages") },
+    ...LANGUAGES.map((l) => ({ value: l, label: t(`languages.${l}`) })),
+  ];
+  const ageOptions = [
+    { value: "", label: t("library.allAges") },
+    ...AGE_RANGES.map((range) => ({
+      value: range,
+      label: t("book.ages", { range: range.replace("-", "–") }),
+    })),
+  ];
+  const themeOptions = [
+    { value: "", label: t("library.allThemes") },
+    ...THEMES.map((theme) => ({ value: theme, label: t(`themes.${theme}`) })),
+  ];
 
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -115,7 +118,7 @@ export default function LibraryPage() {
             className="text-2xl font-extrabold"
             style={{ color: "var(--color-text-primary)" }}
           >
-            Bibliothek
+            {t("library.title")}
           </h1>
 
           {/* Filter bar */}
@@ -125,10 +128,10 @@ export default function LibraryPage() {
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Sprache
+                {t("library.language")}
               </span>
               <select
-                aria-label="Sprache"
+                aria-label={t("library.language")}
                 value={language}
                 onChange={(e) => {
                   setLanguage(e.target.value);
@@ -141,7 +144,7 @@ export default function LibraryPage() {
                   color: "var(--color-text-primary)",
                 }}
               >
-                {LANGUAGE_OPTIONS.map((o) => (
+                {languageOptions.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
@@ -154,10 +157,10 @@ export default function LibraryPage() {
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Alter
+                {t("library.age")}
               </span>
               <select
-                aria-label="Alter"
+                aria-label={t("library.age")}
                 value={ageRange}
                 onChange={(e) => {
                   setAgeRange(e.target.value);
@@ -170,7 +173,7 @@ export default function LibraryPage() {
                   color: "var(--color-text-primary)",
                 }}
               >
-                {AGE_OPTIONS.map((o) => (
+                {ageOptions.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
@@ -183,10 +186,10 @@ export default function LibraryPage() {
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Thema
+                {t("library.theme")}
               </span>
               <select
-                aria-label="Thema"
+                aria-label={t("library.theme")}
                 value={theme}
                 onChange={(e) => {
                   setTheme(e.target.value);
@@ -199,7 +202,7 @@ export default function LibraryPage() {
                   color: "var(--color-text-primary)",
                 }}
               >
-                {THEME_OPTIONS.map((o) => (
+                {themeOptions.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
@@ -212,7 +215,7 @@ export default function LibraryPage() {
           {loading ? (
             <div
               role="status"
-              aria-label="Lade Bücher..."
+              aria-label={t("library.loading")}
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
             >
               {Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -230,13 +233,13 @@ export default function LibraryPage() {
                 className="text-lg font-semibold"
                 style={{ color: "var(--color-text-primary)" }}
               >
-                Etwas ist schiefgelaufen
+                {t("states.errorTitle")}
               </p>
               <p
                 className="text-sm text-center"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Die Bücher konnten nicht geladen werden.
+                {t("library.errorText")}
               </p>
               <button
                 type="button"
@@ -244,7 +247,7 @@ export default function LibraryPage() {
                 className="px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
                 style={{ backgroundColor: "var(--color-primary)" }}
               >
-                Erneut versuchen
+                {t("states.retry")}
               </button>
             </div>
           ) : books.length === 0 ? (
@@ -254,13 +257,13 @@ export default function LibraryPage() {
                 className="text-lg font-semibold"
                 style={{ color: "var(--color-text-primary)" }}
               >
-                Keine Bücher gefunden
+                {t("library.emptyTitle")}
               </p>
               <p
                 className="text-sm"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Versuche andere Filteroptionen.
+                {t("library.emptyText")}
               </p>
             </div>
           ) : (
@@ -269,7 +272,7 @@ export default function LibraryPage() {
                 <BookCard
                   key={book.id}
                   id={book.id}
-                  title={book.titles.de ?? Object.values(book.titles)[0] ?? ""}
+                  title={pickTitle(book.titles, lang)}
                   coverImageUrl={book.cover_image_url ?? undefined}
                   theme={book.theme}
                   ageRange={book.age_range}
@@ -289,7 +292,7 @@ export default function LibraryPage() {
           <div className="flex items-center justify-center gap-4 mt-2">
             <button
               type="button"
-              aria-label="Zurück"
+              aria-label={t("library.prevLabel")}
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
               disabled={page <= 1}
               className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-30 hover:opacity-80"
@@ -298,19 +301,19 @@ export default function LibraryPage() {
                 color: "var(--color-text-primary)",
               }}
             >
-              ◀ Zurück
+              {t("library.prev")}
             </button>
 
             <span
               className="text-sm tabular-nums"
               style={{ color: "var(--color-text-secondary)" }}
             >
-              Seite {page} / {totalPages}
+              {t("library.pageOf", { page, total: totalPages })}
             </span>
 
             <button
               type="button"
-              aria-label="Weiter"
+              aria-label={t("library.nextLabel")}
               onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
               disabled={page >= totalPages}
               className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-30 hover:opacity-80"
@@ -319,7 +322,7 @@ export default function LibraryPage() {
                 color: "var(--color-text-primary)",
               }}
             >
-              Weiter ▶
+              {t("library.next")}
             </button>
           </div>
         </div>

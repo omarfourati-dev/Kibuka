@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useHistory, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders, useAuthStore } from "@omarsapp/shared-stores";
 import { PricingCard } from "../components/pricing/PricingCard";
+import { useAppLanguage } from "../hooks/useAppLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { formatPrice, homePathFor } from "../lib/locale";
+import type { Language } from "../lib/rtl";
 import { cn } from "../utils/cn";
 
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
@@ -12,33 +18,8 @@ interface FaqItem {
   answer: string;
 }
 
-const FAQ_ITEMS: FaqItem[] = [
-  {
-    question: "Kann ich kündigen?",
-    answer:
-      "Ja, jederzeit ohne Mindestlaufzeit. Im Profil unter „Abo verwalten“ kündigst du mit wenigen Klicks — das Abo läuft dann bis zum Ende der bezahlten Periode.",
-  },
-  {
-    question: "Welche Sprachen sind enthalten?",
-    answer:
-      "Alle Bücher sind in vier Sprachen verfügbar: Deutsch, Arabisch, Französisch und Englisch. Du kannst jederzeit zwischen den Sprachen wechseln.",
-  },
-  {
-    question: "Für welches Alter sind die Bücher geeignet?",
-    answer:
-      "Kibuka ist für Kinder von 3 bis 10 Jahren konzipiert. Unsere KI erstellt altersgerechte Geschichten mit einfacher Sprache und bunten Illustrationen.",
-  },
-  {
-    question: "Gibt es eine Probezeit?",
-    answer:
-      "Ja! Dein erstes Abo startet mit 14 Tagen kostenloser Testphase. Du hinterlegst beim Abschluss eine Zahlungsmethode, abgebucht wird aber erst nach Ablauf der Testphase — kündigst du vorher, zahlst du nichts.",
-  },
-  {
-    question: "Auf welchen Geräten kann ich Kibuka nutzen?",
-    answer:
-      "Kibuka ist auf allen modernen Geräten verfügbar: Web (Browser), iOS (iPhone/iPad) und Android. Deine Bücher sind überall dabei.",
-  },
-];
+// Übersetzungsschlüssel pricing.faq<Key>Q / pricing.faq<Key>A, in dieser Reihenfolge
+const FAQ_KEYS = ["Cancel", "Languages", "Age", "Trial", "Devices"] as const;
 
 // ─── Pricing Plans ───────────────────────────────────────────────────────────
 
@@ -53,57 +34,54 @@ interface PricingPlan {
   features: string[];
   isHighlighted: boolean;
   badge?: string;
-  ctaLabel: string;
 }
 
-const SUBSCRIPTION_FEATURES = [
-  "Alle Bücher unbegrenzt lesen",
-  "4 Sprachen: DE, AR, FR, EN",
-  "Audio-Vorlese-Funktion",
-  "Wort-Highlighting (Karaoke)",
-  "Jeden Tag ein neues Buch",
-];
-
-const PLANS: PricingPlan[] = [
-  // Yearly shown first (anchor price, best value)
-  {
-    id: "yearly",
-    title: "Jährlich",
-    price: "€99",
-    priceNote: "pro Jahr",
-    savings: "Spare 2 Monate",
-    features: SUBSCRIPTION_FEATURES,
-    isHighlighted: false,
-    badge: "Bestes Preis-Leistungs-Verhältnis",
-    ctaLabel: "Jetzt starten",
-  },
-  // Monthly — highlighted / most popular (decoy effect)
-  {
-    id: "monthly",
-    title: "Monatlich",
-    price: "€14,99",
-    priceNote: "pro Monat",
-    features: SUBSCRIPTION_FEATURES,
-    isHighlighted: true,
-    badge: "Beliebteste Wahl",
-    ctaLabel: "Jetzt starten",
-  },
-  // Einzelbuch — Kauf passiert direkt auf der Buchseite
-  {
-    id: "single",
-    title: "Einzelbuch",
-    price: "€2,99",
-    priceNote: "pro Buch",
-    features: [
-      "1 Buch deiner Wahl",
-      "4 Sprachen: DE, AR, FR, EN",
-      "Audio-Vorlese-Funktion",
-      "Dauerhaft in deiner Bibliothek",
-    ],
-    isHighlighted: false,
-    ctaLabel: "Jetzt starten",
-  },
-];
+function buildPlans(t: TFunction, lang: Language): PricingPlan[] {
+  const subscriptionFeatures = [
+    t("pricing.featureUnlimited"),
+    t("pricing.featureLanguages"),
+    t("pricing.featureAudio"),
+    t("pricing.featureHighlighting"),
+    t("pricing.featureDaily"),
+  ];
+  return [
+    // Yearly shown first (anchor price, best value)
+    {
+      id: "yearly",
+      title: t("pricing.planYearly"),
+      price: formatPrice(99, lang),
+      priceNote: t("pricing.perYear"),
+      savings: t("pricing.savings"),
+      features: subscriptionFeatures,
+      isHighlighted: false,
+      badge: t("pricing.badgeBestValue"),
+    },
+    // Monthly — highlighted / most popular (decoy effect)
+    {
+      id: "monthly",
+      title: t("pricing.planMonthly"),
+      price: formatPrice(14.99, lang),
+      priceNote: t("pricing.perMonth"),
+      features: subscriptionFeatures,
+      isHighlighted: true,
+      badge: t("pricing.badgePopular"),
+    },
+    // Einzelbuch — Kauf passiert direkt auf der Buchseite
+    {
+      id: "single",
+      title: t("pricing.planSingle"),
+      price: formatPrice(2.99, lang),
+      priceNote: t("pricing.perBook"),
+      features: [
+        t("pricing.featureOneBook"),
+        t("pricing.featureLanguages"),
+        t("pricing.featureAudio"),
+        t("pricing.featureKeep"),
+      ],
+      isHighlighted: false,
+    },
+  ];
+}
 
 // ─── FaqAccordionItem ─────────────────────────────────────────────────────────
 
@@ -116,13 +94,13 @@ function FaqAccordionItem({ question, answer }: FaqItem) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between py-4 text-left text-sm font-semibold text-slate-900 dark:text-white hover:text-orange-500 dark:hover:text-orange-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded"
+        className="flex w-full items-center justify-between py-4 text-start text-sm font-semibold text-slate-900 dark:text-white hover:text-orange-500 dark:hover:text-orange-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded"
       >
         <span>{question}</span>
         <span
           aria-hidden="true"
           className={cn(
-            "flex-shrink-0 ml-4 text-lg transition-transform duration-200",
+            "flex-shrink-0 ms-4 text-lg transition-transform duration-200",
             open ? "rotate-45" : "rotate-0",
           )}
         >
@@ -144,16 +122,17 @@ export default function PricingPage() {
   const history = useHistory();
   const location = useLocation();
   const { isAuthenticated, accessToken } = useAuthStore();
+  const { t } = useTranslation();
+  const lang = useAppLanguage();
+  usePageTitle(t("meta.pricing"));
+  const plans = buildPlans(t, lang);
   const [pendingPlan, setPendingPlan] = useState<PlanId | null>(null);
+  // Schlüssel statt Text speichern, damit ein Sprachwechsel auch den Hinweis übersetzt
   const [notice, setNotice] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("subscription") === "cancel"
-      ? "Abo-Abschluss abgebrochen — es wurde nichts berechnet."
+      ? "pricing.noticeCancelled"
       : null,
   );
-
-  useEffect(() => {
-    document.title = "Preise — Kibuka";
-  }, []);
 
   const handleCta = async (plan: PlanId) => {
     if (plan === "single") {
@@ -177,25 +156,19 @@ export default function PricingPage() {
         return;
       }
       if (res.status === 409) {
-        setNotice(
-          "Du hast bereits ein aktives Abo — verwalte es in deinem Profil.",
-        );
+        setNotice("pricing.noticeAlreadySubscribed");
         setPendingPlan(null);
         return;
       }
       const data = (await res.json().catch(() => ({}))) as { url?: string };
       if (!res.ok || !data.url) {
-        setNotice(
-          "Abo-Abschluss ist gerade nicht möglich. Bitte versuche es später erneut.",
-        );
+        setNotice("pricing.noticeUnavailable");
         setPendingPlan(null);
         return;
       }
       window.location.assign(data.url);
     } catch {
-      setNotice(
-        "Abo-Abschluss ist gerade nicht möglich. Bitte versuche es später erneut.",
-      );
+      setNotice("pricing.noticeUnavailable");
       setPendingPlan(null);
     }
   };
@@ -220,7 +193,7 @@ export default function PricingPage() {
           >
             <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
               <Link
-                to="/"
+                to={homePathFor(lang)}
                 className="font-extrabold text-xl"
                 style={{ color: "var(--color-primary)" }}
               >
@@ -231,7 +204,7 @@ export default function PricingPage() {
                 className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Zur Bibliothek
+                {t("pricing.toLibrary")}
               </Link>
             </div>
           </header>
@@ -242,15 +215,13 @@ export default function PricingPage() {
               className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight"
               style={{ color: "var(--color-text-primary)" }}
             >
-              Verpasse keine neuen Bücher mehr
+              {t("pricing.headline")}
             </h1>
             <p
               className="text-lg md:text-xl max-w-xl mx-auto"
               style={{ color: "var(--color-text-secondary)" }}
             >
-              Täglich ein neues KI-generiertes Kinderbuch in 4 Sprachen — für
-              mehrsprachige Familien, die ihren Kindern die Welt eröffnen
-              möchten.
+              {t("pricing.subline")}
             </p>
           </section>
 
@@ -266,11 +237,11 @@ export default function PricingPage() {
                   color: "var(--color-text-primary)",
                 }}
               >
-                {notice}
+                {t(notice)}
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start max-w-5xl mx-auto">
-              {PLANS.map((plan) => (
+              {plans.map((plan) => (
                 <PricingCard
                   key={plan.id}
                   title={plan.title}
@@ -282,8 +253,8 @@ export default function PricingPage() {
                   badge={plan.badge}
                   ctaLabel={
                     pendingPlan === plan.id
-                      ? "Weiterleitung zu Stripe …"
-                      : plan.ctaLabel
+                      ? t("pricing.redirecting")
+                      : t("pricing.cta")
                   }
                   onCta={() => void handleCta(plan.id)}
                 />
@@ -295,8 +266,7 @@ export default function PricingPage() {
               className="text-center text-sm mt-8"
               style={{ color: "var(--color-text-muted)" }}
             >
-              Alle Preise inkl. MwSt. &mdash; 14 Tage kostenlos testen beim
-              ersten Abo. Jederzeit kündbar.
+              {t("pricing.vatNote")}
             </p>
           </section>
 
@@ -306,7 +276,7 @@ export default function PricingPage() {
               className="text-2xl font-bold text-center mb-8"
               style={{ color: "var(--color-text-primary)" }}
             >
-              Häufig gestellte Fragen
+              {t("pricing.faqHeading")}
             </h2>
             <div
               className="rounded-2xl border p-6"
@@ -315,11 +285,11 @@ export default function PricingPage() {
                 backgroundColor: "var(--color-surface)",
               }}
             >
-              {FAQ_ITEMS.map((item) => (
+              {FAQ_KEYS.map((key) => (
                 <FaqAccordionItem
-                  key={item.question}
-                  question={item.question}
-                  answer={item.answer}
+                  key={key}
+                  question={t(`pricing.faq${key}Q`)}
+                  answer={t(`pricing.faq${key}A`)}
                 />
               ))}
             </div>
@@ -335,8 +305,8 @@ export default function PricingPage() {
                 className="text-sm"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                &copy; {new Date().getFullYear()} Kibuka &mdash; Alle Rechte
-                vorbehalten.
+                &copy; {new Date().getFullYear()} Kibuka &mdash;{" "}
+                {t("pricing.rights")}
               </p>
             </div>
           </footer>
