@@ -1,38 +1,34 @@
-"""Child profiles API endpoints."""
+"""Child profiles API endpoints — persisted via IChildProfileRepository."""
 
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, TypedDict
+from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapters.input.api.dependencies import get_current_user
+from src.adapters.output.persistence.repositories.child_profile_repository import (
+    SqlChildProfileRepository,
+)
+from src.core.domain.entities.child_profile import ChildProfile
+from src.core.domain.value_objects.language import Language
+from src.core.ports.output.i_child_profile_repository import IChildProfileRepository
+from src.infrastructure.database import get_db
 
-__all__ = ["get_current_user", "router"]
+__all__ = ["get_current_user", "get_profile_repository", "router"]
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
-class _ProfileRecord(TypedDict):
-    id: str
-    name: str
-    age: int
-    preferred_languages: list[str]
-    avatar_emoji: str
-
-
-# ---------------------------------------------------------------------------
-# In-memory profile store (per-process; placeholder until full persistence)
-# key: user_id → list[_ProfileRecord]
-# ---------------------------------------------------------------------------
-_profiles_store: dict[str, list[_ProfileRecord]] = {}
-
-
-# ---------------------------------------------------------------------------
-# Dependency helpers
-# ---------------------------------------------------------------------------
+async def get_profile_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> IChildProfileRepository:
+    """Real SQL wiring; tests replace this via dependency override."""
+    return SqlChildProfileRepository(session=session)
 
 
 # ---------------------------------------------------------------------------
@@ -49,17 +45,37 @@ class ChildProfileResponse(BaseModel):
 
 
 class CreateChildProfileRequest(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     age: int = Field(..., ge=1, le=18)
-    preferred_languages: list[str] = ["de"]
-    avatar_emoji: str = "🧒"
+    preferred_languages: list[Language] = [Language.DE]
+    avatar_emoji: str = Field(default="🧒", max_length=10)
 
 
 class UpdateChildProfileRequest(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     age: int | None = Field(default=None, ge=1, le=18)
-    preferred_languages: list[str] | None = None
-    avatar_emoji: str | None = None
+    preferred_languages: list[Language] | None = None
+    avatar_emoji: str | None = Field(default=None, max_length=10)
+
+
+def _to_response(profile: ChildProfile) -> ChildProfileResponse:
+    return ChildProfileResponse(
+        id=profile.id,
+        name=profile.name,
+        age=profile.age,
+        preferred_languages=[str(lang) for lang in profile.preferred_languages],
+        avatar_emoji=profile.avatar_emoji,
+    )
+
+
+async def _owned_profile(
+    repo: IChildProfileRepository, profile_id: str, user_id: str
+) -> ChildProfile:
+    profile = await repo.get_by_id(profile_id)
+    # Fremde Profile sind wie nicht existent — keine ID-Enumeration
+    if profile is None or profile.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profile
 
 
 # ---------------------------------------------------------------------------
@@ -70,10 +86,10 @@ class UpdateChildProfileRequest(BaseModel):
 @router.get("/children", response_model=list[ChildProfileResponse])
 async def list_child_profiles(
     user_id: Annotated[str, Depends(get_current_user)],
+    repo: Annotated[IChildProfileRepository, Depends(get_profile_repository)],
 ) -> list[ChildProfileResponse]:
     """List all child profiles for the authenticated user."""
-    profiles = _profiles_store.get(user_id, [])
-    return [ChildProfileResponse(**p) for p in profiles]
+    return [_to_response(p) for p in await repo.list_by_user(user_id)]
 
 
 @router.post(
@@ -84,19 +100,18 @@ async def list_child_profiles(
 async def create_child_profile(
     body: CreateChildProfileRequest,
     user_id: Annotated[str, Depends(get_current_user)],
+    repo: Annotated[IChildProfileRepository, Depends(get_profile_repository)],
 ) -> ChildProfileResponse:
     """Create a new child profile for the authenticated user."""
-    profile: _ProfileRecord = {
-        "id": str(uuid.uuid4()),
-        "name": body.name,
-        "age": body.age,
-        "preferred_languages": body.preferred_languages,
-        "avatar_emoji": body.avatar_emoji,
-    }
-    if user_id not in _profiles_store:
-        _profiles_store[user_id] = []
-    _profiles_store[user_id].append(profile)
-    return ChildProfileResponse(**profile)
+    profile = ChildProfile(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        name=body.name,
+        age=body.age,
+        preferred_languages=list(body.preferred_languages),
+        avatar_emoji=body.avatar_emoji,
+    )
+    return _to_response(await repo.save(profile))
 
 
 @router.put("/children/{profile_id}", response_model=ChildProfileResponse)
@@ -104,20 +119,28 @@ async def update_child_profile(
     profile_id: str,
     body: UpdateChildProfileRequest,
     user_id: Annotated[str, Depends(get_current_user)],
+    repo: Annotated[IChildProfileRepository, Depends(get_profile_repository)],
 ) -> ChildProfileResponse:
     """Update a child profile (partial update — only provided fields change)."""
-    profiles = _profiles_store.get(user_id, [])
-    profile = next((p for p in profiles if p["id"] == profile_id), None)
-    if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
+    profile = await _owned_profile(repo, profile_id, user_id)
     if body.name is not None:
-        profile["name"] = body.name
+        profile.name = body.name
     if body.age is not None:
-        profile["age"] = body.age
+        profile.age = body.age
     if body.preferred_languages is not None:
-        profile["preferred_languages"] = body.preferred_languages
+        profile.preferred_languages = list(body.preferred_languages)
     if body.avatar_emoji is not None:
-        profile["avatar_emoji"] = body.avatar_emoji
+        profile.avatar_emoji = body.avatar_emoji
+    return _to_response(await repo.save(profile))
 
-    return ChildProfileResponse(**profile)
+
+@router.delete("/children/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_child_profile(
+    profile_id: str,
+    user_id: Annotated[str, Depends(get_current_user)],
+    repo: Annotated[IChildProfileRepository, Depends(get_profile_repository)],
+) -> None:
+    """Soft delete (Projektregel: niemals physisch löschen)."""
+    profile = await _owned_profile(repo, profile_id, user_id)
+    profile.deleted_at = datetime.now(UTC)
+    await repo.save(profile)

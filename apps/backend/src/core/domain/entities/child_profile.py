@@ -29,8 +29,10 @@ class ChildProfile:
 @dataclass
 class ReadingProgress:
     id: str
-    child_profile_id: str
+    user_id: str
     book_id: str
+    # Optional: Fortschritt kann später pro Kinderprofil geführt werden
+    child_profile_id: str | None = None
     current_page: int = 0
     completed_at: datetime | None = None
     last_read_at: datetime = field(default_factory=lambda: datetime.now(UTC))

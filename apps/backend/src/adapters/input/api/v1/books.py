@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,21 +16,20 @@ from src.adapters.input.api.dependencies import (
     get_user_repository,
 )
 from src.adapters.output.persistence.repositories.book_repository import SqlBookRepository
+from src.adapters.output.persistence.repositories.reading_progress_repository import (
+    SqlReadingProgressRepository,
+)
 from src.core.domain.entities.book import Book, BookPage
+from src.core.domain.entities.child_profile import ReadingProgress
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
+from src.core.ports.output.i_reading_progress_repository import IReadingProgressRepository
 from src.core.ports.output.i_user_repository import IUserRepository
 from src.infrastructure.database import get_db
 
 __all__ = ["get_current_user", "get_optional_current_user", "router"]
 
 router = APIRouter(prefix="/books", tags=["books"])
-
-# ---------------------------------------------------------------------------
-# In-memory progress store (per-process; placeholder until full persistence)
-# key: (book_id, user_id) → current_page
-# ---------------------------------------------------------------------------
-_progress_store: dict[tuple[str, str], int] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +42,13 @@ async def get_book_repository(
 ) -> IBookRepository:
     """Real SQL wiring; tests replace this via dependency override."""
     return SqlBookRepository(session=session)
+
+
+async def get_progress_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> IReadingProgressRepository:
+    """Persistenter Lesefortschritt; tests replace this via dependency override."""
+    return SqlReadingProgressRepository(session=session)
 
 
 # ---------------------------------------------------------------------------
@@ -273,15 +281,25 @@ async def update_progress(
     book_id: str,
     body: ProgressRequest,
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
+    progress_repo: Annotated[IReadingProgressRepository, Depends(get_progress_repository)],
     user_id: Annotated[str, Depends(get_current_user)],
 ) -> ProgressResponse:
-    """Save reading progress for authenticated user."""
+    """Save reading progress for authenticated user (persisted)."""
     book = await repo.get_by_id(book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    _progress_store[(book_id, user_id)] = body.current_page
     completed = body.current_page >= book.page_count
+    await progress_repo.upsert(
+        ReadingProgress(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            book_id=book_id,
+            child_profile_id=body.child_profile_id,
+            current_page=body.current_page,
+            completed_at=datetime.now(UTC) if completed else None,
+        )
+    )
 
     return ProgressResponse(
         book_id=book_id,
@@ -294,6 +312,7 @@ async def update_progress(
 async def get_progress(
     book_id: str,
     repo: Annotated[IBookRepository, Depends(get_book_repository)],
+    progress_repo: Annotated[IReadingProgressRepository, Depends(get_progress_repository)],
     user_id: Annotated[str, Depends(get_current_user)],
 ) -> ProgressResponse:
     """Get reading progress for authenticated user."""
@@ -301,7 +320,8 @@ async def get_progress(
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    current_page = _progress_store.get((book_id, user_id), 0)
+    progress = await progress_repo.get(user_id, book_id)
+    current_page = progress.current_page if progress else 0
     completed = current_page >= book.page_count if current_page > 0 else False
 
     return ProgressResponse(

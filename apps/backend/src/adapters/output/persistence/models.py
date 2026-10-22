@@ -392,10 +392,13 @@ class ReadingProgressModel(Base):
     __tablename__ = "reading_progress"
 
     id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
-    child_profile_id: Mapped[str] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
+        sa.String(36), sa.ForeignKey("users.id"), nullable=False, index=True
+    )
+    child_profile_id: Mapped[str | None] = mapped_column(
         sa.String(36),
         sa.ForeignKey("child_profiles.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     book_id: Mapped[str] = mapped_column(sa.String(36), sa.ForeignKey("books.id"), nullable=False)
