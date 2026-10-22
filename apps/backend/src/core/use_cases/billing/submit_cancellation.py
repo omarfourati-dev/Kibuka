@@ -76,10 +76,21 @@ class SubmitCancellation:
 
         await self._cancellations.add(cancellation)
         logger.info("Cancellation %s received: %s", cancellation.id, cancellation.outcome)
-        await self._confirm(cancellation)
+        await self._confirm(cancellation, has_account=user is not None)
         return cancellation
 
-    async def _confirm(self, cancellation: ContractCancellation) -> None:
+    async def _confirm(self, cancellation: ContractCancellation, has_account: bool) -> None:
+        # Freitext aus dem Formular nur an echte Kontoadressen — sonst wäre
+        # das Formular ein Spam-Relais an beliebige Adressen
+        form_input: dict[str, object] = (
+            {
+                "name": cancellation.name,
+                "reason": cancellation.reason,
+                "contract_reference": cancellation.contract_reference,
+            }
+            if has_account
+            else {"name": None, "reason": None, "contract_reference": None}
+        )
         try:
             await self._email.send(
                 to=cancellation.email,
@@ -88,11 +99,10 @@ class SubmitCancellation:
                 context={
                     "reference": cancellation.id,
                     "received_at": cancellation.received_at,
-                    "name": cancellation.name,
                     "kind": cancellation.kind.value,
-                    "reason": cancellation.reason,
-                    "contract_reference": cancellation.contract_reference,
                     "effective_at": cancellation.effective_at,
+                    "matched": has_account,
+                    **form_input,
                 },
             )
         except Exception:
