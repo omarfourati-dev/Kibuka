@@ -1,0 +1,167 @@
+name: Mobile Build (APK + IPA)
+
+# Läuft auf GitHub-gehosteten Runnern (für öffentliche Repos kostenlos) —
+# NIE auf dem self-hosted Produktionsrunner. Bewusst kein pull_request-
+# Trigger: Fork-PRs bekommen weder Secrets noch Build-Zugriff.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["mobile-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-build
+  cancel-in-progress: false
+
+env:
+  # Die native Hülle lädt die Live-Seite (siehe capacitor.config.ts)
+  CAP_SERVER_URL: https://kibuka.omarfourati.de
+  VERSION_NAME: 1.0.${{ github.run_number }}
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app + sync Capacitor
+        working-directory: apps/frontend
+        run: pnpm build && pnpm exec cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_B64 fehlt — scripts/setup_android_signing.sh ausführen."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kibuka.jks"
+          echo "KIBUKA_KEYSTORE_FILE=$RUNNER_TEMP/kibuka.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        working-directory: apps/frontend/android
+        env:
+          KIBUKA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KIBUKA_VERSION_CODE: ${{ github.run_number }}
+          KIBUKA_VERSION_NAME: ${{ env.VERSION_NAME }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/kibuka.jks"
+
+      - name: Name artifact
+        run: cp apps/frontend/android/app/build/outputs/apk/release/app-release.apk "kibuka-${VERSION_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kibuka-android
+          path: kibuka-*.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS IPA (unsigniert)
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app + sync Capacitor (inkl. pod install)
+        working-directory: apps/frontend
+        run: pnpm build && pnpm exec cap sync ios
+
+      - name: Build unsigned app
+        working-directory: apps/frontend/ios/App
+        run: |
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath "$RUNNER_TEMP/build" \
+            MARKETING_VERSION="$VERSION_NAME" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | tail -n 40
+
+      # Unsigniert: SideStore/AltStore signiert beim Installieren mit der
+      # eigenen (kostenlosen) Apple-ID neu
+      - name: Package IPA
+        run: |
+          APP="$RUNNER_TEMP/build/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/kibuka-${VERSION_NAME}-unsigned.ipa" Payload)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kibuka-ios
+          path: kibuka-*-unsigned.ipa
+          if-no-files-found: error
+
+  release:
+    name: GitHub-Release (für Obtainium / SideStore)
+    needs: [android, ios]
+    # Android allein reicht für ein Release — iOS-Fehler blockieren es nicht
+    if: always() && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kibuka-*
+          merge-multiple: true
+          path: dist
+
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "mobile-build-${{ github.run_number }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --prerelease \
+            --title "Kibuka Mobile ${VERSION_NAME}" \
+            --notes "Test-Build ${VERSION_NAME} (Commit ${GITHUB_SHA::7}).
+
+          **Android:** \`kibuka-${VERSION_NAME}.apk\` — direkt installieren oder mit [Obtainium](https://github.com/ImranR98/Obtainium) dieses Repo abonnieren (Pre-Releases einschließen), dann kommen Updates automatisch.
+
+          **iOS:** \`kibuka-${VERSION_NAME}-unsigned.ipa\` — mit [SideStore](https://sidestore.io) oder AltStore installieren (signiert mit deiner Apple-ID neu, 7 Tage gültig).
+
+          Die App lädt die Live-Seite https://kibuka.omarfourati.de."
