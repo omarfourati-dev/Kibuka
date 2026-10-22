@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "../../utils/cn";
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -18,11 +19,12 @@ export function LanguagePicker({
   selectedLanguage,
   onLanguageChange,
 }: LanguagePickerProps) {
+  const { t } = useTranslation();
   return (
     <div
       className="flex items-center gap-2 flex-wrap"
       role="group"
-      aria-label="Language selection"
+      aria-label={t("picker.label")}
     >
       {availableLanguages.map((lang) => {
         const isSelected = lang === selectedLanguage;

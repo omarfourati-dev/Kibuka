@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation, useHistory } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { AudioPlayer } from "../components/reader/AudioPlayer";
 import { WordHighlighter } from "../components/reader/WordHighlighter";
 import { LanguagePicker } from "../components/reader/LanguagePicker";
 import { DualLanguageView } from "../components/reader/DualLanguageView";
+import { useAppLanguage } from "../hooks/useAppLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { WordTimestamp } from "../lib/audio-sync";
+import { pickTitle } from "../lib/locale";
 import { getDir } from "../lib/rtl";
 import type { Language } from "../lib/rtl";
 
@@ -45,9 +49,12 @@ export default function ReaderPage() {
   const { bookId } = useParams<{ bookId: string }>();
   const location = useLocation();
   const history = useHistory();
+  const { t } = useTranslation();
+  const appLanguage = useAppLanguage();
 
   const searchParams = new URLSearchParams(location.search);
-  const initialLanguage = searchParams.get("language") ?? "de";
+  // Ohne ?language öffnet das Buch in der Sprache der App
+  const initialLanguage = searchParams.get("language") ?? appLanguage;
   const initialPage = Number(searchParams.get("page") ?? 0);
 
   const [book, setBook] = useState<BookDetail | null>(null);
@@ -91,7 +98,7 @@ export default function ReaderPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Fehler beim Laden");
+          setError(err instanceof Error ? err.message : "");
         }
       })
       .finally(() => {
@@ -131,6 +138,18 @@ export default function ReaderPage() {
     history.replace({ search: params.toString() });
   }, [currentPage, selectedLanguage, history]);
 
+  const bookTitle = book
+    ? pickTitle(
+        book.titles,
+        isSupportedLanguage(selectedLanguage) ? selectedLanguage : appLanguage,
+      )
+    : "";
+  usePageTitle(
+    bookTitle
+      ? t("meta.reader", { title: bookTitle })
+      : t("meta.readerFallback"),
+  );
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -139,7 +158,7 @@ export default function ReaderPage() {
         <IonContent>
           <div
             role="status"
-            aria-label="Lade Buch..."
+            aria-label={t("reader.loading")}
             className="flex h-screen items-center justify-center"
             style={{ color: "var(--color-text-secondary)" }}
           >
@@ -176,7 +195,7 @@ export default function ReaderPage() {
               className="text-lg font-semibold"
               style={{ color: "var(--color-text-primary)" }}
             >
-              Fehler beim Laden des Buches
+              {t("reader.loadError")}
             </p>
             <p
               className="text-sm"
@@ -190,7 +209,7 @@ export default function ReaderPage() {
               className="px-4 py-2 rounded-lg font-medium text-white"
               style={{ backgroundColor: "var(--color-primary)" }}
             >
-              Zurück
+              {t("reader.back")}
             </button>
           </div>
         </IonContent>
@@ -237,7 +256,7 @@ export default function ReaderPage() {
               Button säße man in der nativen App im Buch fest */}
           <button
             type="button"
-            aria-label="Reader verlassen"
+            aria-label={t("reader.exit")}
             onClick={() => history.push(`/books/${bookId}`)}
             className="absolute top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold shadow-sm transition-all duration-200 hover:opacity-80 active:scale-95"
             style={{
@@ -259,7 +278,7 @@ export default function ReaderPage() {
               <div className="w-full aspect-video rounded-xl overflow-hidden">
                 <img
                   src={page.illustration_url}
-                  alt={`Seite ${currentPage + 1}`}
+                  alt={t("book.pageAlt", { page: currentPage + 1 })}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -305,13 +324,16 @@ export default function ReaderPage() {
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                aria-label="Zurück"
+                aria-label={t("reader.prevPage")}
                 onClick={goPrev}
                 disabled={currentPage === 0}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-80"
                 style={{ backgroundColor: "var(--color-surface-raised)" }}
               >
-                ◀
+                {/* Pfeile spiegeln sich in RTL mit der Leiste */}
+                <span aria-hidden="true" className="rtl:-scale-x-100">
+                  ◀
+                </span>
               </button>
 
               <span
@@ -323,13 +345,15 @@ export default function ReaderPage() {
 
               <button
                 type="button"
-                aria-label="Weiter"
+                aria-label={t("reader.nextPage")}
                 onClick={goNext}
                 disabled={currentPage === totalPages - 1}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-80"
                 style={{ backgroundColor: "var(--color-surface-raised)" }}
               >
-                ▶
+                <span aria-hidden="true" className="rtl:-scale-x-100">
+                  ▶
+                </span>
               </button>
             </div>
 
@@ -344,6 +368,8 @@ export default function ReaderPage() {
               <button
                 type="button"
                 aria-pressed={isDualLanguageMode}
+                aria-label={t("reader.dualMode")}
+                title={t("reader.dualMode")}
                 onClick={() => setIsDualLanguageMode((v) => !v)}
                 className="px-3 py-1 rounded-lg text-xs font-semibold border-2 transition-all duration-150"
                 style={

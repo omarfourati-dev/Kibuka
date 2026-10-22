@@ -1,8 +1,8 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { Language } from "@omarsapp/shared-types";
 
-type Theme = 'light' | 'dark' | 'system';
-type Language = 'de' | 'en';
+type Theme = "light" | "dark" | "system";
 
 interface UIState {
   theme: Theme;
@@ -17,17 +17,22 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      theme: 'system',
-      language: 'de',
+      theme: "system",
+      language: "de",
       sidebarCollapsed: false,
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
-      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      toggleSidebar: () =>
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
     }),
     {
-      name: 'ui-storage',
-      partialize: (state) => ({ theme: state.theme, language: state.language, sidebarCollapsed: state.sidebarCollapsed }),
+      name: "ui-storage",
+      partialize: (state) => ({
+        theme: state.theme,
+        language: state.language,
+        sidebarCollapsed: state.sidebarCollapsed,
+      }),
     },
   ),
 );

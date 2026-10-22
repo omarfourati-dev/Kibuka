@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
+import i18n from "../../i18n/config";
+import ar from "../../i18n/locales/ar.json";
 import BookDetailPage from "../BookDetailPage";
 
 // ─── Mock child components ───────────────────────────────────────────────────
@@ -372,6 +374,86 @@ describe("BookDetailPage", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("img", { name: /das große abenteuer/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("names the book in the browser tab", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderBookDetailPage();
+    await waitFor(() =>
+      expect(document.title).toBe(
+        "Das große Abenteuer – Kinderbuch in 4 Sprachen | Kibuka",
+      ),
+    );
+  });
+
+  describe("auf Arabisch", () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage("ar");
+    });
+
+    it("opens the book in the app language", async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockBook),
+      } as Response);
+
+      renderBookDetailPage();
+      expect(
+        await screen.findByRole("heading", { name: "المغامرة" }),
+      ).toBeInTheDocument();
+      expect(document.title).toBe("المغامرة – قصة أطفال بأربع لغات | Kibuka");
+    });
+
+    it("describes the book in Arabic", async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockBook),
+      } as Response);
+
+      renderBookDetailPage();
+      await screen.findByRole("heading", { name: "المغامرة" });
+      expect(screen.getByText("3-5 سنوات")).toBeInTheDocument();
+      expect(screen.getByText("5 صفحات")).toBeInTheDocument();
+      expect(screen.getByText(ar.themes.adventure)).toBeInTheDocument();
+      expect(screen.getByText(ar.bookDetail.preview)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.bookDetail.backLabel }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "اشترِ بـ 1.99 يورو" }),
+      ).toBeInTheDocument();
+    });
+
+    it("offers the free daily book in Arabic and reads it in Arabic", async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(freeDailyBook),
+      } as Response);
+
+      renderBookDetailPage();
+      fireEvent.click(
+        await screen.findByRole("button", { name: ar.bookDetail.readFree }),
+      );
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/books/book-1/read?language=ar",
+      );
+    });
+
+    it("explains a loading error in Arabic", async () => {
+      vi.mocked(fetch).mockRejectedValue(new Error("down"));
+
+      renderBookDetailPage();
+      expect(
+        await screen.findByText(ar.bookDetail.loadError),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.bookDetail.toLibrary }),
       ).toBeInTheDocument();
     });
   });

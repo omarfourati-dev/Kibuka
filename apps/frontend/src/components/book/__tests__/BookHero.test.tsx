@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BookHero } from "../BookHero";
+import i18n from "../../../i18n/config";
+import ar from "../../../i18n/locales/ar.json";
 
 const defaultBook = {
   id: "book-hero-1",
@@ -121,5 +123,36 @@ describe("BookHero", () => {
   it("renders placeholder when no cover image", () => {
     render(<BookHero book={defaultBook} />);
     expect(screen.getByText("📚")).toBeInTheDocument();
+  });
+});
+
+describe("BookHero auf Arabisch", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ar");
+  });
+
+  it("presents today's story in Arabic", () => {
+    render(<BookHero book={defaultBook} />);
+    expect(screen.getByText(ar.hero.badge)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "اشترِ بـ 1.99 يورو" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: ar.hero.preview }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(ar.hero.languagesLabel)).toBeInTheDocument();
+  });
+
+  it("offers free and purchased books for reading in Arabic", () => {
+    const { rerender } = render(
+      <BookHero book={{ ...defaultBook, priceSingle: 0 }} />,
+    );
+    expect(
+      screen.getByRole("button", { name: ar.hero.readFree }),
+    ).toBeInTheDocument();
+    rerender(<BookHero book={defaultBook} isPurchased />);
+    expect(
+      screen.getByRole("button", { name: ar.hero.readNow }),
+    ).toBeInTheDocument();
   });
 });

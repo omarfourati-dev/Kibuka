@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
 import { IonContent, IonPage } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
-import { getAuthHeaders, useAuthStore } from "@omarsapp/shared-stores";
+import { useTranslation } from "react-i18next";
+import {
+  getAuthHeaders,
+  useAuthStore,
+  useUIStore,
+} from "@omarsapp/shared-stores";
+import { useAppLanguage } from "../hooks/useAppLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { logout } from "../lib/session";
 import { IMPRINT_URL, PRIVACY_URL, resetAdConsent } from "../lib/ads";
+import { formatDate, LANGUAGES, NATIVE_LANGUAGE_NAMES } from "../lib/locale";
+import { cn } from "../utils/cn";
 
 interface SubscriptionStatus {
   status: string;
@@ -13,31 +22,28 @@ interface SubscriptionStatus {
   is_active: boolean;
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  monthly: "Monatsabo",
-  yearly: "Jahresabo",
+// Übersetzungsschlüssel je Abo-Plan bzw. Rolle
+const PLAN_KEYS: Record<string, string> = {
+  monthly: "profile.planMonthly",
+  yearly: "profile.planYearly",
 };
 
-function formatDate(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString("de-DE", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Administrator",
-  admin: "Administrator",
-  member: "Mitglied",
-  viewer: "Gast",
+const ROLE_KEYS: Record<string, string> = {
+  owner: "profile.roleAdmin",
+  admin: "profile.roleAdmin",
+  member: "profile.roleMember",
+  viewer: "profile.roleGuest",
 };
 
 export default function ProfilePage() {
   const history = useHistory();
   const location = useLocation();
   const { user, isAuthenticated, accessToken } = useAuthStore();
+  const { t } = useTranslation();
+  const lang = useAppLanguage();
+  const appLanguage = useUIStore((s) => s.language);
+  const setAppLanguage = useUIStore((s) => s.setLanguage);
+  usePageTitle(t("meta.profile"));
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
     null,
   );
@@ -77,7 +83,7 @@ export default function ProfilePage() {
       if (!res.ok || !data.url) throw new Error("portal");
       window.location.assign(data.url);
     } catch {
-      setPortalError("Die Abo-Verwaltung ist gerade nicht erreichbar.");
+      setPortalError(t("profile.portalError"));
       setOpeningPortal(false);
     }
   };
@@ -90,7 +96,7 @@ export default function ProfilePage() {
             className="text-2xl font-extrabold"
             style={{ color: "var(--color-text-primary)" }}
           >
-            Profil
+            {t("profile.title")}
           </h1>
 
           {isAuthenticated && user ? (
@@ -123,7 +129,7 @@ export default function ProfilePage() {
                     className="text-xs mt-1"
                     style={{ color: "var(--color-text-secondary)" }}
                   >
-                    {ROLE_LABELS[user.role] ?? user.role}
+                    {ROLE_KEYS[user.role] ? t(ROLE_KEYS[user.role]) : user.role}
                   </span>
                 </div>
               </div>
@@ -138,7 +144,7 @@ export default function ProfilePage() {
                     color: "var(--color-text-primary)",
                   }}
                 >
-                  🎉 Willkommen im Abo! Ab sofort kannst du alle Bücher lesen.
+                  {t("profile.welcome")}
                 </div>
               )}
 
@@ -153,19 +159,34 @@ export default function ProfilePage() {
                       className="font-semibold"
                       style={{ color: "var(--color-text-primary)" }}
                     >
-                      {PLAN_LABELS[subscription.plan ?? ""] ?? "Abo"}{" "}
-                      {subscription.status === "trialing"
-                        ? "(Testphase)"
-                        : "aktiv"}
+                      {t(
+                        subscription.status === "trialing"
+                          ? "profile.trialing"
+                          : "profile.active",
+                        {
+                          plan: t(
+                            PLAN_KEYS[subscription.plan ?? ""] ??
+                              "profile.planFallback",
+                          ),
+                        },
+                      )}
                     </span>
                     {subscription.current_period_end && (
                       <span
                         className="text-sm"
                         style={{ color: "var(--color-text-secondary)" }}
                       >
-                        {subscription.cancel_at_period_end
-                          ? `Gekündigt — läuft bis ${formatDate(subscription.current_period_end)}`
-                          : `Verlängert sich am ${formatDate(subscription.current_period_end)}`}
+                        {t(
+                          subscription.cancel_at_period_end
+                            ? "profile.canceledUntil"
+                            : "profile.renewsOn",
+                          {
+                            date: formatDate(
+                              subscription.current_period_end,
+                              lang,
+                            ),
+                          },
+                        )}
                       </span>
                     )}
                     <button
@@ -179,8 +200,8 @@ export default function ProfilePage() {
                       }}
                     >
                       {openingPortal
-                        ? "Öffne Abo-Verwaltung …"
-                        : "Abo verwalten"}
+                        ? t("profile.opening")
+                        : t("profile.manage")}
                     </button>
                     {portalError && (
                       <span className="text-sm" style={{ color: "#dc2626" }}>
@@ -194,13 +215,13 @@ export default function ProfilePage() {
                       className="font-semibold"
                       style={{ color: "var(--color-text-primary)" }}
                     >
-                      Kein Abo
+                      {t("profile.noSubscription")}
                     </span>
                     <span
                       className="text-sm"
                       style={{ color: "var(--color-text-secondary)" }}
                     >
-                      Mit einem Abo liest du alle Bücher unbegrenzt.
+                      {t("profile.noSubscriptionText")}
                     </span>
                     <button
                       type="button"
@@ -211,7 +232,7 @@ export default function ProfilePage() {
                         color: "var(--color-primary)",
                       }}
                     >
-                      Abo ansehen
+                      {t("profile.viewPlans")}
                     </button>
                   </>
                 )}
@@ -223,7 +244,7 @@ export default function ProfilePage() {
                 className="self-start px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
                 style={{ backgroundColor: "var(--color-primary)" }}
               >
-                Abmelden
+                {t("profile.logout")}
               </button>
             </div>
           ) : (
@@ -238,14 +259,13 @@ export default function ProfilePage() {
                 className="font-semibold"
                 style={{ color: "var(--color-text-primary)" }}
               >
-                Du bist nicht angemeldet.
+                {t("profile.notLoggedIn")}
               </p>
               <p
                 className="text-sm"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Melde dich an, um das Tagesbuch gratis zu lesen und gekaufte
-                Bücher zu öffnen.
+                {t("profile.notLoggedInText")}
               </p>
               <button
                 type="button"
@@ -253,13 +273,54 @@ export default function ProfilePage() {
                 className="px-6 py-3 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
                 style={{ backgroundColor: "var(--color-primary)" }}
               >
-                Anmelden
+                {t("profile.login")}
               </button>
             </div>
           )}
 
+          {/* Einziger Weg zurück nach Deutsch: "/" behält die gewählte Sprache */}
+          <section
+            className="flex flex-col gap-3 rounded-2xl p-6"
+            style={{ backgroundColor: "var(--color-surface-raised)" }}
+          >
+            <h2
+              id="app-language-heading"
+              className="font-semibold"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              {t("profile.appLanguage")}
+            </h2>
+            <div
+              role="group"
+              aria-labelledby="app-language-heading"
+              className="flex flex-wrap gap-2"
+            >
+              {LANGUAGES.map((l) => {
+                const isSelected = l === appLanguage;
+                return (
+                  <button
+                    key={l}
+                    type="button"
+                    lang={l}
+                    aria-pressed={isSelected}
+                    onClick={() => setAppLanguage(l)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                      isSelected
+                        ? "text-white border-transparent bg-[var(--color-primary)]"
+                        : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:opacity-80",
+                    )}
+                  >
+                    {NATIVE_LANGUAGE_NAMES[l]}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <nav
-            aria-label="Rechtliches"
+            aria-label={t("profile.legal")}
             className="flex flex-wrap justify-center gap-4 text-xs"
             style={{ color: "var(--color-text-secondary)" }}
           >
@@ -268,7 +329,7 @@ export default function ProfilePage() {
               onClick={() => resetAdConsent()}
               className="hover:underline"
             >
-              Datenschutzeinstellungen
+              {t("profile.privacySettings")}
             </button>
             <a
               href={PRIVACY_URL}
@@ -276,7 +337,7 @@ export default function ProfilePage() {
               rel="noopener noreferrer"
               className="hover:underline"
             >
-              Datenschutz
+              {t("profile.privacy")}
             </a>
             <a
               href={IMPRINT_URL}
@@ -284,7 +345,7 @@ export default function ProfilePage() {
               rel="noopener noreferrer"
               className="hover:underline"
             >
-              Impressum
+              {t("profile.imprint")}
             </a>
           </nav>
         </div>

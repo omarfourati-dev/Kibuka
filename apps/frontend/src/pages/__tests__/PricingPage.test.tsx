@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Switch } from "react-router-dom";
 import { useAuthStore } from "@omarsapp/shared-stores";
+import i18n from "../../i18n/config";
+import ar from "../../i18n/locales/ar.json";
 import PricingPage from "../PricingPage";
 
 // Mock PricingCard to isolate PricingPage tests
@@ -206,5 +208,72 @@ describe("PricingPage", () => {
       name: /Jetzt starten/i,
     });
     expect(ctaButtons.length).toBe(3);
+  });
+
+  it("puts the German pricing title in the browser tab", () => {
+    renderPricingPage();
+    expect(document.title).toBe("Preise – Kinderbuch-Abo | Kibuka");
+  });
+
+  describe("auf Arabisch", () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage("ar");
+    });
+
+    it("shows the plans with Arabic names and prices", () => {
+      renderPricingPage();
+      const titles = screen
+        .getAllByTestId("card-title")
+        .map((t) => t.textContent);
+      expect(titles).toEqual([
+        ar.pricing.planYearly,
+        ar.pricing.planMonthly,
+        ar.pricing.planSingle,
+      ]);
+      const prices = screen
+        .getAllByTestId("card-price")
+        .map((p) => p.textContent);
+      expect(prices).toEqual(["99 يورو", "14.99 يورو", "2.99 يورو"]);
+      const badges = screen
+        .getAllByTestId("card-badge")
+        .map((b) => b.textContent);
+      expect(badges).toEqual([
+        ar.pricing.badgeBestValue,
+        ar.pricing.badgePopular,
+      ]);
+      expect(
+        screen.getAllByRole("button", { name: ar.pricing.cta }),
+      ).toHaveLength(3);
+    });
+
+    it("answers the FAQ in Arabic", () => {
+      renderPricingPage();
+      expect(
+        screen.getByRole("heading", { name: ar.pricing.faqHeading }),
+      ).toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: ar.pricing.faqCancelQ }),
+      );
+      expect(screen.getByText(ar.pricing.faqCancelA)).toBeInTheDocument();
+      expect(screen.getByText(ar.pricing.vatNote)).toBeInTheDocument();
+    });
+
+    it("shows checkout notices in Arabic", () => {
+      renderPricingPage("/pricing?subscription=cancel");
+      expect(screen.getByText(ar.pricing.noticeCancelled)).toBeInTheDocument();
+    });
+
+    it("links the logo back to the Arabic home page", () => {
+      renderPricingPage();
+      expect(screen.getByRole("link", { name: /Kibuka/ })).toHaveAttribute(
+        "href",
+        "/ar",
+      );
+    });
+
+    it("puts the Arabic pricing title in the browser tab", () => {
+      renderPricingPage();
+      expect(document.title).toBe(ar.meta.pricing);
+    });
   });
 });

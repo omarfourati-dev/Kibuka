@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../utils/cn";
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -40,6 +41,7 @@ export function AudioPlayer({
   autoPlay = false,
   language,
 }: AudioPlayerProps) {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -128,7 +130,7 @@ export function AudioPlayer({
         </span>
 
         <select
-          aria-label="Playback speed"
+          aria-label={t("audio.speed")}
           value={speed}
           onChange={handleSpeedChange}
           className={cn(
@@ -152,7 +154,7 @@ export function AudioPlayer({
         step={0.01}
         value={currentTime}
         onChange={handleSeek}
-        aria-label="Seek"
+        aria-label={t("audio.seek")}
         className="w-full accent-[var(--color-primary)]"
       />
 
@@ -160,7 +162,7 @@ export function AudioPlayer({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label={isPlaying ? "Pause" : "Play"}
+          aria-label={isPlaying ? t("audio.pause") : t("audio.play")}
           onClick={handlePlayPause}
           className={cn(
             "w-9 h-9 rounded-full flex items-center justify-center",

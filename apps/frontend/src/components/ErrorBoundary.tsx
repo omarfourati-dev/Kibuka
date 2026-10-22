@@ -1,7 +1,13 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from "react";
+import i18n from "../i18n/config";
 
-interface Props { children: ReactNode; }
-interface State { hasError: boolean; error?: Error; }
+interface Props {
+  children: ReactNode;
+}
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
 
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
@@ -11,17 +17,24 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, info);
+    console.error("ErrorBoundary caught:", error, info);
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-screen text-center p-8">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">Something went wrong</h2>
-          <p className="text-sm text-slate-500 mb-4">{this.state.error?.message}</p>
-          <button onClick={() => this.setState({ hasError: false })} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm">
-            Try again
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+            {i18n.t("states.errorTitle")}
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">
+            {this.state.error?.message}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm"
+          >
+            {i18n.t("states.retry")}
           </button>
         </div>
       );

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AudioPlayer } from "../AudioPlayer";
+import i18n from "../../../i18n/config";
+import ar from "../../../i18n/locales/ar.json";
 
 // jsdom doesn't implement HTMLMediaElement fully — mock play/pause
 beforeAll(() => {
@@ -22,7 +24,9 @@ describe("AudioPlayer", () => {
       <AudioPlayer audioUrl="https://example.com/audio.mp3" language="de" />,
     );
     // Play button present (pause button should not be visible before playing)
-    expect(screen.getByRole("button", { name: /play/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /abspielen/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders audio element with correct src", () => {
@@ -97,7 +101,7 @@ describe("AudioPlayer", () => {
         onPlay={onPlay}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /play/i }));
+    fireEvent.click(screen.getByRole("button", { name: /abspielen/i }));
     expect(onPlay).toHaveBeenCalledTimes(1);
   });
 
@@ -113,5 +117,28 @@ describe("AudioPlayer", () => {
       <AudioPlayer audioUrl="https://example.com/audio.mp3" language="ar" />,
     );
     expect(screen.getByText("العربية")).toBeInTheDocument();
+  });
+});
+
+describe("AudioPlayer — Beschriftung", () => {
+  it("labels its controls in German", () => {
+    render(<AudioPlayer audioUrl="https://example.com/a.mp3" language="de" />);
+    expect(
+      screen.getByRole("button", { name: "Abspielen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Wiedergabegeschwindigkeit" }),
+    ).toBeInTheDocument();
+  });
+
+  it("labels its controls in Arabic", async () => {
+    await i18n.changeLanguage("ar");
+    render(<AudioPlayer audioUrl="https://example.com/a.mp3" language="ar" />);
+    expect(
+      screen.getByRole("button", { name: ar.audio.play }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("slider", { name: ar.audio.seek }),
+    ).toBeInTheDocument();
   });
 });

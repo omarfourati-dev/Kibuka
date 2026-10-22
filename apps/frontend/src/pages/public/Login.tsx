@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useHistory, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@omarsapp/shared-stores";
 import { apiClient } from "@omarsapp/shared-api";
 import type { AuthUser } from "@omarsapp/shared-types";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { useAppLanguage } from "../../hooks/useAppLanguage";
+import { usePageTitle } from "../../hooks/usePageTitle";
+import { homePathFor } from "../../lib/locale";
 
 type Mode = "login" | "register";
 
@@ -32,11 +36,9 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    document.title =
-      mode === "login" ? "Anmelden — Kibuka" : "Registrieren — Kibuka";
-  }, [mode]);
+  const { t } = useTranslation();
+  const lang = useAppLanguage();
+  usePageTitle(t(mode === "login" ? "meta.login" : "meta.register"));
 
   useEffect(() => {
     // Nur wegnavigieren, wenn WIRKLICH ein Token existiert. Nach einem
@@ -72,7 +74,7 @@ export default function Login() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Authentication failed. Please try again.");
+        setError(t("login.failed"));
       }
     },
   });
@@ -94,13 +96,15 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link
-            to="/"
+            to={homePathFor(lang)}
             className="text-2xl font-bold text-slate-900 dark:text-white"
           >
             Kibuka
           </Link>
           <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm">
-            {mode === "login" ? "Welcome back" : "Create your account"}
+            {mode === "login"
+              ? t("login.welcomeBack")
+              : t("login.createAccount")}
           </p>
         </div>
 
@@ -111,26 +115,32 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
               <Input
-                label="Full name"
+                id="name"
+                label={t("login.name")}
                 type="text"
-                placeholder="Omar Fourati"
+                placeholder={t("login.namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
                 autoComplete="name"
               />
             )}
+            {/* E-Mail und Passwort bleiben auch auf Arabisch links-nach-rechts */}
             <Input
-              label="Email"
+              id="email"
+              dir="ltr"
+              label={t("login.email")}
               type="email"
-              placeholder="you@example.com"
+              placeholder={t("login.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
             />
             <Input
-              label="Password"
+              id="password"
+              dir="ltr"
+              label={t("login.password")}
               type="password"
               placeholder="••••••••"
               value={password}
@@ -147,14 +157,12 @@ export default function Login() {
               className="w-full"
               loading={mutation.isPending}
             >
-              {mode === "login" ? "Sign In" : "Create Account"}
+              {mode === "login" ? t("login.signIn") : t("login.register")}
             </Button>
           </form>
 
           <p className="text-center text-sm text-slate-600 dark:text-slate-400 mt-6">
-            {mode === "login"
-              ? "Don't have an account? "
-              : "Already have an account? "}
+            {mode === "login" ? t("login.noAccount") : t("login.haveAccount")}{" "}
             <button
               type="button"
               className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
@@ -164,7 +172,7 @@ export default function Login() {
                 mutation.reset();
               }}
             >
-              {mode === "login" ? "Sign up" : "Sign in"}
+              {mode === "login" ? t("login.toRegister") : t("login.toSignIn")}
             </button>
           </p>
         </div>

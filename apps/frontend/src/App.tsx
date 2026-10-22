@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Redirect, Route, Switch } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   IonApp,
   IonIcon,
@@ -21,7 +22,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdSenseLoader } from "./components/ads/AdSenseLoader";
 import { DocumentLanguage } from "./components/DocumentLanguage";
-import type { Language } from "./lib/rtl";
+import { useAppLanguage } from "./hooks/useAppLanguage";
+import { homePathFor } from "./lib/locale";
 
 const LandingPage = lazy(() => import("./pages/public/Landing"));
 const LoginPage = lazy(() => import("./pages/public/Login"));
@@ -38,11 +40,14 @@ const BookDetailPage = lazy(() => import("./pages/BookDetailPage"));
 const ReaderPage = lazy(() => import("./pages/ReaderPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 
-const Fallback = () => (
-  <div className="flex h-screen items-center justify-center text-slate-500 dark:text-slate-400">
-    Loading...
-  </div>
-);
+function Fallback() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex h-screen items-center justify-center text-slate-500 dark:text-slate-400">
+      {t("app.loading")}
+    </div>
+  );
+}
 
 const lazyPage = (Page: React.LazyExoticComponent<() => JSX.Element>) =>
   function LazyPage() {
@@ -70,20 +75,6 @@ const SpacesPageRoute = lazyPage(SpacesPage);
 const SettingsPageRoute = lazyPage(SettingsPage);
 const AdminPageRoute = lazyPage(AdminPage);
 
-// Sprach-Landingpages: Startseite mit voreingestellter Sprache (ebenfalls
-// stabile Komponenten, siehe oben)
-const homeInLanguage = (lang: Language) =>
-  function LocalizedHomePage() {
-    return (
-      <Suspense fallback={<Fallback />}>
-        <HomePageKibuka lang={lang} />
-      </Suspense>
-    );
-  };
-const HomePageArRoute = homeInLanguage("ar");
-const HomePageFrRoute = homeInLanguage("fr");
-const HomePageEnRoute = homeInLanguage("en");
-
 const TAB_PATHS = [
   "/",
   "/ar",
@@ -97,13 +88,19 @@ const TAB_PATHS = [
 ];
 
 function MainTabs() {
+  const { t } = useTranslation();
+  // Home führt zur Startseite der aktuellen Sprache (/ar, /fr, /en oder /)
+  const homePath = homePathFor(useAppLanguage());
+
   return (
     <IonTabs>
       <IonRouterOutlet>
+        {/* Sprach-Landingpages: dieselbe Startseite — die Sprache setzt
+            DocumentLanguage anhand der URL */}
         <Route exact path="/" component={HomePageKibukaRoute} />
-        <Route exact path="/ar" component={HomePageArRoute} />
-        <Route exact path="/fr" component={HomePageFrRoute} />
-        <Route exact path="/en" component={HomePageEnRoute} />
+        <Route exact path="/ar" component={HomePageKibukaRoute} />
+        <Route exact path="/fr" component={HomePageKibukaRoute} />
+        <Route exact path="/en" component={HomePageKibukaRoute} />
         <Route exact path="/library" component={LibraryPageRoute} />
         <Route exact path="/books" component={LibraryPageRoute} />
         <Route exact path="/books/:bookId" component={BookDetailPageRoute} />
@@ -111,21 +108,21 @@ function MainTabs() {
         <Route exact path="/profile" component={ProfilePageRoute} />
       </IonRouterOutlet>
       <IonTabBar slot="bottom" className="kibuka-tab-bar">
-        <IonTabButton tab="home" href="/">
+        <IonTabButton tab="home" href={homePath}>
           <IonIcon aria-hidden="true" icon={homeOutline} />
-          <IonLabel>Home</IonLabel>
+          <IonLabel>{t("tabs.home")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="library" href="/library">
           <IonIcon aria-hidden="true" icon={libraryOutline} />
-          <IonLabel>Bibliothek</IonLabel>
+          <IonLabel>{t("tabs.library")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="pricing" href="/pricing">
           <IonIcon aria-hidden="true" icon={pricetagsOutline} />
-          <IonLabel>Preise</IonLabel>
+          <IonLabel>{t("tabs.pricing")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="profile" href="/profile">
           <IonIcon aria-hidden="true" icon={personCircleOutline} />
-          <IonLabel>Profil</IonLabel>
+          <IonLabel>{t("tabs.profile")}</IonLabel>
         </IonTabButton>
       </IonTabBar>
     </IonTabs>

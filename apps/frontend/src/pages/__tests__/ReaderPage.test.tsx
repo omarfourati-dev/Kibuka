@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
+import { useUIStore } from "@omarsapp/shared-stores";
+import i18n from "../../i18n/config";
+import ar from "../../i18n/locales/ar.json";
 import ReaderPage from "../ReaderPage";
 
 // ─── Mock child components ──────────────────────────────────────────────────
@@ -313,5 +316,63 @@ describe("ReaderPage", () => {
         expect.stringMatching(/^\/login\?redirect=.*book-1/),
       );
     });
+  });
+
+  describe("auf Arabisch", () => {
+    beforeEach(async () => {
+      await i18n.changeLanguage("ar");
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockBook),
+      } as Response);
+    });
+
+    it("opens the book in the app language when no language is given", async () => {
+      renderReaderPage();
+      expect(await screen.findByText("نص الصفحة الأولى")).toBeInTheDocument();
+    });
+
+    it("labels the controls in Arabic", async () => {
+      renderReaderPage();
+      await screen.findByTestId("word-highlighter");
+      expect(
+        screen.getByRole("button", { name: ar.reader.exit }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.reader.prevPage }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.reader.nextPage }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: ar.reader.dualMode }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: "الصفحة 1" })).toBeInTheDocument();
+    });
+
+    it("names the book in the browser tab", async () => {
+      renderReaderPage();
+      await screen.findByTestId("word-highlighter");
+      expect(document.title).toBe("اقرأ: المغامرة | Kibuka");
+    });
+
+    it("explains a loading error in Arabic", async () => {
+      vi.mocked(fetch).mockRejectedValue(new Error("down"));
+      renderReaderPage();
+      expect(await screen.findByText(ar.reader.loadError)).toBeInTheDocument();
+    });
+  });
+
+  it("keeps an explicit ?language over the app language", async () => {
+    useUIStore.setState({ language: "ar" });
+    await i18n.changeLanguage("ar");
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderReaderPage("book-1", "?language=fr");
+    expect(await screen.findByText("Texte page un")).toBeInTheDocument();
+    useUIStore.setState({ language: "de" });
   });
 });
