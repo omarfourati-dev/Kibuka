@@ -43,7 +43,8 @@ test.describe('Buttons behalten ihr Tailwind-Styling', () => {
     await expect(cta).toBeVisible({ timeout: 10000 })
     await expect(cta).toHaveCSS('padding-left', '24px') // px-6
     await expect(cta).toHaveCSS('padding-top', '12px') // py-3
-    await expect(cta).toHaveCSS('border-top-left-radius', '12px') // rounded-xl
+    // rounded-xl = --radius-xl, im Design-System 1.5rem
+    await expect(cta).toHaveCSS('border-top-left-radius', '24px')
   })
 
   test('the outlined preview button keeps its border', async ({ page }) => {
