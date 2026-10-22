@@ -3,10 +3,14 @@
 # Läuft als eigener Compose-Dienst "db-backup"; Ziel ist ein Host-Ordner
 # AUSSERHALB von /home/kibuka (den der Deploy-rsync --delete leert).
 set -eu
+# Dumps enthalten personenbezogene Daten und Passwort-Hashes — nur root darf lesen
+umask 077
 
 INTERVAL="${BACKUP_INTERVAL_SECONDS:-86400}"
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 DIR="${BACKUP_DIR:-/backups}"
+
+chmod 700 "$DIR"
 
 until pg_isready -h "${PGHOST:-db}" -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do
   sleep 5
