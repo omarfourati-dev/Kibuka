@@ -39,11 +39,15 @@ class TestChildProfile:
 
 class TestReadingProgress:
     def test_not_completed_by_default(self):
-        progress = ReadingProgress(id="rp1", child_profile_id="cp1", book_id="b1")
+        progress = ReadingProgress(id="rp1", user_id="u1", child_profile_id="cp1", book_id="b1")
         assert progress.is_completed is False
 
     def test_completed_when_completed_at_set(self):
         progress = ReadingProgress(
-            id="rp1", child_profile_id="cp1", book_id="b1", completed_at=datetime.now(UTC)
+            id="rp1",
+            user_id="u1",
+            child_profile_id="cp1",
+            book_id="b1",
+            completed_at=datetime.now(UTC),
         )
         assert progress.is_completed is True

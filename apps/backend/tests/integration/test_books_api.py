@@ -15,6 +15,7 @@ from src.core.domain.entities.book import (
     PageContent,
     WordTimestamp,
 )
+from src.core.domain.entities.child_profile import ReadingProgress
 from src.core.domain.entities.user import User, UserRole, UserStatus
 from src.core.domain.value_objects.language import AgeRange, BookTheme, Language
 from src.core.ports.output.i_book_repository import IBookRepository
@@ -178,27 +179,50 @@ class FakeUserRepo:
         )
 
 
+class FakeProgressRepo:
+    """Persistenz-Stand-in — ersetzt den alten prozessweiten Dict-Store."""
+
+    def __init__(self) -> None:
+        self.store: dict[tuple[str, str], ReadingProgress] = {}
+
+    async def get(self, user_id: str, book_id: str) -> ReadingProgress | None:
+        return self.store.get((user_id, book_id))
+
+    async def upsert(self, progress: ReadingProgress) -> ReadingProgress:
+        self.store[(progress.user_id, progress.book_id)] = progress
+        return progress
+
+
+@pytest.fixture()
+def progress_repo() -> FakeProgressRepo:
+    return FakeProgressRepo()
+
+
 def _build_client(
     book_repo: MockBookRepository,
     optional_user: str | None,
     auth_user: str = USER_ID,
     user_repo: FakeUserRepo | None = None,
+    progress_repo: FakeProgressRepo | None = None,
 ) -> TestClient:
     from src.adapters.input.api.dependencies import get_user_repository
     from src.adapters.input.api.v1.books import (
         get_book_repository,
         get_current_user,
         get_optional_current_user,
+        get_progress_repository,
     )
     from src.adapters.input.api.v1.books import router as books_router
 
     app = FastAPI()
     app.include_router(books_router, prefix="/api/v1")
 
+    shared_progress = progress_repo or FakeProgressRepo()
     app.dependency_overrides[get_book_repository] = lambda: book_repo
     app.dependency_overrides[get_optional_current_user] = lambda: optional_user
     app.dependency_overrides[get_current_user] = lambda: auth_user
     app.dependency_overrides[get_user_repository] = lambda: user_repo or FakeUserRepo()
+    app.dependency_overrides[get_progress_repository] = lambda: shared_progress
 
     return TestClient(app, raise_server_exceptions=True)
 
@@ -210,9 +234,9 @@ def client(book_repo: MockBookRepository) -> TestClient:
 
 
 @pytest.fixture()
-def authed_client(book_repo: MockBookRepository) -> TestClient:
+def authed_client(book_repo: MockBookRepository, progress_repo: FakeProgressRepo) -> TestClient:
     """Authenticated client — current user = USER_ID (regular member)."""
-    return _build_client(book_repo, optional_user=USER_ID)
+    return _build_client(book_repo, optional_user=USER_ID, progress_repo=progress_repo)
 
 
 @pytest.fixture()
@@ -497,6 +521,21 @@ class TestProgress:
         response = authed_client.get("/api/v1/books/book-1/progress")
         data = response.json()
         assert data["completed"] is True
+
+    def test_progress_is_persisted_through_the_repository(
+        self, authed_client: TestClient, progress_repo: FakeProgressRepo
+    ) -> None:
+        """Kein prozessweiter Dict-Store mehr — Fortschritt muss Deploys überleben."""
+        authed_client.put("/api/v1/books/book-1/progress", json={"current_page": 2})
+        stored = progress_repo.store[(USER_ID, "book-1")]
+        assert stored.current_page == 2
+        assert stored.completed_at is None
+
+    def test_completed_progress_stores_completion_time(
+        self, authed_client: TestClient, progress_repo: FakeProgressRepo
+    ) -> None:
+        authed_client.put("/api/v1/books/book-1/progress", json={"current_page": 3})
+        assert progress_repo.store[(USER_ID, "book-1")].completed_at is not None
 
 
 class TestAdminAccess:
