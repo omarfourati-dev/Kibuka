@@ -84,7 +84,9 @@ class SqlBookRepository(IBookRepository):
             .limit(page_size)
         )
         result = await self._session.execute(query)
-        books = [self._to_entity(m) for m in result.scalars().all()]
+        # Summary-Liste: Seiten bewusst nicht laden (lazy access würde im
+        # async-Kontext MissingGreenlet werfen und ist für die Liste unnötig)
+        books = [self._to_entity(m, with_pages=False) for m in result.scalars().all()]
         return books, total
 
     async def save(self, book: Book) -> Book:
@@ -135,7 +137,7 @@ class SqlBookRepository(IBookRepository):
         )
         await self._session.flush()
 
-    def _to_entity(self, model: BookModel) -> Book:
+    def _to_entity(self, model: BookModel, *, with_pages: bool = True) -> Book:
         translations = [
             BookTranslation(
                 book_id=t.book_id,
@@ -144,8 +146,8 @@ class SqlBookRepository(IBookRepository):
             )
             for t in model.translations
         ]
-        pages = []
-        for page_model in model.pages:
+        pages: list[BookPage] = []
+        for page_model in model.pages if with_pages else []:
             contents = []
             for c in page_model.contents:
                 timestamps = [
