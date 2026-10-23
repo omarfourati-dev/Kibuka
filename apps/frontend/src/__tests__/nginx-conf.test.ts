@@ -28,4 +28,9 @@ describe("nginx.conf", () => {
   it("forwards the resolved client IP to the backend", () => {
     expect(conf).toMatch(/proxy_set_header\s+X-Real-IP\s+\$remote_addr;/);
   });
+
+  it("serves the PWA manifest with its own media type", () => {
+    // Live 22.10.: application/octet-stream — PWA-Prüfer erwarten den echten Typ
+    expect(conf).toMatch(/application\/manifest\+json\s+webmanifest;/);
+  });
 });
