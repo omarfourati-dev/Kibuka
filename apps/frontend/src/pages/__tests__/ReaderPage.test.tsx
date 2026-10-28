@@ -15,8 +15,16 @@ vi.mock("../../components/reader/AudioPlayer", () => ({
   ),
 }));
 vi.mock("../../components/reader/WordHighlighter", () => ({
-  WordHighlighter: ({ text }: { text: string }) => (
-    <div data-testid="word-highlighter">{text}</div>
+  WordHighlighter: ({
+    text,
+    currentTimeMs,
+  }: {
+    text: string;
+    currentTimeMs: number;
+  }) => (
+    <div data-testid="word-highlighter" data-time={currentTimeMs}>
+      {text}
+    </div>
   ),
 }));
 vi.mock("../../components/reader/LanguagePicker", () => ({
@@ -262,6 +270,18 @@ describe("ReaderPage", () => {
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
     expect(mockNavigate).toHaveBeenCalledWith("/books/book-1");
+  });
+
+  it("highlights no word before reading aloud starts (live: first word lit up)", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderReaderPage();
+    const text = await screen.findByTestId("word-highlighter");
+    // Das erste Wort beginnt bei 0 ms — "keine Wiedergabe" muss davor liegen
+    expect(Number(text.dataset.time)).toBeLessThan(0);
   });
 
   it("names the book at the top in the reading language", async () => {
