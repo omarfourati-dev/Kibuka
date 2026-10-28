@@ -131,6 +131,11 @@ describe("dayLabel (Regal „Diese Woche“)", () => {
     expect(dayLabel("2026-10-25T06:00:00", "en", now)).toBe("Sunday");
     expect(dayLabel("2026-10-25T06:00:00", "ar", now)).toBe("الأحد");
   });
+
+  it("uses the date once the weekday would repeat (no two Wednesdays)", () => {
+    expect(dayLabel("2026-10-22T06:00:00", "de", now)).toBe("22. Okt.");
+    expect(dayLabel("2026-10-21T06:00:00", "en", now)).toBe("21 Oct");
+  });
 });
 
 describe("formatToday", () => {

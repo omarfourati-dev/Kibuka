@@ -483,4 +483,32 @@ describe("HomePage", () => {
     const weekday = new Date().toLocaleDateString("de-DE", { weekday: "long" });
     expect(screen.getByText(new RegExp(`^${weekday}, `))).toBeInTheDocument();
   });
+
+  it("puts today's book first on the shelf as 'Heute', even if it was published earlier", async () => {
+    const daysAgo = (n: number) =>
+      new Date(Date.now() - n * 86_400_000).toISOString();
+    const daily = { ...dailyBook, published_at: daysAgo(5) };
+    vi.mocked(fetch).mockImplementation((url) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            String(url).includes("/daily")
+              ? daily
+              : {
+                  items: [daily, { ...bookList[0], published_at: daysAgo(1) }],
+                  total: 2,
+                  page: 1,
+                  page_size: 6,
+                },
+          ),
+      } as Response),
+    );
+
+    renderHomePage();
+    const shelf = await screen.findByRole("region", { name: "Diese Woche" });
+    const items = within(shelf).getAllByRole("link");
+    expect(items[0]).toHaveAccessibleName(/^Heute.*Das tägliche Abenteuer/);
+    expect(items[1]).toHaveAccessibleName(/^Gestern.*Erstes Buch/);
+  });
 });

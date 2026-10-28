@@ -168,6 +168,9 @@ describe("BookHero – Buch des Tages", () => {
     expect(arabic).toHaveAttribute("dir", "rtl");
     // Die Sprache der Überschrift steht nicht noch einmal in der Liste
     expect(screen.queryByText("Deutsch")).toBeNull();
+    // Lateinische Schriften zuerst, Arabisch (andere Leserichtung) zuletzt
+    const terms = screen.getAllByRole("term").map((dt) => dt.textContent);
+    expect(terms).toEqual(["English", "Français", "العربية"]);
   });
 
   it("renders the square cover as a book, not a cropped portrait", () => {
