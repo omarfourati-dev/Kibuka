@@ -14,14 +14,15 @@ import { IonReactRouter } from "@ionic/react-router";
 import {
   homeOutline,
   libraryOutline,
-  personCircleOutline,
-  pricetagsOutline,
+  peopleOutline,
+  starOutline,
 } from "ionicons/icons";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdSenseLoader } from "./components/ads/AdSenseLoader";
 import { DocumentLanguage } from "./components/DocumentLanguage";
+import { PageSkeleton } from "./components/PageSkeleton";
 import { useAppLanguage } from "./hooks/useAppLanguage";
 import { CANCELLATION_PATH } from "./lib/legal";
 import { homePathFor } from "./lib/locale";
@@ -42,14 +43,8 @@ const ReaderPage = lazy(() => import("./pages/ReaderPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const CancellationPage = lazy(() => import("./pages/CancellationPage"));
 
-function Fallback() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex h-screen items-center justify-center text-slate-500 dark:text-slate-400">
-      {t("app.loading")}
-    </div>
-  );
-}
+// Lade-Skelett statt weißer Seite, solange ein Seiten-Chunk nachlädt
+const Fallback = PageSkeleton;
 
 const lazyPage = (Page: React.LazyExoticComponent<() => JSX.Element>) =>
   function LazyPage() {
@@ -127,11 +122,11 @@ function MainTabs() {
           <IonLabel>{t("tabs.library")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="pricing" href="/pricing">
-          <IonIcon aria-hidden="true" icon={pricetagsOutline} />
+          <IonIcon aria-hidden="true" icon={starOutline} />
           <IonLabel>{t("tabs.pricing")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="profile" href="/profile">
-          <IonIcon aria-hidden="true" icon={personCircleOutline} />
+          <IonIcon aria-hidden="true" icon={peopleOutline} />
           <IonLabel>{t("tabs.profile")}</IonLabel>
         </IonTabButton>
       </IonTabBar>

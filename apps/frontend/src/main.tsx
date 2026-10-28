@@ -14,6 +14,19 @@ import i18n from "./i18n/config";
 import App from "./App";
 import { restoreSession, startSessionKeepAlive } from "./lib/session";
 // Enthält auch Ionics CSS (eigene Cascade-Layer, siehe index.css)
+// Schriften selbst gehostet (keine Anfrage an Google — DSGVO)
+import "@fontsource/atkinson-hyperlegible/400.css";
+import "@fontsource/atkinson-hyperlegible/700.css";
+import "@fontsource/baloo-2/600.css";
+import "@fontsource/baloo-2/700.css";
+import "@fontsource/baloo-2/800.css";
+import "@fontsource/baloo-bhaijaan-2/500.css";
+import "@fontsource/baloo-bhaijaan-2/700.css";
+import "@fontsource/baloo-bhaijaan-2/800.css";
+import "@fontsource/andika/400.css";
+import "@fontsource/andika/700.css";
+import "@fontsource/noto-naskh-arabic/500.css";
+import "@fontsource/noto-naskh-arabic/700.css";
 import "./index.css";
 
 setupIonicReact({ mode: "md" });

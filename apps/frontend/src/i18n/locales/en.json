@@ -4,7 +4,10 @@
     "spaces": "Spaces",
     "settings": "Settings",
     "admin": "Admin",
-    "logout": "Logout"
+    "logout": "Logout",
+    "main": "Main navigation",
+    "languageButton": "App language: {{language}}",
+    "languageMenu": "Choose language"
   },
   "ai": {
     "chat": "AI Chat",
@@ -34,10 +37,10 @@
     "loading": "Loading…"
   },
   "tabs": {
-    "home": "Home",
+    "home": "Today",
     "library": "Library",
-    "pricing": "Pricing",
-    "profile": "Profile"
+    "pricing": "Subscription",
+    "profile": "Family"
   },
   "meta": {
     "home": "Kibuka – Bilingual Children’s Books, a New Story Every Day",
@@ -77,14 +80,22 @@
     "purchased": "Owned",
     "daily": "Today",
     "cardLabel": "Book: {{title}}",
-    "pageAlt": "Page {{page}}"
+    "pageAlt": "Page {{page}}",
+    "languagesCount_one": "{{count}} language",
+    "languagesCount_other": "{{count}} languages",
+    "todayFree": "Free today",
+    "today": "Today"
   },
   "home": {
     "loading": "Loading the home page…",
     "errorText": "We couldn’t load the books. Check your connection and try again.",
     "emptyTitle": "No books yet",
     "emptyText": "Check back soon – there’s a new story every day!",
-    "allBooks": "All stories"
+    "allBooks": "All stories",
+    "thisWeek": "This week",
+    "subscribeTitle": "A new book every evening, in your family's language",
+    "subscribeText": "With a subscription your child reads every book in German, Arabic, French and English. Cancel monthly.",
+    "subscribeCta": "See subscription"
   },
   "hero": {
     "badge": "Today’s story",
@@ -92,7 +103,11 @@
     "readFree": "Read for free",
     "readNow": "Read now",
     "buy": "Buy for {{price}}",
-    "preview": "Read a preview"
+    "preview": "Read a preview",
+    "badgeToday": "Free today",
+    "readToday": "Read free today",
+    "otherTitles": "Title in other languages",
+    "cover": "Cover: {{title}}"
   },
   "library": {
     "title": "Library",
@@ -229,7 +244,15 @@
     "toRegister": "Sign up",
     "haveAccount": "Already have an account?",
     "toSignIn": "Sign in",
-    "failed": "Sign-in failed. Please try again."
+    "failed": "Sign-in failed. Please try again.",
+    "familyTitle": "Your family account",
+    "familyText": "Free. With it your child reads the book of the day for free every day, and Kibuka remembers where you stopped.",
+    "tabsLabel": "Account",
+    "tabNew": "New here",
+    "tabSignIn": "Sign in",
+    "registerAndRead": "Create account and read",
+    "signInAndRead": "Sign in and read",
+    "noPayment": "No subscription, no payment details."
   },
   "legal": {
     "nav": "Legal",

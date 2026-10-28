@@ -4,7 +4,10 @@
     "spaces": "Bereiche",
     "settings": "Einstellungen",
     "admin": "Admin",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "main": "Hauptnavigation",
+    "languageButton": "Sprache der App: {{language}}",
+    "languageMenu": "Sprache wählen"
   },
   "ai": {
     "chat": "KI-Chat",
@@ -34,10 +37,10 @@
     "loading": "Wird geladen …"
   },
   "tabs": {
-    "home": "Home",
+    "home": "Heute",
     "library": "Bibliothek",
-    "pricing": "Preise",
-    "profile": "Profil"
+    "pricing": "Abo",
+    "profile": "Familie"
   },
   "meta": {
     "home": "Kibuka – Jeden Tag ein neues Kinderbuch in 4 Sprachen",
@@ -77,14 +80,22 @@
     "purchased": "Gekauft",
     "daily": "Täglich",
     "cardLabel": "Buch: {{title}}",
-    "pageAlt": "Seite {{page}}"
+    "pageAlt": "Seite {{page}}",
+    "languagesCount_one": "{{count}} Sprache",
+    "languagesCount_other": "{{count}} Sprachen",
+    "todayFree": "Heute gratis",
+    "today": "Heute"
   },
   "home": {
     "loading": "Lade Startseite...",
     "errorText": "Die Bücher konnten nicht geladen werden. Prüfe deine Verbindung und versuche es noch einmal.",
     "emptyTitle": "Keine Bücher verfügbar",
     "emptyText": "Schau bald wieder vorbei — neue Bücher erscheinen täglich!",
-    "allBooks": "Alle Bücher"
+    "allBooks": "Alle Bücher",
+    "thisWeek": "Diese Woche",
+    "subscribeTitle": "Jeden Abend ein neues Buch, in eurer Familiensprache",
+    "subscribeText": "Mit dem Abo liest dein Kind alle Bücher auf Deutsch, Arabisch, Französisch und Englisch. Monatlich kündbar.",
+    "subscribeCta": "Abo ansehen"
   },
   "hero": {
     "badge": "Buch des Tages",
@@ -92,7 +103,11 @@
     "readFree": "Gratis lesen",
     "readNow": "Jetzt lesen",
     "buy": "{{price}} kaufen",
-    "preview": "Vorschau lesen"
+    "preview": "Vorschau lesen",
+    "badgeToday": "Heute gratis",
+    "readToday": "Heute gratis lesen",
+    "otherTitles": "Titel in weiteren Sprachen",
+    "cover": "Cover: {{title}}"
   },
   "library": {
     "title": "Bibliothek",
@@ -229,7 +244,15 @@
     "toRegister": "Registrieren",
     "haveAccount": "Schon ein Konto?",
     "toSignIn": "Anmelden",
-    "failed": "Anmeldung fehlgeschlagen. Bitte versuche es erneut."
+    "failed": "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
+    "familyTitle": "Euer Familienkonto",
+    "familyText": "Kostenlos. Damit liest dein Kind jeden Tag das Buch des Tages gratis, und Kibuka merkt sich, wo ihr aufgehört habt.",
+    "tabsLabel": "Konto",
+    "tabNew": "Neu hier",
+    "tabSignIn": "Anmelden",
+    "registerAndRead": "Konto anlegen und lesen",
+    "signInAndRead": "Anmelden und lesen",
+    "noPayment": "Kein Abo, keine Zahlungsdaten."
   },
   "legal": {
     "nav": "Rechtliches",

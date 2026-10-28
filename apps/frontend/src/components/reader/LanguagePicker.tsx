@@ -1,12 +1,6 @@
 import { useTranslation } from "react-i18next";
+import { NATIVE_LANGUAGE_NAMES, isLanguage } from "../../lib/locale";
 import { cn } from "../../utils/cn";
-
-const LANGUAGE_FLAGS: Record<string, string> = {
-  de: "🇩🇪",
-  ar: "🇸🇦",
-  fr: "🇫🇷",
-  en: "🇬🇧",
-};
 
 interface LanguagePickerProps {
   availableLanguages: string[];
@@ -14,6 +8,10 @@ interface LanguagePickerProps {
   onLanguageChange: (language: string) => void;
 }
 
+/**
+ * Lesesprache wählen. Jede Sprache steht in ihrer eigenen Schrift — keine
+ * Flaggen-Emoji (Windows zeigte statt Flaggen nur "DE DE", "SA AR").
+ */
 export function LanguagePicker({
   availableLanguages,
   selectedLanguage,
@@ -22,36 +20,33 @@ export function LanguagePicker({
   const { t } = useTranslation();
   return (
     <div
-      className="flex items-center gap-2 flex-wrap"
+      className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2"
       role="group"
       aria-label={t("picker.label")}
     >
       {availableLanguages.map((lang) => {
         const isSelected = lang === selectedLanguage;
-        const flag = LANGUAGE_FLAGS[lang];
+        const name = isLanguage(lang)
+          ? NATIVE_LANGUAGE_NAMES[lang]
+          : lang.toUpperCase();
 
         return (
           <button
             key={lang}
             type="button"
-            aria-label={lang.toUpperCase()}
+            lang={lang}
             aria-pressed={isSelected}
             onClick={() => onLanguageChange(lang)}
             className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium",
-              "transition-all duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+              "h-12 px-5 rounded-2xl font-bold text-[16px]",
+              "transition-colors duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]",
               isSelected
-                ? "bg-[var(--color-primary)] text-white shadow-sm"
-                : "bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] hover:opacity-80",
+                ? "border-2 border-[var(--color-text-primary)] bg-[var(--color-text-primary)] text-[var(--color-background)]"
+                : "border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)]",
             )}
           >
-            {flag && (
-              <span className="text-base leading-none" aria-hidden="true">
-                {flag}
-              </span>
-            )}
-            <span className="text-xs uppercase">{lang}</span>
+            {name}
           </button>
         );
       })}

@@ -4,7 +4,10 @@
     "spaces": "Espaces",
     "settings": "Paramètres",
     "admin": "Administration",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "main": "Navigation principale",
+    "languageButton": "Langue de l’app : {{language}}",
+    "languageMenu": "Choisir la langue"
   },
   "ai": {
     "chat": "Chat IA",
@@ -34,10 +37,10 @@
     "loading": "Chargement…"
   },
   "tabs": {
-    "home": "Accueil",
+    "home": "Aujourd’hui",
     "library": "Bibliothèque",
-    "pricing": "Tarifs",
-    "profile": "Profil"
+    "pricing": "Abonnement",
+    "profile": "Famille"
   },
   "meta": {
     "home": "Kibuka – Livres pour enfants bilingues : une histoire par jour",
@@ -78,14 +81,22 @@
     "purchased": "Acheté",
     "daily": "Du jour",
     "cardLabel": "Livre : {{title}}",
-    "pageAlt": "Page {{page}}"
+    "pageAlt": "Page {{page}}",
+    "languagesCount_one": "{{count}} langue",
+    "languagesCount_other": "{{count}} langues",
+    "todayFree": "Gratuit aujourd’hui",
+    "today": "Aujourd’hui"
   },
   "home": {
     "loading": "Chargement de l’accueil…",
     "errorText": "Impossible de charger les livres. Vérifiez votre connexion et réessayez.",
     "emptyTitle": "Aucun livre pour le moment",
     "emptyText": "Revenez bientôt : une nouvelle histoire paraît chaque jour !",
-    "allBooks": "Toutes les histoires"
+    "allBooks": "Toutes les histoires",
+    "thisWeek": "Cette semaine",
+    "subscribeTitle": "Un nouveau livre chaque soir, dans la langue de votre famille",
+    "subscribeText": "Avec l’abonnement, ton enfant lit tous les livres en allemand, arabe, français et anglais. Résiliable chaque mois.",
+    "subscribeCta": "Voir l’abonnement"
   },
   "hero": {
     "badge": "L’histoire du jour",
@@ -93,7 +104,11 @@
     "readFree": "Lire gratuitement",
     "readNow": "Lire maintenant",
     "buy": "Acheter – {{price}}",
-    "preview": "Lire un extrait"
+    "preview": "Lire un extrait",
+    "badgeToday": "Gratuit aujourd’hui",
+    "readToday": "Lire gratuitement",
+    "otherTitles": "Titre dans d’autres langues",
+    "cover": "Couverture : {{title}}"
   },
   "library": {
     "title": "Bibliothèque",
@@ -230,7 +245,15 @@
     "toRegister": "Inscrivez-vous",
     "haveAccount": "Déjà un compte ?",
     "toSignIn": "Connectez-vous",
-    "failed": "La connexion a échoué. Merci de réessayer."
+    "failed": "La connexion a échoué. Merci de réessayer.",
+    "familyTitle": "Votre compte famille",
+    "familyText": "Gratuit. Ton enfant lit chaque jour le livre du jour gratuitement, et Kibuka retient où vous vous êtes arrêtés.",
+    "tabsLabel": "Compte",
+    "tabNew": "Nouveau ici",
+    "tabSignIn": "Se connecter",
+    "registerAndRead": "Créer le compte et lire",
+    "signInAndRead": "Se connecter et lire",
+    "noPayment": "Pas d’abonnement, aucune donnée de paiement."
   },
   "legal": {
     "nav": "Informations légales",

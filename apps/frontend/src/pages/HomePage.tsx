@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useHistory } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
@@ -6,9 +6,10 @@ import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookHero } from "../components/book/BookHero";
 import { BookCard } from "../components/book/BookCard";
 import { LegalFooter } from "../components/legal/LegalFooter";
+import { TopNav } from "../components/layout/TopNav";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { pickTitle } from "../lib/locale";
+import { dayLabel, formatToday, pickTitle } from "../lib/locale";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,28 @@ export default function HomePage() {
 
   const hasContent = dailyBook !== null || books.length > 0;
 
+  // Regal "Diese Woche": Bücher der letzten 7 Tage, neuestes zuerst; der
+  // Rest steht unter "Alle Bücher" — nichts doppelt
+  const { shelf, rest } = useMemo(() => {
+    const now = Date.now();
+    const all = [...(dailyBook ? [dailyBook] : []), ...books].filter(
+      (b, i, list) => list.findIndex((x) => x.id === b.id) === i,
+    );
+    const recent = all
+      .filter((b) => now - new Date(b.published_at).getTime() < 7 * 86_400_000)
+      .sort((a, b) => b.published_at.localeCompare(a.published_at));
+    const shelfIds = new Set(recent.map((b) => b.id));
+    return {
+      shelf: recent,
+      rest: books.filter((b) => !shelfIds.has(b.id)),
+    };
+  }, [dailyBook, books]);
+
+  const openBook = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    history.push(`/books/${id}`);
+  };
+
   let body: React.ReactNode;
 
   if (loading) {
@@ -87,20 +110,21 @@ export default function HomePage() {
       <div
         role="status"
         aria-label={t("home.loading")}
-        className="flex flex-col gap-10 p-6 max-w-4xl mx-auto"
+        className="flex flex-col lg:flex-row gap-8 lg:gap-14 px-5 lg:px-8 py-6 max-w-6xl mx-auto"
       >
-        {/* Hero skeleton */}
         <div
-          className="rounded-2xl h-64 animate-pulse"
+          className="self-center w-full max-w-[300px] lg:max-w-[440px] aspect-square rounded-xl animate-pulse"
           style={{ backgroundColor: "var(--color-surface-raised)" }}
         />
-        {/* Grid skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="flex flex-col gap-4 flex-1">
+          {[70, 50, 45, 55].map((w, i) => (
             <div
               key={i}
-              className="rounded-xl aspect-[3/4] animate-pulse"
-              style={{ backgroundColor: "var(--color-surface-raised)" }}
+              className="h-6 rounded-full animate-pulse"
+              style={{
+                width: `${w}%`,
+                backgroundColor: "var(--color-surface-raised)",
+              }}
             />
           ))}
         </div>
@@ -108,16 +132,18 @@ export default function HomePage() {
     );
   } else if (loadError) {
     body = (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
-        <span className="text-5xl select-none">🙈</span>
-        <p
-          className="text-lg font-semibold"
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
+        <span className="text-5xl select-none" aria-hidden="true">
+          🙈
+        </span>
+        <h1
+          className="text-2xl font-bold"
           style={{ color: "var(--color-text-primary)" }}
         >
           {t("states.errorTitle")}
-        </p>
+        </h1>
         <p
-          className="text-sm text-center"
+          className="max-w-sm"
           style={{ color: "var(--color-text-secondary)" }}
         >
           {t("home.errorText")}
@@ -125,8 +151,11 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => setReloadKey((k) => k + 1)}
-          className="px-5 py-2.5 rounded-xl font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
-          style={{ backgroundColor: "var(--color-primary)" }}
+          className="h-12 px-6 rounded-2xl font-bold transition-colors duration-200 hover:bg-[var(--color-primary-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]"
+          style={{
+            backgroundColor: "var(--color-primary)",
+            color: "var(--color-on-primary)",
+          }}
         >
           {t("states.retry")}
         </button>
@@ -134,64 +163,135 @@ export default function HomePage() {
     );
   } else if (!hasContent) {
     body = (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
-        <span className="text-5xl select-none">📚</span>
-        <p
-          className="text-lg font-semibold"
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
+        <span className="text-5xl select-none" aria-hidden="true">
+          📚
+        </span>
+        <h1
+          className="text-2xl font-bold"
           style={{ color: "var(--color-text-primary)" }}
         >
           {t("home.emptyTitle")}
-        </p>
-        <p
-          className="text-sm text-center"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
+        </h1>
+        <p style={{ color: "var(--color-text-secondary)" }}>
           {t("home.emptyText")}
         </p>
       </div>
     );
   } else {
     body = (
-      <div className="flex flex-col gap-10 p-6 max-w-4xl mx-auto">
-        {/* Daily book hero */}
+      <div className="flex flex-col gap-12 lg:gap-16 px-5 lg:px-8 pt-2 lg:pt-10 pb-10 max-w-6xl mx-auto">
         {dailyBook && (
-          <BookHero
-            book={{
-              id: dailyBook.id,
-              title: pickTitle(dailyBook.titles, lang),
-              coverImageUrl: dailyBook.cover_image_url ?? undefined,
-              theme: dailyBook.theme,
-              ageRange: dailyBook.age_range,
-              languages: Object.keys(dailyBook.titles).filter(
-                (k) => dailyBook.titles[k],
-              ),
-              priceSingle: dailyBook.price_single,
-            }}
-            isPurchased={dailyBook.is_purchased ?? false}
-            // Gratis/gekauft → direkt in den Reader; sonst zur Detailseite
-            onRead={() =>
-              history.push(
-                dailyBook.price_single === 0 || dailyBook.is_purchased
-                  ? `/books/${dailyBook.id}/read`
-                  : `/books/${dailyBook.id}`,
-              )
-            }
-            onPurchase={() => history.push(`/books/${dailyBook.id}`)}
-            onPreview={() => history.push(`/books/${dailyBook.id}`)}
-          />
+          <div className="flex flex-col gap-4">
+            <p
+              className="m-0 text-[15px] lg:text-[17px]"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              {formatToday(new Date(), lang)}
+            </p>
+            <BookHero
+              book={{
+                id: dailyBook.id,
+                title: pickTitle(dailyBook.titles, lang),
+                coverImageUrl: dailyBook.cover_image_url ?? undefined,
+                theme: dailyBook.theme,
+                ageRange: dailyBook.age_range,
+                languages: Object.keys(dailyBook.titles).filter(
+                  (k) => dailyBook.titles[k],
+                ),
+                priceSingle: dailyBook.price_single,
+              }}
+              isDaily
+              titles={dailyBook.titles}
+              meta={`${t("book.ages", { range: dailyBook.age_range.replace("-", "–") })}, ${t("book.pages", { count: dailyBook.page_count })}`}
+              isPurchased={dailyBook.is_purchased ?? false}
+              // Buch des Tages ist heute gratis (mit Familienkonto): direkt in
+              // den Reader — ohne Konto fängt der Reader per Login ab
+              onRead={() => history.push(`/books/${dailyBook.id}/read`)}
+              onPreview={() => history.push(`/books/${dailyBook.id}`)}
+            />
+          </div>
         )}
 
-        {/* Book grid */}
-        {books.length > 0 && (
-          <section>
+        {shelf.length > 0 && (
+          <section aria-labelledby="home-week" className="flex flex-col gap-4">
             <h2
-              className="text-xl font-bold mb-4"
+              id="home-week"
+              className="text-[24px] lg:text-[32px] font-bold"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              {t("home.thisWeek")}
+            </h2>
+            <div className="flex flex-col">
+              <div className="relative z-10 flex gap-4 lg:gap-6 overflow-x-auto px-1 -mx-1 pt-1">
+                {shelf.map((book) => {
+                  const isToday = book.id === dailyBook?.id;
+                  return (
+                    <a
+                      key={book.id}
+                      href={`/books/${book.id}`}
+                      onClick={openBook(book.id)}
+                      className="shrink-0 flex flex-col w-28 lg:w-44 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-[var(--color-primary-text)]"
+                    >
+                      <span
+                        className="block aspect-square w-full overflow-hidden"
+                        style={{
+                          borderRadius: "var(--radius-book)",
+                          boxShadow: "var(--shadow-md)",
+                          backgroundColor: "var(--color-surface-raised)",
+                          outline: isToday
+                            ? "3px solid var(--color-accent)"
+                            : undefined,
+                          outlineOffset: "2px",
+                        }}
+                      >
+                        {book.cover_image_url && (
+                          <img
+                            src={book.cover_image_url}
+                            alt=""
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </span>
+                      {/* Regalbrett direkt unter jedem Buch — läuft durch */}
+                      <span
+                        aria-hidden="true"
+                        className="block h-2.5 -mx-2 lg:-mx-3"
+                        style={{ backgroundColor: "var(--color-shelf)" }}
+                      />
+                      <span
+                        className="pt-2 text-sm font-bold"
+                        style={{
+                          color: isToday
+                            ? "var(--color-text-primary)"
+                            : "var(--color-text-secondary)",
+                        }}
+                      >
+                        {dayLabel(book.published_at, lang)}
+                      </span>
+                      <span className="sr-only">
+                        {pickTitle(book.titles, lang)}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {rest.length > 0 && (
+          <section aria-labelledby="home-all" className="flex flex-col gap-4">
+            <h2
+              id="home-all"
+              className="text-[24px] lg:text-[32px] font-bold"
               style={{ color: "var(--color-text-primary)" }}
             >
               {t("home.allBooks")}
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {books.map((book) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6 lg:gap-x-6 lg:gap-y-8">
+              {rest.map((book) => (
                 <BookCard
                   key={book.id}
                   id={book.id}
@@ -211,6 +311,39 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+        {/* Abo-Band: bewusst in den Nacht-Farben, in beiden Modi gleich */}
+        <section
+          aria-labelledby="home-subscribe"
+          className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-12 rounded-[28px] p-6 lg:px-11 lg:py-10"
+          style={{ backgroundColor: "#1e2747", color: "#eef1fa" }}
+        >
+          <div className="flex flex-col gap-2.5 flex-1">
+            <h2
+              id="home-subscribe"
+              className="text-[22px] lg:text-[32px] font-bold leading-tight"
+            >
+              {t("home.subscribeTitle")}
+            </h2>
+            <p
+              className="m-0 text-base lg:text-lg leading-relaxed"
+              style={{ color: "#c7cde4" }}
+            >
+              {t("home.subscribeText")}
+            </p>
+          </div>
+          <a
+            href="/pricing"
+            onClick={(e) => {
+              e.preventDefault();
+              history.push("/pricing");
+            }}
+            className="self-start lg:self-center inline-flex items-center h-12 lg:h-14 px-6 rounded-2xl font-bold text-base lg:text-lg transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e2747] focus-visible:ring-[#f2b632]"
+            style={{ backgroundColor: "#f2b632", color: "#1e2747" }}
+          >
+            {t("home.subscribeCta")}
+          </a>
+        </section>
       </div>
     );
   }
@@ -218,6 +351,7 @@ export default function HomePage() {
   return (
     <IonPage>
       <IonContent>
+        <TopNav />
         {body}
         <LegalFooter />
       </IonContent>

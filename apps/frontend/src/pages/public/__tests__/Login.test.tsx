@@ -129,7 +129,7 @@ describe("Login — Sprache", () => {
 
   it("switches to registration with its own title", () => {
     renderLogin();
-    fireEvent.click(screen.getByRole("button", { name: "Registrieren" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Neu hier" }));
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Konto erstellen" }),

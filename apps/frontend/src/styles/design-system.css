@@ -1,43 +1,62 @@
+/* Kibuka „Tag & Nacht": hell = Tag auf der Wiese, dunkel = Vorlesezeit am
+   Abend. Die Farben kommen aus den Aquarell-Illustrationen der Bücher
+   (Himmel, Wiese, Sonnenblume) — bewusst kein Orange, damit die Cover
+   (oft Füchse) nicht mit der Oberfläche konkurrieren. */
 :root {
-  /* Primary — warm orange (sun, warmth) */
-  --color-primary: #ff6b35;
-  --color-primary-light: #ff8c5a;
-  --color-primary-dark: #e55520;
+  /* Primär — Nachtblau-Tinte. --color-primary für Flächen (weiße Schrift
+     darauf), --color-primary-text für Schrift/Linien auf dem Hintergrund */
+  --color-primary: #3343a8;
+  --color-primary-light: #5566c8;
+  --color-primary-dark: #26318a;
+  --color-primary-text: #3343a8;
+  --color-primary-soft: #e3e8f8;
+  --color-on-primary: #ffffff;
 
-  /* Secondary — sky blue (dreams, adventure) */
-  --color-secondary: #4ecdc4;
-  --color-secondary-light: #7eddd6;
-  --color-secondary-dark: #2eb5ac;
+  /* Sekundär — Wiesengrün (gratis, erledigt) */
+  --color-secondary: #2f7d4f;
+  --color-secondary-light: #4c9a6c;
+  --color-secondary-dark: #23613c;
 
-  /* Accent — sunshine yellow */
-  --color-accent: #ffd93d;
-  --color-accent-dark: #f0c020;
+  /* Akzent — Sonnenblume (Tagesbuch, Hervorhebung; Schrift darauf: Tinte) */
+  --color-accent: #f2b632;
+  --color-accent-dark: #d99a12;
+  --color-on-accent: #1e2747;
 
-  /* Neutral */
-  --color-background: #fffdf7;
+  /* Flächen und Schrift */
+  --color-background: #f4f7f2;
   --color-surface: #ffffff;
-  --color-surface-raised: #fff8ee;
-  --color-text-primary: #2d2d2d;
-  --color-text-secondary: #6b6b6b;
-  --color-text-muted: #a0a0a0;
-  --color-border: #e8e0d5;
+  --color-surface-raised: #eaf0e7;
+  --color-shelf: #c9d6c3;
+  --color-text-primary: #1e2747;
+  --color-text-secondary: #4f5873;
+  --color-text-muted: #5f6886;
+  --color-border: #d9e1d6;
 
-  /* Semantic */
-  --color-success: #6bcb77;
-  --color-error: #ff6b6b;
-  --color-warning: #ffd93d;
+  /* Status */
+  --color-success: #2f7d4f;
+  --color-success-text: #2f7d4f;
+  --color-error: #b42318;
+  --color-error-text: #b42318;
+  --color-warning: #f2b632;
 
-  /* Typography scale (children-friendly, slightly larger) */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
+  /* Schrift: Baloo (Latein + Arabisch aus einer Familie) für Überschriften,
+     Atkinson Hyperlegible für die Oberfläche, Andika/Naskh im Reader
+     (Andika ist für Leseanfänger gezeichnet). Selbst gehostet, kein Google. */
+  --font-sans: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --font-display: "Baloo 2", "Baloo Bhaijaan 2", system-ui, sans-serif;
+  --font-reader: "Andika", "Atkinson Hyperlegible", sans-serif;
+
+  /* Typo-Skala (Verhältnis 1,25) */
+  --font-size-xs: 0.8125rem;
+  --font-size-sm: 0.9375rem;
   --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.875rem;
-  --font-size-4xl: 2.25rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5625rem;
+  --font-size-2xl: 1.9375rem;
+  --font-size-3xl: 2.4375rem;
+  --font-size-4xl: 3.0625rem;
 
-  /* Spacing (4px grid) */
+  /* Abstände (4-px-Raster) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -47,58 +66,79 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  /* Border radius — rounded for children's app */
+  /* Rundungen: Bücher haben einen geraden Rücken (links) */
   --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
+  --radius-md: 0.875rem;
   --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  --radius-xl: 1.25rem;
   --radius-full: 9999px;
+  --radius-book: 4px 12px 12px 4px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+  /* Schatten: nur Bücher werfen einen echten Schatten */
+  --shadow-sm: 0 1px 2px rgba(30, 39, 71, 0.12);
+  --shadow-md: 0 10px 16px -12px rgba(30, 39, 71, 0.6);
+  --shadow-lg: 0 22px 34px -16px rgba(30, 39, 71, 0.45);
 
   /* Ionic-Flächen hängen an den Tokens oben und folgen so dem Dark Mode */
+  --ion-font-family: var(--font-sans);
   --ion-background-color: var(--color-background);
-  --ion-background-color-rgb: 255, 253, 247;
+  --ion-background-color-rgb: 244, 247, 242;
   --ion-text-color: var(--color-text-primary);
-  --ion-text-color-rgb: 45, 45, 45;
+  --ion-text-color-rgb: 30, 39, 71;
   --ion-tab-bar-background: var(--color-surface);
   --ion-tab-bar-border-color: var(--color-border);
   --ion-tab-bar-color: var(--color-text-secondary);
+  --ion-tab-bar-color-selected: var(--color-primary-text);
   --ion-toolbar-background: var(--color-surface);
   --ion-item-background: var(--color-surface);
   color-scheme: light;
 }
 
-/* Dark mode */
+/* Nacht */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #1a1a2e;
-    --color-surface: #16213e;
-    --color-surface-raised: #1f2a4a;
-    --color-text-primary: #f0f0f0;
-    --color-text-secondary: #b0b0b0;
-    --color-text-muted: #707070;
-    --color-border: #2a3550;
+    --color-primary: #4f63d9;
+    --color-primary-light: #6677e6;
+    --color-primary-dark: #3d50c4;
+    --color-primary-text: #afbdff;
+    --color-primary-soft: #2e3b78;
+    --color-on-primary: #ffffff;
 
-    --ion-background-color-rgb: 26, 26, 46;
-    --ion-text-color-rgb: 240, 240, 240;
-    /* Ionics Blau hat auf Nachtblau zu wenig Kontrast */
-    --ion-tab-bar-color-selected: var(--color-primary-light);
+    --color-accent: #f5c451;
+    --color-on-accent: #121933;
+
+    --color-background: #121933;
+    --color-surface: #1b2446;
+    --color-surface-raised: #222d55;
+    --color-shelf: #2a3560;
+    --color-text-primary: #eef1fa;
+    --color-text-secondary: #b4bcd8;
+    --color-text-muted: #a3acc9;
+    --color-border: #2a3560;
+
+    --color-success: #237a49;
+    --color-success-text: #7fd3a0;
+    --color-error: #c4321c;
+    --color-error-text: #ffa59a;
+
+    --shadow-md: 0 10px 16px -12px rgba(0, 0, 0, 0.8);
+    --shadow-lg: 0 26px 40px -18px rgba(0, 0, 0, 0.75);
+
+    --ion-background-color-rgb: 18, 25, 51;
+    --ion-text-color-rgb: 238, 241, 250;
     color-scheme: dark;
   }
 }
 
-/* RTL support */
-[dir="rtl"] {
-  text-align: right;
+/* Arabisch: Baloo Bhaijaan 2 auch für die Oberfläche, Naskh im Reader */
+:lang(ar) {
+  --font-sans: "Baloo Bhaijaan 2", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-display: "Baloo Bhaijaan 2", "Baloo 2", system-ui, sans-serif;
+  --font-reader: "Noto Naskh Arabic", "Baloo Bhaijaan 2", serif;
 }
 
-/* Arabic font */
-[lang="ar"],
 [dir="rtl"] {
-  font-family: "Noto Naskh Arabic", "Scheherazade New", serif;
-  line-height: 1.8; /* Arabic needs more line height */
+  text-align: right;
+  /* Bücher öffnen sich auf Arabisch nach rechts — der Rücken liegt rechts */
+  --radius-book: 12px 4px 4px 12px;
 }

@@ -427,6 +427,8 @@ describe("HomePage", () => {
 
   it("shows this week's books on a shelf, newest first, labelled by day", async () => {
     const today = new Date().toISOString();
+    const daysAgo = (n: number) =>
+      new Date(Date.now() - n * 86_400_000).toISOString();
     vi.mocked(fetch).mockImplementation((url) => {
       if (String(url).includes("/daily")) {
         return Promise.resolve({
@@ -438,8 +440,14 @@ describe("HomePage", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            items: [{ ...dailyBook, published_at: today }, ...bookList],
-            total: 3,
+            items: [
+              { ...dailyBook, published_at: today },
+              { ...bookList[0], published_at: daysAgo(3) },
+              { ...bookList[1], published_at: daysAgo(1) },
+              // Älter als eine Woche: nicht im Regal, sondern unter "Alle Bücher"
+              { ...bookList[0], id: "old-1", published_at: daysAgo(30) },
+            ],
+            total: 4,
             page: 1,
             page_size: 6,
           }),
@@ -451,8 +459,11 @@ describe("HomePage", () => {
     const items = within(shelf).getAllByRole("link");
     expect(items).toHaveLength(3);
     expect(items[0]).toHaveAccessibleName(/Heute.*Das tägliche Abenteuer/);
+    expect(items[1]).toHaveAccessibleName(/Gestern.*Zweites Buch/);
     fireEvent.click(items[1]);
     expect(mockNavigate).toHaveBeenCalledWith("/books/book-2");
+    // Nichts doppelt: unter "Alle Bücher" steht nur das ältere Buch
+    expect(screen.getAllByTestId("book-card")).toHaveLength(1);
   });
 
   it("shows today's date above the book of the day", async () => {

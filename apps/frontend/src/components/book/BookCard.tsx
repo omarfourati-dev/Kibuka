@@ -4,13 +4,6 @@ import { useAppLanguage } from "../../hooks/useAppLanguage";
 import { formatPrice } from "../../lib/locale";
 import { cn } from "../../utils/cn";
 
-const LANGUAGE_FLAGS: Record<string, string> = {
-  de: "🇩🇪",
-  ar: "🇸🇦",
-  fr: "🇫🇷",
-  en: "🇬🇧",
-};
-
 interface BookCardProps {
   id: string;
   title: string;
@@ -24,6 +17,10 @@ interface BookCardProps {
   onClick?: () => void;
 }
 
+/**
+ * Ein Buch im Regal: das quadratische Cover als Buch (gerader Rücken),
+ * darunter Titel, Alter und Preis — keine Karten-Hülle drumherum.
+ */
 export function BookCard({
   title,
   coverImageUrl,
@@ -36,9 +33,6 @@ export function BookCard({
 }: BookCardProps) {
   const { t } = useTranslation();
   const lang = useAppLanguage();
-  // Gratis-Bücher (z.B. Tagesbuch) nie als "€0,00" anzeigen
-  const formattedPrice =
-    priceSingle === 0 ? t("book.free") : formatPrice(priceSingle, lang);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -46,6 +40,21 @@ export function BookCard({
       onClick?.();
     }
   };
+
+  let price: { text: string; color: string };
+  if (isPurchased) {
+    price = { text: t("book.purchased"), color: "var(--color-success-text)" };
+  } else if (isDailyBook) {
+    price = { text: t("book.todayFree"), color: "var(--color-success-text)" };
+  } else if (priceSingle === 0) {
+    // Gratis-Bücher nie als "0,00 €" anzeigen
+    price = { text: t("book.free"), color: "var(--color-success-text)" };
+  } else {
+    price = {
+      text: formatPrice(priceSingle, lang),
+      color: "var(--color-text-primary)",
+    };
+  }
 
   return (
     <div
@@ -55,92 +64,74 @@ export function BookCard({
       onClick={onClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        "rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer",
-        "overflow-hidden flex flex-col",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        "group flex flex-col gap-2 cursor-pointer rounded-xl",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-[var(--color-primary-text)]",
       )}
-      style={{ backgroundColor: "var(--color-surface)" }}
     >
-      {/* Cover image area */}
-      <div className="relative aspect-[3/4] w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-        {coverImageUrl ? (
-          <img
-            src={coverImageUrl}
-            alt={title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-5xl select-none">📚</span>
-        )}
+      <div className="relative">
+        <div
+          className="aspect-square w-full overflow-hidden flex items-center justify-center transition-transform duration-200 group-hover:-translate-y-1"
+          style={{
+            borderRadius: "var(--radius-book)",
+            boxShadow: "var(--shadow-md)",
+            backgroundColor: "var(--color-surface-raised)",
+            outline: isDailyBook ? "3px solid var(--color-accent)" : undefined,
+            outlineOffset: isDailyBook ? "2px" : undefined,
+          }}
+        >
+          {coverImageUrl ? (
+            <img
+              src={coverImageUrl}
+              alt={title}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-5xl select-none">📚</span>
+          )}
+        </div>
 
-        {/* Daily badge overlay */}
         {isDailyBook && (
           <span
-            className="absolute top-2 start-2 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
-            style={{ backgroundColor: "var(--color-primary)" }}
+            className="absolute -top-2 start-2 px-2.5 py-1 rounded-full text-xs font-bold"
+            style={{
+              backgroundColor: "var(--color-accent)",
+              color: "var(--color-on-accent)",
+            }}
           >
-            {t("book.daily")}
+            {t("book.today")}
           </span>
         )}
       </div>
 
-      {/* Card body */}
-      <div className="p-3 flex flex-col gap-2 flex-1">
-        {/* Title */}
-        <p
-          className="font-semibold text-sm leading-tight line-clamp-2"
-          style={{ color: "var(--color-text-primary)" }}
+      <p
+        className="m-0 mt-1 text-[18px] font-bold leading-[1.15] line-clamp-2"
+        style={{
+          fontFamily: "var(--font-display)",
+          color: "var(--color-text-primary)",
+        }}
+      >
+        {title}
+      </p>
+
+      <div
+        className="flex items-baseline justify-between gap-2 text-sm"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        <span>{t("book.ages", { range: ageRange.replace("-", "–") })}</span>
+        <span
+          className="font-bold whitespace-nowrap"
+          style={{ color: price.color }}
         >
-          {title}
-        </p>
-
-        {/* Language badges */}
-        <div className="flex gap-1 flex-wrap">
-          {languages.map((lang) =>
-            LANGUAGE_FLAGS[lang] ? (
-              <span
-                key={lang}
-                className="text-base leading-none"
-                aria-label={lang.toUpperCase()}
-              >
-                {LANGUAGE_FLAGS[lang]}
-              </span>
-            ) : null,
-          )}
-        </div>
-
-        {/* Age range + purchase status row */}
-        <div className="flex items-center justify-between mt-auto gap-1">
-          <span
-            className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            {t("book.ages", { range: ageRange })}
-          </span>
-
-          {isPurchased ? (
-            <span
-              className="text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: "var(--color-success)",
-                color: "#fff",
-              }}
-            >
-              {t("book.purchased")}
-            </span>
-          ) : (
-            <span
-              className="text-xs font-semibold"
-              style={{ color: "var(--color-primary)" }}
-            >
-              {formattedPrice}
-            </span>
-          )}
-        </div>
+          {price.text}
+        </span>
       </div>
+      <span
+        className="text-[13px]"
+        style={{ color: "var(--color-text-muted)" }}
+      >
+        {t("book.languagesCount", { count: languages.length })}
+      </span>
     </div>
   );
 }

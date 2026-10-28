@@ -15,10 +15,6 @@
    .dark-Klasse setzte niemand, alle dark:-Varianten waren wirkungslos. */
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
-:root {
-  --font-sans: system-ui, -apple-system, sans-serif;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -26,6 +22,37 @@
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Überschriften in Baloo — eine Familie für Latein und Arabisch */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Ab Tablet-Querformat übernimmt die TopNav — die Tableiste ist Handy-Navigation */
+@media (min-width: 1024px) {
+  ion-tab-bar.kibuka-tab-bar {
+    display: none;
+  }
+}
+
+/* Leserichtung im Reader und in der Leseprobe */
+.kibuka-reader-text {
+  font-family: var(--font-reader);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Werbefrei (Abonnenten, Reader): von AdSense Auto-Ads bereits eingefügte

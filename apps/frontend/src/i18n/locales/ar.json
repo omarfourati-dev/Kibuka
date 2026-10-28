@@ -4,7 +4,10 @@
     "spaces": "المساحات",
     "settings": "الإعدادات",
     "admin": "الإدارة",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "main": "التنقل الرئيسي",
+    "languageButton": "لغة التطبيق: {{language}}",
+    "languageMenu": "اختر اللغة"
   },
   "ai": {
     "chat": "محادثة الذكاء الاصطناعي",
@@ -34,10 +37,10 @@
     "loading": "جارٍ التحميل…"
   },
   "tabs": {
-    "home": "الرئيسية",
+    "home": "اليوم",
     "library": "المكتبة",
-    "pricing": "الأسعار",
-    "profile": "حسابي"
+    "pricing": "الاشتراك",
+    "profile": "العائلة"
   },
   "meta": {
     "home": "Kibuka – قصص أطفال بالعربية: قصة مصوّرة جديدة كل يوم",
@@ -81,14 +84,26 @@
     "purchased": "تم الشراء",
     "daily": "قصة اليوم",
     "cardLabel": "كتاب: {{title}}",
-    "pageAlt": "الصفحة {{page}}"
+    "pageAlt": "الصفحة {{page}}",
+    "languagesCount_zero": "{{count}} لغات",
+    "languagesCount_one": "لغة واحدة",
+    "languagesCount_two": "لغتان",
+    "languagesCount_few": "{{count}} لغات",
+    "languagesCount_many": "{{count}} لغة",
+    "languagesCount_other": "{{count}} لغة",
+    "todayFree": "مجاني اليوم",
+    "today": "اليوم"
   },
   "home": {
     "loading": "جارٍ تحميل الصفحة الرئيسية…",
     "errorText": "تعذّر تحميل الكتب. تحقّق من اتصالك بالإنترنت ثم حاول مرة أخرى.",
     "emptyTitle": "لا توجد كتب حاليًا",
     "emptyText": "عُد إلينا قريبًا، فكل يوم تصدر قصة جديدة!",
-    "allBooks": "كل القصص"
+    "allBooks": "كل القصص",
+    "thisWeek": "هذا الأسبوع",
+    "subscribeTitle": "كتاب جديد كل مساء، بلغة عائلتكم",
+    "subscribeText": "مع الاشتراك يقرأ طفلك جميع الكتب بالألمانية والعربية والفرنسية والإنجليزية. يمكن الإلغاء شهرياً.",
+    "subscribeCta": "عرض الاشتراك"
   },
   "hero": {
     "badge": "قصة اليوم",
@@ -96,7 +111,11 @@
     "readFree": "اقرأ مجانًا",
     "readNow": "اقرأ الآن",
     "buy": "اشترِ بـ {{price}}",
-    "preview": "اقرأ مقتطفًا"
+    "preview": "اقرأ مقتطفًا",
+    "badgeToday": "مجاني اليوم",
+    "readToday": "اقرأ مجاناً اليوم",
+    "otherTitles": "العنوان بلغات أخرى",
+    "cover": "غلاف: {{title}}"
   },
   "library": {
     "title": "المكتبة",
@@ -233,7 +252,15 @@
     "toRegister": "أنشئ حسابًا",
     "haveAccount": "لديك حساب بالفعل؟",
     "toSignIn": "سجّل دخولك",
-    "failed": "تعذّر تسجيل الدخول. يُرجى المحاولة مرة أخرى."
+    "failed": "تعذّر تسجيل الدخول. يُرجى المحاولة مرة أخرى.",
+    "familyTitle": "حساب عائلتكم",
+    "familyText": "مجاني. يقرأ طفلك به كتاب اليوم مجاناً كل يوم، ويتذكر كيبوكا أين توقفتم.",
+    "tabsLabel": "الحساب",
+    "tabNew": "جديد هنا",
+    "tabSignIn": "تسجيل الدخول",
+    "registerAndRead": "أنشئ الحساب واقرأ",
+    "signInAndRead": "سجّل الدخول واقرأ",
+    "noPayment": "بلا اشتراك وبلا بيانات دفع."
   },
   "legal": {
     "nav": "معلومات قانونية",

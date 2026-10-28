@@ -57,10 +57,9 @@ export function formatPrice(amount: number, lang: Language): string {
       return `${value} يورو`;
     case "en":
       return `€${value}`;
-    case "fr":
-      return `${value.replace(".", ",")} €`;
     default:
-      return `€${value.replace(".", ",")}`;
+      // Deutsch und Französisch: Betrag vor dem Zeichen (DIN 5008: "2,99 €")
+      return `${value.replace(".", ",")} €`;
   }
 }
 
@@ -78,5 +77,37 @@ export function formatDate(iso: string | null, lang: Language): string | null {
     day: "numeric",
     month: "long",
     year: "numeric",
+  });
+}
+
+const startOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+const TODAY: Record<Language, [string, string]> = {
+  de: ["Heute", "Gestern"],
+  ar: ["اليوم", "أمس"],
+  fr: ["Aujourd’hui", "Hier"],
+  en: ["Today", "Yesterday"],
+};
+
+/** Beschriftung im Regal „Diese Woche": Heute, Gestern, sonst Wochentag. */
+export function dayLabel(
+  iso: string,
+  lang: Language,
+  now = new Date(),
+): string {
+  const day = new Date(iso);
+  const diff = Math.round((startOfDay(now) - startOfDay(day)) / 86_400_000);
+  if (diff <= 0) return TODAY[lang][0];
+  if (diff === 1) return TODAY[lang][1];
+  return day.toLocaleDateString(DATE_LOCALES[lang], { weekday: "long" });
+}
+
+/** Datumszeile über dem Buch des Tages, z. B. "Mittwoch, 28. Oktober". */
+export function formatToday(day: Date, lang: Language): string {
+  return day.toLocaleDateString(DATE_LOCALES[lang], {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 }

@@ -115,7 +115,8 @@ describe("BookCard", () => {
 
   it("shows age range badge", () => {
     render(<BookCard {...defaultProps} ageRange="3-5" />);
-    expect(screen.getByText("3-5 Jahre")).toBeInTheDocument();
+    // Halbgeviertstrich für Bereiche
+    expect(screen.getByText("3–5 Jahre")).toBeInTheDocument();
   });
 
   it("is focusable (has tabIndex)", () => {
@@ -131,10 +132,12 @@ describe("BookCard auf Arabisch", () => {
   });
 
   it("labels price, age and badges in Arabic", () => {
-    render(<BookCard {...defaultProps} isDailyBook />);
+    const { rerender } = render(<BookCard {...defaultProps} />);
     expect(screen.getByText("1.99 يورو")).toBeInTheDocument();
-    expect(screen.getByText("3-5 سنوات")).toBeInTheDocument();
-    expect(screen.getByText(ar.book.daily)).toBeInTheDocument();
+    expect(screen.getByText("3–5 سنوات")).toBeInTheDocument();
+    rerender(<BookCard {...defaultProps} isDailyBook />);
+    expect(screen.getByText(ar.book.today)).toBeInTheDocument();
+    expect(screen.getByText(ar.book.todayFree)).toBeInTheDocument();
     expect(
       screen.getByRole("article", { name: "كتاب: Das Abenteuer im Wald" }),
     ).toBeInTheDocument();
@@ -149,7 +152,7 @@ describe("BookCard auf Arabisch", () => {
 
   it("pins the daily badge to the reading start (right in Arabic)", () => {
     render(<BookCard {...defaultProps} isDailyBook />);
-    const badge = screen.getByText(ar.book.daily);
+    const badge = screen.getByText(ar.book.today);
     expect(badge.className).toContain("start-2");
     expect(badge.className).not.toContain("left-2");
   });
