@@ -8,6 +8,7 @@ import { BookCard } from "../components/book/BookCard";
 import { LegalFooter } from "../components/legal/LegalFooter";
 import { TopNav } from "../components/layout/TopNav";
 import { useAppLanguage } from "../hooks/useAppLanguage";
+import { useBillingEnabled } from "../hooks/useBillingEnabled";
 import { useIsSubscriber } from "../hooks/useIsSubscriber";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { dayLabel, formatToday, pickTitle } from "../lib/locale";
@@ -42,9 +43,11 @@ export default function HomePage() {
   // /ar, /fr, /en setzen die App-Sprache (DocumentLanguage) — Buchtitel folgen ihr
   const lang = useAppLanguage();
   usePageTitle(t("meta.home"));
-  // Abo-Band nur für Familien ohne Abo — solange der Status lädt, gar nicht
-  // (kein kurzes Aufblitzen für Abonnenten)
+  // Abo-Band nur, wenn man ein Abo abschließen kann (ENABLE_BILLING) und
+  // noch keins hat — solange etwas lädt, gar nicht (kein Aufblitzen)
   const isSubscriber = useIsSubscriber();
+  const billingEnabled = useBillingEnabled();
+  const showSubscribeBand = billingEnabled === true && isSubscriber === false;
 
   const [dailyBook, setDailyBook] = useState<BookSummary | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
@@ -336,7 +339,7 @@ export default function HomePage() {
         )}
 
         {/* Abo-Band: bewusst in den Nacht-Farben, in beiden Modi gleich */}
-        {isSubscriber === false && (
+        {showSubscribeBand && (
           <section
             aria-labelledby="home-subscribe"
             className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-12 rounded-[28px] p-6 lg:px-11 lg:py-10"

@@ -91,7 +91,9 @@ describe("AdSenseLoader", () => {
   });
 
   it("waits for the subscription status before loading", () => {
-    useAuthStore.setState(SIGNED_IN);
+    // Eigenes Token: die nie beantwortete Abfrage wird je Token geteilt und
+    // darf nicht in den nächsten Test hängen
+    useAuthStore.setState({ ...SIGNED_IN, accessToken: "tok-pending" });
     vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
 
     renderAt("/");

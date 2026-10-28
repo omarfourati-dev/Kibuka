@@ -40,6 +40,7 @@ interface BookDetail {
 
 const SUPPORTED_LANGUAGES = ["de", "ar", "fr", "en"];
 const NOT_PLAYING = -1;
+const SWIPE_MIN_PX = 50;
 
 function isSupportedLanguage(lang: string): lang is Language {
   return (["de", "ar", "fr", "en"] as const).includes(lang as Language);
@@ -142,6 +143,26 @@ export default function ReaderPage() {
     setCurrentTimeMs(NOT_PLAYING);
     void contentRef.current?.scrollToTop?.(0);
   }, [currentPage, selectedLanguage]);
+
+  // Wischen blättert wie die Pfeiltasten: nach links = weiter (Arabisch
+  // umgekehrt). Kurze oder eher senkrechte Bewegungen sind Scrollen.
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current;
+    const t = e.changedTouches[0];
+    touchStart.current = null;
+    if (!start || !t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5)
+      return;
+    const forward = isRtlUi ? dx > 0 : dx < 0;
+    (forward ? goNext : goPrev)();
+  };
 
   // Nächste Illustration vorladen, damit das Umblättern nicht flackert
   useEffect(() => {
@@ -338,6 +359,8 @@ export default function ReaderPage() {
           <main className="flex-1 w-full max-w-xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-5 lg:py-10 flex flex-col gap-6">
             {/* Die Seite: Bild und Text wie im Buch — am Desktop aufgeschlagen */}
             <article
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
               className="overflow-hidden lg:grid lg:grid-cols-2 rounded-[22px]"
               style={{
                 backgroundColor: "var(--color-surface)",

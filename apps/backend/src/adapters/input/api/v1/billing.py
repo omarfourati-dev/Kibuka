@@ -7,7 +7,7 @@ from functools import cache
 from typing import Annotated, Any, Literal
 
 import stripe
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -300,6 +300,18 @@ async def create_subscription_checkout(
         withdrawal_waiver_at=waiver_at,
     )
     return {"url": url}
+
+
+class BillingConfigResponse(BaseModel):
+    enabled: bool
+
+
+@router.get("/config", response_model=BillingConfigResponse)
+async def get_billing_config(response: Response) -> BillingConfigResponse:
+    """Öffentlich: kann man gerade überhaupt kaufen/abonnieren? Das Frontend
+    zeigt das Abo-Band nur dann. Bewusst nur der Schalter, keine Preis-IDs."""
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return BillingConfigResponse(enabled=settings.enable_billing)
 
 
 @router.get("/subscription/me", response_model=SubscriptionStatusResponse)
