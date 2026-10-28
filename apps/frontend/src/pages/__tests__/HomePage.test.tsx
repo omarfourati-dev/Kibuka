@@ -48,6 +48,12 @@ vi.mock("../../components/book/BookCard", () => ({
   ),
 }));
 
+// ─── Mock Billing-Schalter (ENABLE_BILLING) ─────────────────────────────────
+let billingEnabled: boolean | null = true;
+vi.mock("../../hooks/useBillingEnabled", () => ({
+  useBillingEnabled: () => billingEnabled,
+}));
+
 // ─── Mock useHistory ─────────────────────────────────────────────────────────
 const mockNavigate = vi.fn();
 const mockHistory = { push: mockNavigate, replace: vi.fn(), goBack: vi.fn() };
@@ -535,6 +541,7 @@ describe("HomePage", () => {
     }
 
     afterEach(() => {
+      billingEnabled = true;
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,
@@ -572,6 +579,25 @@ describe("HomePage", () => {
         ),
       );
       // Auch nicht kurz aufblitzen, solange der Status noch lädt
+      expect(
+        screen.queryByRole("region", { name: de.home.subscribeTitle }),
+      ).not.toBeInTheDocument();
+    });
+    it("shows no band while subscriptions cannot be bought yet (billing off)", async () => {
+      billingEnabled = false;
+      catalogWith(false);
+      renderHomePage();
+      await screen.findByTestId("book-hero");
+      expect(
+        screen.queryByRole("region", { name: de.home.subscribeTitle }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("waits for the billing switch before showing the band", async () => {
+      billingEnabled = null;
+      catalogWith(false);
+      renderHomePage();
+      await screen.findByTestId("book-hero");
       expect(
         screen.queryByRole("region", { name: de.home.subscribeTitle }),
       ).not.toBeInTheDocument();

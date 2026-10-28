@@ -77,4 +77,14 @@ describe("useIsSubscriber", () => {
     const { result } = renderHook(() => useIsSubscriber());
     await waitFor(() => expect(result.current).toBe(false));
   });
+  it("asks the server once when several parts of the page need the status", async () => {
+    // Startseite (Abo-Band) und Werbung fragen gleichzeitig — eine Anfrage
+    useAuthStore.setState({ accessToken: "tok-shared", isAuthenticated: true });
+    vi.mocked(fetch).mockResolvedValue(subscription(true));
+    const first = renderHook(() => useIsSubscriber());
+    const second = renderHook(() => useIsSubscriber());
+    await waitFor(() => expect(first.result.current).toBe(true));
+    await waitFor(() => expect(second.result.current).toBe(true));
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });

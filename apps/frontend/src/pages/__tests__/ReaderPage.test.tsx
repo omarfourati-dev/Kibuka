@@ -122,6 +122,19 @@ function renderReaderPage(bookId = "book-1", search = "") {
   );
 }
 
+function swipe(
+  el: Element,
+  fromX: number,
+  toX: number,
+  fromY = 200,
+  toY = 200,
+) {
+  fireEvent.touchStart(el, { touches: [{ clientX: fromX, clientY: fromY }] });
+  fireEvent.touchEnd(el, {
+    changedTouches: [{ clientX: toX, clientY: toY }],
+  });
+}
+
 describe("ReaderPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de");
@@ -495,6 +508,46 @@ describe("ReaderPage", () => {
     await waitFor(() =>
       expect(screen.getByText(/2\s*\/\s*3/)).toBeInTheDocument(),
     );
+  });
+
+  describe("Wischen auf dem Handy", () => {
+    beforeEach(() => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockBook),
+      } as Response);
+    });
+
+    it("swiping left turns to the next page, right goes back", async () => {
+      renderReaderPage();
+      await screen.findByTestId("word-highlighter");
+      swipe(screen.getByRole("article"), 300, 100);
+      await waitFor(() =>
+        expect(screen.getByText(/2\s*\/\s*3/)).toBeInTheDocument(),
+      );
+      swipe(screen.getByRole("article"), 100, 300);
+      await waitFor(() =>
+        expect(screen.getByText(/1\s*\/\s*3/)).toBeInTheDocument(),
+      );
+    });
+
+    it("ignores short and mostly vertical moves (scrolling the text)", async () => {
+      renderReaderPage();
+      await screen.findByTestId("word-highlighter");
+      swipe(screen.getByRole("article"), 200, 170);
+      swipe(screen.getByRole("article"), 300, 200, 100, 400);
+      expect(screen.getByText(/1\s*\/\s*3/)).toBeInTheDocument();
+    });
+
+    it("swipes the other way round in Arabic, like a right-to-left book", async () => {
+      await i18n.changeLanguage("ar");
+      renderReaderPage();
+      await screen.findByTestId("word-highlighter");
+      swipe(screen.getByRole("article"), 100, 300);
+      await waitFor(() =>
+        expect(screen.getByText(/2\s*\/\s*3/)).toBeInTheDocument(),
+      );
+    });
   });
 
   it("keeps an explicit ?language over the app language", async () => {
