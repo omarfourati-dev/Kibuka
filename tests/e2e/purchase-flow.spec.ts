@@ -44,6 +44,6 @@ test.describe('Purchase Flow', () => {
   test('pricing page shows jährlich savings amount', async ({ page }) => {
     await page.goto('/pricing')
     // The yearly plan should show the price anchor
-    await expect(page.getByText('€99')).toBeVisible()
+    await expect(page.getByText('99 €', { exact: true })).toBeVisible()
   })
 })

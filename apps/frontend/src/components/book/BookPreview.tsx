@@ -45,7 +45,7 @@ export function BookPreview({ pages, language }: BookPreviewProps) {
           <div className="p-4 flex flex-col gap-2">
             {/* Page number */}
             <span
-              className="text-xs font-bold uppercase tracking-wider"
+              className="text-xs font-bold"
               style={{ color: "var(--color-text-muted)" }}
             >
               {page.pageNumber}
@@ -53,7 +53,8 @@ export function BookPreview({ pages, language }: BookPreviewProps) {
 
             {/* Page text */}
             <p
-              className="text-lg leading-relaxed"
+              lang={language}
+              className="kibuka-reader-text text-[21px] leading-relaxed"
               style={{ color: "var(--color-text-primary)" }}
             >
               {page.text}

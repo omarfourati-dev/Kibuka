@@ -32,8 +32,9 @@ export function WordHighlighter({
   return (
     <p
       dir={getDir(language as Language)}
+      lang={language}
       className={cn(
-        "leading-relaxed flex flex-wrap gap-x-1 gap-y-0.5",
+        "kibuka-reader-text leading-relaxed flex flex-wrap gap-x-1 gap-y-0.5",
         FONT_SIZE_MAP[fontSize],
       )}
     >

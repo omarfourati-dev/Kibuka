@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { Link, useHistory, useLocation } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders, useAuthStore } from "@omarsapp/shared-stores";
 import { LegalFooter } from "../components/legal/LegalFooter";
+import { TopNav } from "../components/layout/TopNav";
 import { WithdrawalWaiver } from "../components/legal/WithdrawalWaiver";
 import { PricingCard } from "../components/pricing/PricingCard";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { formatPrice, homePathFor } from "../lib/locale";
+import { formatPrice } from "../lib/locale";
 import type { Language } from "../lib/rtl";
 import { cn } from "../utils/cn";
 
@@ -96,7 +97,7 @@ function FaqAccordionItem({ question, answer }: FaqItem) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between py-4 text-start text-sm font-semibold text-slate-900 dark:text-white hover:text-orange-500 dark:hover:text-orange-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded"
+        className="flex w-full items-center justify-between py-4 text-start text-sm font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary-text)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-text)] rounded"
       >
         <span>{question}</span>
         <span
@@ -185,6 +186,7 @@ export default function PricingPage() {
   return (
     <IonPage>
       <IonContent>
+        <TopNav />
         <div
           className="min-h-screen"
           style={{
@@ -192,36 +194,10 @@ export default function PricingPage() {
             color: "var(--color-text-primary)",
           }}
         >
-          {/* Nav */}
-          <header
-            className="sticky top-0 z-10 border-b backdrop-blur-sm"
-            style={{
-              borderColor: "var(--color-border)",
-              backgroundColor: "var(--color-background)",
-            }}
-          >
-            <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-              <Link
-                to={homePathFor(lang)}
-                className="font-extrabold text-xl"
-                style={{ color: "var(--color-primary)" }}
-              >
-                📚 Kibuka
-              </Link>
-              <Link
-                to="/library"
-                className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-                style={{ color: "var(--color-text-secondary)" }}
-              >
-                {t("pricing.toLibrary")}
-              </Link>
-            </div>
-          </header>
-
           {/* Hero */}
-          <section className="max-w-3xl mx-auto px-6 py-16 text-center">
+          <section className="max-w-3xl mx-auto px-6 pt-8 pb-10 lg:pt-14 lg:pb-12 text-center">
             <h1
-              className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight"
+              className="text-[34px] md:text-5xl font-extrabold mb-4 leading-tight"
               style={{ color: "var(--color-text-primary)" }}
             >
               {t("pricing.headline")}

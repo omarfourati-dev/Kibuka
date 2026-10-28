@@ -44,7 +44,7 @@ export function WithdrawalWaiver({
           id={errorId}
           role="alert"
           className="mt-2 text-sm font-medium"
-          style={{ color: "#dc2626" }}
+          style={{ color: "var(--color-error-text)" }}
         >
           {t("legal.waiverRequired")}
         </p>

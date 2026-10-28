@@ -92,7 +92,8 @@
     "languagesCount_many": "{{count}} لغة",
     "languagesCount_other": "{{count}} لغة",
     "todayFree": "مجاني اليوم",
-    "today": "اليوم"
+    "today": "اليوم",
+    "meta": "{{ages}}، {{pages}}"
   },
   "home": {
     "loading": "جارٍ تحميل الصفحة الرئيسية…",

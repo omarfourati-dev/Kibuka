@@ -11,6 +11,7 @@ import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { logout } from "../lib/session";
 import { LegalFooter } from "../components/legal/LegalFooter";
+import { TopNav } from "../components/layout/TopNav";
 import { resetAdConsent } from "../lib/ads";
 import { formatDate, LANGUAGES, NATIVE_LANGUAGE_NAMES } from "../lib/locale";
 import { cn } from "../utils/cn";
@@ -92,6 +93,7 @@ export default function ProfilePage() {
   return (
     <IonPage>
       <IonContent>
+        <TopNav />
         <div className="flex flex-col gap-6 p-6 max-w-xl mx-auto">
           <h1
             className="text-2xl font-extrabold"
@@ -197,7 +199,7 @@ export default function ProfilePage() {
                       className="self-start mt-1 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all duration-200 hover:opacity-80 disabled:opacity-60"
                       style={{
                         borderColor: "var(--color-primary)",
-                        color: "var(--color-primary)",
+                        color: "var(--color-primary-text)",
                       }}
                     >
                       {openingPortal
@@ -205,7 +207,10 @@ export default function ProfilePage() {
                         : t("profile.manage")}
                     </button>
                     {portalError && (
-                      <span className="text-sm" style={{ color: "#dc2626" }}>
+                      <span
+                        className="text-sm"
+                        style={{ color: "var(--color-error-text)" }}
+                      >
                         {portalError}
                       </span>
                     )}
@@ -230,7 +235,7 @@ export default function ProfilePage() {
                       className="self-start mt-1 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all duration-200 hover:opacity-80"
                       style={{
                         borderColor: "var(--color-primary)",
-                        color: "var(--color-primary)",
+                        color: "var(--color-primary-text)",
                       }}
                     >
                       {t("profile.viewPlans")}

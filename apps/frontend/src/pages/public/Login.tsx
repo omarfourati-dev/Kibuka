@@ -157,7 +157,10 @@ export default function Login() {
         <Link
           to={homePathFor(lang)}
           className="inline-flex items-center gap-2 text-[24px] font-extrabold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-text)]"
-          style={{ fontFamily: "var(--font-display)" }}
+          style={{
+            fontFamily: "var(--font-display)",
+            color: "var(--color-text-primary)",
+          }}
         >
           <SunMark />
           <span lang="de">Kibuka</span>

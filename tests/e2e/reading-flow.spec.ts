@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { navItem } from './nav'
 
 test.describe('Homepage', () => {
   test('loads and shows daily book section', async ({ page }) => {
@@ -207,8 +208,8 @@ test.describe('Tab-Navigation', () => {
     })
   }
 
-  for (const tab of ['Bibliothek', 'Preise', 'Profil']) {
-    test(`switching ${tab} → Home shows the home page again`, async ({ page }) => {
+  for (const tab of ['Bibliothek', 'Abo', 'Familie']) {
+    test(`switching ${tab} → Heute shows the home page again`, async ({ page }) => {
       await page.route('**/api/v1/books/daily', (r) =>
         r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DAILY) })
       )
@@ -219,13 +220,13 @@ test.describe('Tab-Navigation', () => {
       await page.route('**/api/v1/auth/refresh', (r) => r.fulfill({ status: 401, body: '{}' }))
 
       await page.goto('/')
-      await expect(page.getByText('Buch des Tages')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText('Heute gratis', { exact: true })).toBeVisible({ timeout: 10000 })
 
-      await page.locator('ion-tab-button', { hasText: tab }).click()
-      await expect.poll(() => topPageText(page)).not.toContain('Buch des Tages')
+      await (await navItem(page, tab)).click()
+      await expect.poll(() => topPageText(page)).not.toContain('Heute gratis')
 
-      await page.locator('ion-tab-button', { hasText: 'Home' }).click()
-      await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('Buch des Tages')
+      await (await navItem(page, 'Heute')).click()
+      await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('Heute gratis')
     })
   }
 })

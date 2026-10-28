@@ -1,11 +1,10 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppLanguage } from "../../hooks/useAppLanguage";
-import {
-  LANGUAGES,
-  NATIVE_LANGUAGE_NAMES,
-  formatPrice,
-} from "../../lib/locale";
+import { NATIVE_LANGUAGE_NAMES, formatPrice } from "../../lib/locale";
+import type { Language } from "../../lib/rtl";
+
+const TITLE_ORDER: readonly Language[] = ["de", "en", "fr", "ar"];
 
 interface BookHeroBook {
   id: string;
@@ -53,7 +52,8 @@ export function BookHero({
   const formattedPrice = formatPrice(book.priceSingle, lang);
   // Gratis/Tagesbuch: lesen statt kaufen — niemals "0,00 € kaufen"
   const isFree = isDaily || book.priceSingle === 0;
-  const otherTitles = LANGUAGES.filter(
+  // Lateinische Schriften zuerst, Arabisch (andere Leserichtung) zuletzt
+  const otherTitles = TITLE_ORDER.filter(
     (l) => l !== lang && titles?.[l] && titles[l] !== book.title,
   );
 
@@ -145,7 +145,9 @@ export function BookHero({
                           ? '"Baloo Bhaijaan 2", var(--font-display)'
                           : '"Baloo 2", var(--font-display)',
                       color: "var(--color-text-primary)",
-                      textAlign: l === "ar" ? "right" : "left",
+                      // Alle Titel an derselben Kante wie die Seite —
+                      // sonst springt Arabisch an den anderen Rand
+                      textAlign: lang === "ar" ? "right" : "left",
                     }}
                   >
                     {titles?.[l]}

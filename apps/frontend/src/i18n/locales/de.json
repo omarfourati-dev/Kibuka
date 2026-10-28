@@ -84,7 +84,8 @@
     "languagesCount_one": "{{count}} Sprache",
     "languagesCount_other": "{{count}} Sprachen",
     "todayFree": "Heute gratis",
-    "today": "Heute"
+    "today": "Heute",
+    "meta": "{{ages}}, {{pages}}"
   },
   "home": {
     "loading": "Lade Startseite...",

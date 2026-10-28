@@ -100,6 +100,13 @@ export function dayLabel(
   const diff = Math.round((startOfDay(now) - startOfDay(day)) / 86_400_000);
   if (diff <= 0) return TODAY[lang][0];
   if (diff === 1) return TODAY[lang][1];
+  // Ab sechs Tagen wiederholte sich der Wochentag von heute — dann Datum
+  if (diff >= 6) {
+    return day.toLocaleDateString(DATE_LOCALES[lang], {
+      day: "numeric",
+      month: "short",
+    });
+  }
   return day.toLocaleDateString(DATE_LOCALES[lang], { weekday: "long" });
 }
 

@@ -5,6 +5,7 @@ import { IonContent, IonPage } from "@ionic/react";
 import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookCard } from "../components/book/BookCard";
 import { LegalFooter } from "../components/legal/LegalFooter";
+import { TopNav } from "../components/layout/TopNav";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { LANGUAGES, pickTitle } from "../lib/locale";
@@ -113,6 +114,7 @@ export default function LibraryPage() {
   return (
     <IonPage>
       <IonContent>
+        <TopNav />
         <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
           {/* Page heading */}
           <h1
@@ -126,7 +128,7 @@ export default function LibraryPage() {
           <div className="flex flex-wrap gap-3 items-center">
             <label className="flex flex-col gap-1">
               <span
-                className="text-xs font-semibold uppercase tracking-wide"
+                className="text-xs font-semibold"
                 style={{ color: "var(--color-text-secondary)" }}
               >
                 {t("library.language")}
@@ -155,7 +157,7 @@ export default function LibraryPage() {
 
             <label className="flex flex-col gap-1">
               <span
-                className="text-xs font-semibold uppercase tracking-wide"
+                className="text-xs font-semibold"
                 style={{ color: "var(--color-text-secondary)" }}
               >
                 {t("library.age")}
@@ -184,7 +186,7 @@ export default function LibraryPage() {
 
             <label className="flex flex-col gap-1">
               <span
-                className="text-xs font-semibold uppercase tracking-wide"
+                className="text-xs font-semibold"
                 style={{ color: "var(--color-text-secondary)" }}
               >
                 {t("library.theme")}
@@ -222,7 +224,7 @@ export default function LibraryPage() {
               {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl aspect-[3/4] animate-pulse"
+                  className="rounded-xl aspect-square animate-pulse"
                   style={{ backgroundColor: "var(--color-surface-raised)" }}
                 />
               ))}

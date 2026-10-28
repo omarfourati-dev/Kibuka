@@ -88,9 +88,21 @@ export default function HomePage() {
     const all = [...(dailyBook ? [dailyBook] : []), ...books].filter(
       (b, i, list) => list.findIndex((x) => x.id === b.id) === i,
     );
+    // Das Buch des Tages steht immer vorn ("Heute"), auch wenn es schon
+    // früher erschienen ist; danach die übrigen der Woche, neuestes zuerst
     const recent = all
-      .filter((b) => now - new Date(b.published_at).getTime() < 7 * 86_400_000)
-      .sort((a, b) => b.published_at.localeCompare(a.published_at));
+      .filter(
+        (b) =>
+          b.id === dailyBook?.id ||
+          now - new Date(b.published_at).getTime() < 7 * 86_400_000,
+      )
+      .sort((a, b) =>
+        a.id === dailyBook?.id
+          ? -1
+          : b.id === dailyBook?.id
+            ? 1
+            : b.published_at.localeCompare(a.published_at),
+      );
     const shelfIds = new Set(recent.map((b) => b.id));
     return {
       shelf: recent,
@@ -203,7 +215,12 @@ export default function HomePage() {
               }}
               isDaily
               titles={dailyBook.titles}
-              meta={`${t("book.ages", { range: dailyBook.age_range.replace("-", "–") })}, ${t("book.pages", { count: dailyBook.page_count })}`}
+              meta={t("book.meta", {
+                ages: t("book.ages", {
+                  range: dailyBook.age_range.replace("-", "–"),
+                }),
+                pages: t("book.pages", { count: dailyBook.page_count }),
+              })}
               isPurchased={dailyBook.is_purchased ?? false}
               // Buch des Tages ist heute gratis (mit Familienkonto): direkt in
               // den Reader — ohne Konto fängt der Reader per Login ab
@@ -268,7 +285,9 @@ export default function HomePage() {
                             : "var(--color-text-secondary)",
                         }}
                       >
-                        {dayLabel(book.published_at, lang)}
+                        {isToday
+                          ? t("book.today")
+                          : dayLabel(book.published_at, lang)}
                       </span>
                       <span className="sr-only">
                         {pickTitle(book.titles, lang)}

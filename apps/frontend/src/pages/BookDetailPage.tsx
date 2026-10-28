@@ -6,6 +6,7 @@ import { getAuthHeaders } from "@omarsapp/shared-stores";
 import { BookPreview } from "../components/book/BookPreview";
 import { LanguagePicker } from "../components/reader/LanguagePicker";
 import { LegalFooter } from "../components/legal/LegalFooter";
+import { TopNav } from "../components/layout/TopNav";
 import { WithdrawalWaiver } from "../components/legal/WithdrawalWaiver";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -129,6 +130,7 @@ export default function BookDetailPage() {
     return (
       <IonPage>
         <IonContent>
+          <TopNav />
           <div
             role="status"
             aria-label={t("bookDetail.loading")}
@@ -140,7 +142,7 @@ export default function BookDetailPage() {
             />
             <div className="flex gap-6">
               <div
-                className="flex-shrink-0 w-48 aspect-[3/4] rounded-xl"
+                className="flex-shrink-0 w-48 aspect-square rounded-xl"
                 style={{ backgroundColor: "var(--color-surface-raised)" }}
               />
               <div className="flex flex-col gap-3 flex-1">
@@ -168,6 +170,7 @@ export default function BookDetailPage() {
     return (
       <IonPage>
         <IonContent>
+          <TopNav />
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
             <p
               className="text-lg font-semibold"
@@ -253,6 +256,7 @@ export default function BookDetailPage() {
   return (
     <IonPage>
       <IonContent>
+        <TopNav />
         <div className="flex flex-col gap-8 p-6 max-w-3xl mx-auto">
           {/* Back button */}
           <button
@@ -307,7 +311,7 @@ export default function BookDetailPage() {
           {/* Hero section */}
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Cover */}
-            <div className="flex-shrink-0 w-full sm:w-48 aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <div className="flex-shrink-0 w-full sm:w-48 aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
               {book.cover_image_url ? (
                 <img
                   src={book.cover_image_url}
@@ -336,7 +340,7 @@ export default function BookDetailPage() {
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  {t("book.ages", { range: book.age_range })}
+                  {t("book.ages", { range: book.age_range.replace("-", "–") })}
                 </span>
                 <span
                   className="text-xs px-2 py-1 rounded-full font-medium"
@@ -423,7 +427,10 @@ export default function BookDetailPage() {
                   </>
                 )}
                 {purchaseError && (
-                  <p className="text-sm w-full" style={{ color: "#dc2626" }}>
+                  <p
+                    className="text-sm w-full"
+                    style={{ color: "var(--color-error-text)" }}
+                  >
                     {purchaseError}
                   </p>
                 )}

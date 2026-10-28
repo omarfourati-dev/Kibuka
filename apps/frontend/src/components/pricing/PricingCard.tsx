@@ -26,91 +26,119 @@ export function PricingCard({
   return (
     <div
       className={cn(
-        "relative flex flex-col rounded-2xl border p-8 transition-all duration-200",
-        isHighlighted
-          ? "highlighted border-orange-400 bg-orange-50 ring-2 ring-orange-400 shadow-lg shadow-orange-100 dark:bg-orange-950/20 dark:border-orange-500 dark:ring-orange-500 dark:shadow-orange-900/30"
-          : "border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700 shadow-sm",
+        "relative flex flex-col rounded-[24px] p-7 lg:p-8",
+        isHighlighted ? "highlighted border-2" : "border-[1.5px]",
       )}
+      style={{
+        backgroundColor: "var(--color-surface)",
+        borderColor: isHighlighted
+          ? "var(--color-primary)"
+          : "var(--color-border)",
+        boxShadow: isHighlighted
+          ? "0 22px 40px -28px rgba(51, 67, 168, 0.6)"
+          : undefined,
+      }}
     >
-      {/* Badge */}
       {badge && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white shadow-md whitespace-nowrap">
+        <div className="absolute -top-3.5 inset-x-0 flex justify-center">
+          <span
+            className="inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] font-bold whitespace-nowrap"
+            style={{
+              backgroundColor: "var(--color-accent)",
+              color: "var(--color-on-accent)",
+            }}
+          >
             {badge}
           </span>
         </div>
       )}
 
-      {/* Header */}
       <div className="mb-6">
         <p
-          className={cn(
-            "text-sm font-semibold uppercase tracking-wide mb-2",
-            isHighlighted
-              ? "text-orange-600 dark:text-orange-400"
-              : "text-slate-500 dark:text-slate-400",
-          )}
+          className="text-base font-bold mb-1.5"
+          style={{ color: "var(--color-text-secondary)" }}
         >
           {title}
         </p>
 
-        <div className="flex items-end gap-1.5 mb-1">
+        <div className="flex items-baseline gap-2 mb-2 flex-wrap">
           <span
-            className={cn(
-              "text-4xl font-extrabold",
-              isHighlighted
-                ? "text-orange-600 dark:text-orange-400"
-                : "text-slate-900 dark:text-white",
-            )}
+            className="text-[44px] font-extrabold leading-none"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "var(--color-text-primary)",
+            }}
           >
             {price}
           </span>
           {priceNote && (
-            <span className="text-sm text-slate-500 dark:text-slate-400 mb-1">
+            <span
+              className="text-[15px]"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
               {priceNote}
             </span>
           )}
         </div>
 
         {savings && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5">
+          <span
+            className="inline-flex items-center rounded-full text-[13px] font-bold px-3 py-1"
+            style={{
+              backgroundColor: "var(--color-surface-raised)",
+              color: "var(--color-success-text)",
+            }}
+          >
             {savings}
           </span>
         )}
       </div>
 
-      {/* Features */}
-      <ul className="space-y-3 mb-8 flex-1">
+      <ul className="flex flex-col gap-3 mb-8 flex-1 p-0 m-0 list-none">
         {features.map((feature) => (
-          <li key={feature} className="flex items-start gap-2.5 text-sm">
-            <span
+          <li key={feature} className="flex items-start gap-3 text-[15px]">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-success-text)"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               aria-hidden="true"
-              className={cn(
-                "mt-0.5 flex-shrink-0 text-base leading-none",
-                isHighlighted
-                  ? "text-orange-500 dark:text-orange-400"
-                  : "text-green-500 dark:text-green-400",
-              )}
+              className="mt-0.5 shrink-0"
             >
-              ✓
-            </span>
-            <span className="text-slate-700 dark:text-slate-300">
+              <path d="M4.5 12.5l5 5 10-11" />
+            </svg>
+            <span style={{ color: "var(--color-text-primary)" }}>
               {feature}
             </span>
           </li>
         ))}
       </ul>
 
-      {/* CTA */}
       <button
         type="button"
         onClick={onCta}
         className={cn(
-          "w-full rounded-xl py-3 px-6 font-semibold text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          "w-full h-14 rounded-2xl px-6 font-bold text-[17px] transition-colors duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]",
           isHighlighted
-            ? "bg-orange-500 text-white hover:bg-orange-600 focus-visible:ring-orange-500 shadow-md hover:shadow-lg"
-            : "bg-slate-100 text-slate-900 hover:bg-slate-200 focus-visible:ring-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
+            ? "hover:bg-[var(--color-primary-dark)]"
+            : "border-2 hover:bg-[var(--color-primary-soft)]",
         )}
+        style={
+          isHighlighted
+            ? {
+                backgroundColor: "var(--color-primary)",
+                color: "var(--color-on-primary)",
+              }
+            : {
+                borderColor: "var(--color-primary)",
+                color: "var(--color-primary-text)",
+              }
+        }
       >
         {ctaLabel}
       </button>

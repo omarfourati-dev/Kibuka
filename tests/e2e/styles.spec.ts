@@ -31,20 +31,19 @@ function pageBackground(page: Page) {
   })
 }
 
-const DARK_BACKGROUND = 'rgb(26, 26, 46)' // --color-background im Dark Mode
-const LIGHT_BACKGROUND = 'rgb(255, 253, 247)' // --color-background hell
+const DARK_BACKGROUND = 'rgb(18, 25, 51)' // --color-background in der Nacht
+const LIGHT_BACKGROUND = 'rgb(244, 247, 242)' // --color-background am Tag
 
 test.describe('Buttons behalten ihr Tailwind-Styling', () => {
   test.beforeEach(async ({ page }) => mockApi(page))
 
   test('the daily book CTA has padding and rounded corners', async ({ page }) => {
     await page.goto('/')
-    const cta = page.getByRole('button', { name: 'Gratis lesen' })
+    const cta = page.getByRole('button', { name: 'Heute gratis lesen' })
     await expect(cta).toBeVisible({ timeout: 10000 })
-    await expect(cta).toHaveCSS('padding-left', '24px') // px-6
-    await expect(cta).toHaveCSS('padding-top', '12px') // py-3
-    // rounded-xl = --radius-xl, im Design-System 1.5rem
-    await expect(cta).toHaveCSS('border-top-left-radius', '24px')
+    await expect(cta).toHaveCSS('padding-left', '28px') // px-7
+    await expect(cta).toHaveCSS('height', '56px') // h-14
+    await expect(cta).toHaveCSS('border-top-left-radius', '16px') // rounded-2xl
   })
 
   test('the outlined preview button keeps its border', async ({ page }) => {
@@ -75,12 +74,12 @@ test.describe('Dark Mode', () => {
 
   test('the tab bar is dark too', async ({ page }) => {
     await page.goto('/library')
-    await expect(page.locator('ion-tab-bar')).toHaveCSS('background-color', 'rgb(22, 33, 62)') // --color-surface
+    await expect(page.locator('ion-tab-bar')).toHaveCSS('background-color', 'rgb(27, 36, 70)') // --color-surface (Nacht)
   })
 
   test('pricing cards follow the dark theme', async ({ page }) => {
     await page.goto('/pricing')
-    const yearly = page.locator('div.rounded-2xl', { hasText: 'Jährlich' }).first()
+    const yearly = page.locator('div.p-7', { hasText: 'Jährlich' }).first()
     await expect(yearly).toBeVisible({ timeout: 10000 })
     await expect(yearly).not.toHaveCSS('background-color', 'rgb(255, 255, 255)')
   })

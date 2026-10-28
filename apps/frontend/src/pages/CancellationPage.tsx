@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { IonContent, IonPage } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { LegalFooter } from "../components/legal/LegalFooter";
+import { TopNav } from "../components/layout/TopNav";
 import { useAppLanguage } from "../hooks/useAppLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { DATE_LOCALES } from "../lib/locale";
@@ -95,6 +96,7 @@ export default function CancellationPage() {
   return (
     <IonPage>
       <IonContent>
+        <TopNav />
         <div
           className="min-h-full flex flex-col"
           style={{ backgroundColor: "var(--color-background)" }}
@@ -176,7 +178,7 @@ export default function CancellationPage() {
                   className="mt-6 px-5 py-3 rounded-xl font-bold border-2 transition-all duration-200 hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                   style={{
                     borderColor: "var(--color-primary)",
-                    color: "var(--color-primary)",
+                    color: "var(--color-primary-text)",
                   }}
                 >
                   {t("cancel.print")}
@@ -317,7 +319,7 @@ export default function CancellationPage() {
                     <p
                       role="alert"
                       className="text-sm font-medium"
-                      style={{ color: "#dc2626" }}
+                      style={{ color: "var(--color-error-text)" }}
                     >
                       {error}
                     </p>

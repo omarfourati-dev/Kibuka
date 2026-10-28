@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { mainNav, navItem } from './nav'
 
 // Wer über /ar, /fr oder /en kommt, soll die ganze App in seiner Sprache
 // sehen — und die Sprache beim Navigieren nicht wieder verlieren.
@@ -29,7 +30,7 @@ function topPageText(page: Page) {
   })
 }
 
-const tab = (page: Page, label: string) => page.locator('ion-tab-button', { hasText: label })
+const clickTab = async (page: Page, label: string) => (await navItem(page, label)).click()
 
 test.describe('Sprache der App', () => {
   test.beforeEach(async ({ page }) => {
@@ -38,15 +39,15 @@ test.describe('Sprache der App', () => {
 
   test('/ar shows the whole interface in Arabic, right-to-left', async ({ page }) => {
     await page.goto('/ar')
-    await expect(page.getByText('قصة اليوم').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('مجاني اليوم').first()).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('heading', { name: 'ليلى الثعلبة الصغيرة' })).toBeVisible()
 
-    const tabBar = page.locator('ion-tab-bar')
-    for (const label of ['الرئيسية', 'المكتبة', 'الأسعار', 'حسابي']) {
+    const tabBar = await mainNav(page)
+    for (const label of ['اليوم', 'المكتبة', 'الاشتراك', 'العائلة']) {
       await expect(tabBar.getByText(label)).toBeVisible()
     }
     await expect(tabBar).not.toContainText('Bibliothek')
-    await expect(page.getByText('Buch des Tages')).toHaveCount(0)
+    await expect(page.getByText('Heute gratis')).toHaveCount(0)
 
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
     await expect(page).toHaveTitle('Kibuka – قصص أطفال بالعربية: قصة مصوّرة جديدة كل يوم')
@@ -54,18 +55,18 @@ test.describe('Sprache der App', () => {
 
   test('/ar keeps Arabic across tabs and Home leads back to /ar', async ({ page }) => {
     await page.goto('/ar')
-    await expect(page.getByText('قصة اليوم').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('مجاني اليوم').first()).toBeVisible({ timeout: 10000 })
 
-    await tab(page, 'المكتبة').click()
+    await clickTab(page, 'المكتبة')
     await expect(page).toHaveURL(/\/library$/)
     await expect.poll(() => topPageText(page)).toContain('كل اللغات')
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
     await expect(page).toHaveTitle('المكتبة – قصص أطفال بأربع لغات | Kibuka')
 
-    await tab(page, 'الرئيسية').click()
+    await clickTab(page, 'اليوم')
     await expect(page).toHaveURL(/\/ar$/)
-    await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('قصة اليوم')
+    await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('مجاني اليوم')
     await expect(page).toHaveTitle('Kibuka – قصص أطفال بالعربية: قصة مصوّرة جديدة كل يوم')
   })
 
@@ -84,31 +85,31 @@ test.describe('Sprache der App', () => {
 
     await page.goto('/')
     await expect(page).toHaveURL(/\/ar$/)
-    await expect(page.getByText('قصة اليوم').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('مجاني اليوم').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('the browser tab title follows SPA navigation (/fr → Tarifs)', async ({ page }) => {
     await page.goto('/fr')
     await expect(page).toHaveTitle('Kibuka – Livres pour enfants bilingues : une histoire par jour')
 
-    await tab(page, 'Tarifs').click()
+    await clickTab(page, 'Abonnement')
     await expect(page).toHaveTitle('Tarifs – abonnement livres pour enfants | Kibuka')
 
-    await tab(page, 'Profil').click()
+    await clickTab(page, 'Famille')
     await expect(page).toHaveTitle('Profil | Kibuka')
   })
 
   test('switching back to German in the profile', async ({ page }) => {
     await page.goto('/ar')
-    await tab(page, 'حسابي').click()
+    await clickTab(page, 'العائلة')
     await page.getByRole('button', { name: 'Deutsch' }).click()
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'de')
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
-    await expect(tab(page, 'Bibliothek')).toBeVisible()
+    await expect(await navItem(page, 'Bibliothek')).toBeVisible()
 
-    await tab(page, 'Home').click()
+    await clickTab(page, 'Heute')
     await expect(page).toHaveURL(/\/$/)
-    await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('Buch des Tages')
+    await expect.poll(() => topPageText(page), { timeout: 5000 }).toContain('Heute gratis')
   })
 })

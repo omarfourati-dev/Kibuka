@@ -440,7 +440,7 @@ describe("BookDetailPage", () => {
 
       renderBookDetailPage();
       await screen.findByRole("heading", { name: "المغامرة" });
-      expect(screen.getByText("3-5 سنوات")).toBeInTheDocument();
+      expect(screen.getByText("3–5 سنوات")).toBeInTheDocument();
       expect(screen.getByText("5 صفحات")).toBeInTheDocument();
       expect(screen.getByText(ar.themes.adventure)).toBeInTheDocument();
       expect(screen.getByText(ar.bookDetail.preview)).toBeInTheDocument();

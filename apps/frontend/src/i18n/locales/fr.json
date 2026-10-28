@@ -85,7 +85,8 @@
     "languagesCount_one": "{{count}} langue",
     "languagesCount_other": "{{count}} langues",
     "todayFree": "Gratuit aujourd’hui",
-    "today": "Aujourd’hui"
+    "today": "Aujourd’hui",
+    "meta": "{{ages}}, {{pages}}"
   },
   "home": {
     "loading": "Chargement de l’accueil…",
