@@ -22,10 +22,10 @@ describe("LanguagePicker", () => {
         onLanguageChange={vi.fn()}
       />,
     );
-    const frButton = screen.getByRole("button", { name: /fr/i });
+    const frButton = screen.getByRole("button", { name: "Français" });
     expect(frButton).toHaveAttribute("aria-pressed", "true");
 
-    const deButton = screen.getByRole("button", { name: /de/i });
+    const deButton = screen.getByRole("button", { name: "Deutsch" });
     expect(deButton).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -42,14 +42,19 @@ describe("LanguagePicker", () => {
     expect(onLanguageChange).toHaveBeenCalledWith("fr");
   });
 
-  it("renders DE flag for de", () => {
-    render(
+  it("names each language in its own script, without flag emoji", () => {
+    const { container } = render(
       <LanguagePicker
-        availableLanguages={["de"]}
+        availableLanguages={["de", "ar", "fr", "en"]}
         selectedLanguage="de"
         onLanguageChange={vi.fn()}
       />,
     );
-    expect(screen.getByText("🇩🇪")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "العربية" })).toHaveAttribute(
+      "lang",
+      "ar",
+    );
+    expect(screen.getByRole("button", { name: "English" })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/\p{Regional_Indicator}/u);
   });
 });

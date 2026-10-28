@@ -39,35 +39,45 @@ describe("BookCard", () => {
 
   it("shows daily badge when isDailyBook is true", () => {
     render(<BookCard {...defaultProps} isDailyBook={true} />);
-    expect(screen.getByText("Täglich")).toBeInTheDocument();
+    expect(screen.getByText("Heute")).toBeInTheDocument();
   });
 
   it("does not show daily badge when isDailyBook is false", () => {
     render(<BookCard {...defaultProps} isDailyBook={false} />);
-    expect(screen.queryByText("Täglich")).not.toBeInTheDocument();
+    expect(screen.queryByText("Heute")).not.toBeInTheDocument();
   });
 
-  it("shows language badges for all available languages", () => {
-    render(<BookCard {...defaultProps} languages={["de", "ar", "fr", "en"]} />);
-    expect(screen.getByText("🇩🇪")).toBeInTheDocument();
-    expect(screen.getByText("🇸🇦")).toBeInTheDocument();
-    expect(screen.getByText("🇫🇷")).toBeInTheDocument();
-    expect(screen.getByText("🇬🇧")).toBeInTheDocument();
+  it("names the languages instead of flag emoji (Windows showed 'DE DE')", () => {
+    const { container } = render(
+      <BookCard {...defaultProps} languages={["de", "ar", "fr", "en"]} />,
+    );
+    expect(screen.getByText("4 Sprachen")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/\p{Regional_Indicator}/u);
   });
 
-  it("shows only requested language badges", () => {
+  it("counts only the languages the book has", () => {
     render(<BookCard {...defaultProps} languages={["de", "fr"]} />);
-    expect(screen.getByText("🇩🇪")).toBeInTheDocument();
-    expect(screen.getByText("🇫🇷")).toBeInTheDocument();
-    expect(screen.queryByText("🇸🇦")).not.toBeInTheDocument();
-    expect(screen.queryByText("🇬🇧")).not.toBeInTheDocument();
+    expect(screen.getByText("2 Sprachen")).toBeInTheDocument();
+  });
+
+  it("shows today's book as free today, never with its single price", () => {
+    render(<BookCard {...defaultProps} isDailyBook priceSingle={2.99} />);
+    expect(screen.getAllByText("Heute gratis").length).toBeGreaterThan(0);
+    expect(screen.queryByText("2,99 €")).toBeNull();
+  });
+
+  it("shows the square cover uncropped", () => {
+    render(
+      <BookCard {...defaultProps} coverImageUrl="https://example.com/c.webp" />,
+    );
+    expect(screen.getByRole("img").parentElement).toHaveClass("aspect-square");
   });
 
   it("shows price when not purchased", () => {
     render(
       <BookCard {...defaultProps} isPurchased={false} priceSingle={1.99} />,
     );
-    expect(screen.getByText("€1,99")).toBeInTheDocument();
+    expect(screen.getByText("1,99 €")).toBeInTheDocument();
   });
 
   it("shows Gekauft when isPurchased", () => {

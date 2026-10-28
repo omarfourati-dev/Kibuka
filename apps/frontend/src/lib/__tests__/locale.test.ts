@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
   applyDocumentLanguage,
+  dayLabel,
   formatDate,
   formatPrice,
+  formatToday,
   homePathFor,
   isLanguage,
   landingPageLanguage,
@@ -84,9 +86,9 @@ describe("pickTitle", () => {
 
 describe("formatPrice", () => {
   it("keeps the established German format", () => {
-    expect(formatPrice(14.99, "de")).toBe("€14,99");
-    expect(formatPrice(99, "de")).toBe("€99");
-    expect(formatPrice(0.5, "de")).toBe("€0,50");
+    expect(formatPrice(14.99, "de")).toBe("14,99 €");
+    expect(formatPrice(99, "de")).toBe("99 €");
+    expect(formatPrice(0.5, "de")).toBe("0,50 €");
   });
 
   it("writes prices the way each language does", () => {
@@ -113,5 +115,28 @@ describe("formatDate", () => {
 
   it("returns null without a date", () => {
     expect(formatDate(null, "de")).toBeNull();
+  });
+});
+
+describe("dayLabel (Regal „Diese Woche“)", () => {
+  const now = new Date("2026-10-28T09:00:00");
+
+  it("names today and yesterday", () => {
+    expect(dayLabel("2026-10-28T06:00:00", "de", now)).toBe("Heute");
+    expect(dayLabel("2026-10-27T06:00:00", "de", now)).toBe("Gestern");
+  });
+
+  it("uses the weekday for older days of the week", () => {
+    expect(dayLabel("2026-10-25T06:00:00", "de", now)).toBe("Sonntag");
+    expect(dayLabel("2026-10-25T06:00:00", "en", now)).toBe("Sunday");
+    expect(dayLabel("2026-10-25T06:00:00", "ar", now)).toBe("الأحد");
+  });
+});
+
+describe("formatToday", () => {
+  it("writes the full date the way each language does", () => {
+    const day = new Date("2026-10-28T09:00:00");
+    expect(formatToday(day, "de")).toBe("Mittwoch, 28. Oktober");
+    expect(formatToday(day, "en")).toBe("Wednesday 28 October");
   });
 });

@@ -83,7 +83,7 @@ describe("PricingPage", () => {
     const prices = screen
       .getAllByTestId("card-price")
       .map((p) => p.textContent);
-    expect(prices).toContain("€2,99");
+    expect(prices).toContain("2,99 €");
   });
 
   it("makes no false promises (no card-free trial, no offline)", () => {

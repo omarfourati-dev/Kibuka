@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
 import i18n from "../../i18n/config";
 import ar from "../../i18n/locales/ar.json";
@@ -12,12 +18,20 @@ vi.mock("../../components/book/BookHero", () => ({
     book,
     onRead,
     onPreview,
+    isDaily,
+    titles,
   }: {
     book: { title: string };
     onRead?: () => void;
     onPreview?: () => void;
+    isDaily?: boolean;
+    titles?: Record<string, string>;
   }) => (
-    <div data-testid="book-hero">
+    <div
+      data-testid="book-hero"
+      data-daily={String(Boolean(isDaily))}
+      data-languages={Object.keys(titles ?? {}).join(",")}
+    >
       {book.title}
       <button onClick={onRead}>HeroRead</button>
       <button onClick={onPreview}>HeroPreview</button>
@@ -385,5 +399,77 @@ describe("HomePage", () => {
     vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
     renderHomePage();
     expect(document.title).toBe(de.meta.home);
+  });
+
+  it("treats today's book as free today, whatever its single price (live bug)", async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/daily")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ...dailyBook, price_single: 2.99 }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ items: [], total: 0, page: 1, page_size: 6 }),
+      } as Response);
+    });
+
+    renderHomePage();
+    const hero = await screen.findByTestId("book-hero");
+    expect(hero).toHaveAttribute("data-daily", "true");
+    expect(hero).toHaveAttribute("data-languages", "de,ar,fr,en");
+    fireEvent.click(screen.getByText("HeroRead"));
+    // Ohne Konto fängt der Reader das per Login ab — hier zählt: nicht kaufen
+    expect(mockNavigate).toHaveBeenCalledWith("/books/daily-1/read");
+  });
+
+  it("shows this week's books on a shelf, newest first, labelled by day", async () => {
+    const today = new Date().toISOString();
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes("/daily")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ...dailyBook, published_at: today }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            items: [{ ...dailyBook, published_at: today }, ...bookList],
+            total: 3,
+            page: 1,
+            page_size: 6,
+          }),
+      } as Response);
+    });
+
+    renderHomePage();
+    const shelf = await screen.findByRole("region", { name: "Diese Woche" });
+    const items = within(shelf).getAllByRole("link");
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveAccessibleName(/Heute.*Das tägliche Abenteuer/);
+    fireEvent.click(items[1]);
+    expect(mockNavigate).toHaveBeenCalledWith("/books/book-2");
+  });
+
+  it("shows today's date above the book of the day", async () => {
+    vi.mocked(fetch).mockImplementation((url) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            String(url).includes("/daily")
+              ? dailyBook
+              : { items: [], total: 0, page: 1, page_size: 6 },
+          ),
+      } as Response),
+    );
+    renderHomePage();
+    await screen.findByTestId("book-hero");
+    const weekday = new Date().toLocaleDateString("de-DE", { weekday: "long" });
+    expect(screen.getByText(new RegExp(`^${weekday}, `))).toBeInTheDocument();
   });
 });

@@ -162,3 +162,49 @@ describe("Login — Sprache", () => {
     );
   });
 });
+
+describe("Login – Familienkonto vor dem Lesen", () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      accessToken: null,
+    });
+  });
+
+  it("explains the free family account when a reader sent the visitor here", () => {
+    renderLogin("/login?redirect=/books/b1/read");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Euer Familienkonto" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Buch des Tages gratis/)).toBeInTheDocument();
+    // Neue Besucher zuerst: Registrierung ist vorausgewählt
+    expect(screen.getByRole("tab", { name: "Neu hier" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Konto anlegen und lesen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("switches between new account and sign in with tabs", () => {
+    renderLogin("/login?redirect=/books/b1/read");
+    fireEvent.click(screen.getByRole("tab", { name: "Anmelden" }));
+    expect(screen.getByRole("tab", { name: "Anmelden" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Anmelden und lesen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("starts with sign in for everybody else", () => {
+    renderLogin("/login?redirect=/profile");
+    expect(screen.getByRole("tab", { name: "Anmelden" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+});
