@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { MemoryRouter, Switch, Route } from "react-router-dom";
+import { useAuthStore } from "@omarsapp/shared-stores";
 import i18n from "../../i18n/config";
 import ar from "../../i18n/locales/ar.json";
 import de from "../../i18n/locales/de.json";
@@ -510,5 +511,70 @@ describe("HomePage", () => {
     const items = within(shelf).getAllByRole("link");
     expect(items[0]).toHaveAccessibleName(/^Heute.*Das tägliche Abenteuer/);
     expect(items[1]).toHaveAccessibleName(/^Gestern.*Erstes Buch/);
+  });
+  describe("Abo-Band", () => {
+    function catalogWith(subscriptionActive: boolean) {
+      vi.mocked(fetch).mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes("/billing/subscription/me")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ is_active: subscriptionActive }),
+          } as Response);
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              u.includes("/daily")
+                ? dailyBook
+                : { items: bookList, total: 2, page: 1, page_size: 6 },
+            ),
+        } as Response);
+      });
+    }
+
+    afterEach(() => {
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        accessToken: null,
+      });
+    });
+
+    it("invites guests to subscribe", async () => {
+      catalogWith(false);
+      renderHomePage();
+      await screen.findByTestId("book-hero");
+      expect(
+        screen.getByRole("region", { name: de.home.subscribeTitle }),
+      ).toBeInTheDocument();
+    });
+
+    it("invites signed-in families without a plan", async () => {
+      useAuthStore.setState({ accessToken: "tok", isAuthenticated: true });
+      catalogWith(false);
+      renderHomePage();
+      expect(
+        await screen.findByRole("region", { name: de.home.subscribeTitle }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not advertise the plan to families who already have it", async () => {
+      useAuthStore.setState({ accessToken: "tok", isAuthenticated: true });
+      catalogWith(true);
+      renderHomePage();
+      await screen.findByTestId("book-hero");
+      await waitFor(() =>
+        expect(fetch).toHaveBeenCalledWith(
+          "/api/v1/billing/subscription/me",
+          expect.anything(),
+        ),
+      );
+      // Auch nicht kurz aufblitzen, solange der Status noch lädt
+      expect(
+        screen.queryByRole("region", { name: de.home.subscribeTitle }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

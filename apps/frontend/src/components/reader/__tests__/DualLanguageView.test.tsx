@@ -67,4 +67,16 @@ describe("DualLanguageView", () => {
     expect(activeWords.length).toBeGreaterThan(0);
     expect(activeWords[0].textContent).toBe("Hello");
   });
+  it("names the second language in its own script, so parents know which is which", () => {
+    render(
+      <DualLanguageView
+        primaryLanguage="de"
+        secondaryLanguage="ar"
+        primaryText="Hallo Welt"
+        secondaryText="مرحبا بالعالم"
+      />,
+    );
+    const label = screen.getByText("العربية");
+    expect(label).toHaveAttribute("lang", "ar");
+  });
 });

@@ -23,8 +23,20 @@ vi.mock("../../components/reader/LanguagePicker", () => ({
   LanguagePicker: () => <div data-testid="language-picker">LanguagePicker</div>,
 }));
 vi.mock("../../components/reader/DualLanguageView", () => ({
-  DualLanguageView: () => (
-    <div data-testid="dual-language-view">DualLanguageView</div>
+  DualLanguageView: ({
+    primaryLanguage,
+    secondaryLanguage,
+  }: {
+    primaryLanguage: string;
+    secondaryLanguage: string;
+  }) => (
+    <div
+      data-testid="dual-language-view"
+      data-primary={primaryLanguage}
+      data-secondary={secondaryLanguage}
+    >
+      DualLanguageView
+    </div>
   ),
 }));
 
@@ -103,7 +115,8 @@ function renderReaderPage(bookId = "book-1", search = "") {
 }
 
 describe("ReaderPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("de");
     vi.stubGlobal("fetch", vi.fn());
     mockNavigate.mockReset();
   });
@@ -223,7 +236,7 @@ describe("ReaderPage", () => {
     ).toBeDisabled();
   });
 
-  it("disables next on last page", async () => {
+  it("turns 'next' into 'Fertig' on the last page, which closes the book", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockBook),
@@ -245,8 +258,56 @@ describe("ReaderPage", () => {
       expect(screen.getByText(/3\s*\/\s*3/)).toBeInTheDocument(),
     );
     expect(
-      screen.getByRole("button", { name: /weiter|next|▶/i }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: /weiter|next|▶/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/books/book-1");
+  });
+
+  it("names the book at the top in the reading language", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderReaderPage("book-1", "?language=fr");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "L'Aventure" }),
+    ).toBeInTheDocument();
+  });
+
+  it("tells screen readers how far into the book they are", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderReaderPage();
+    const progress = await screen.findByRole("progressbar");
+    expect(progress).toHaveAttribute("aria-valuenow", "1");
+    expect(progress).toHaveAttribute("aria-valuemax", "3");
+    expect(progress).toHaveAccessibleName("Seite 1 von 3");
+    fireEvent.click(screen.getByRole("button", { name: /weiter/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        "2",
+      ),
+    );
+  });
+
+  it("labels the two-language switch in words, not 'A|B'", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+
+    renderReaderPage();
+    const toggle = await screen.findByRole("button", {
+      name: "Zwei Sprachen",
+    });
+    expect(toggle).toHaveTextContent("Zwei Sprachen");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
   });
 
   it("shows page indicator", async () => {
@@ -356,11 +417,64 @@ describe("ReaderPage", () => {
       expect(document.title).toBe("اقرأ: المغامرة | Kibuka");
     });
 
+    it("shows the app language as the second language next to the book", async () => {
+      // Arabische Familie liest das deutsche Buch: daneben Arabisch, nicht Englisch
+      renderReaderPage("book-1", "?language=de");
+      fireEvent.click(
+        await screen.findByRole("button", { name: ar.reader.dualMode }),
+      );
+      const dual = screen.getByTestId("dual-language-view");
+      expect(dual).toHaveAttribute("data-primary", "de");
+      expect(dual).toHaveAttribute("data-secondary", "ar");
+    });
+
+    it("turns the page with the left arrow key, like the mirrored buttons", async () => {
+      renderReaderPage();
+      await screen.findByTestId("word-highlighter");
+      expect(screen.getByText(/1\s*\/\s*3/)).toBeInTheDocument();
+      fireEvent.keyDown(window, { key: "ArrowLeft" });
+      await waitFor(() =>
+        expect(screen.getByText(/2\s*\/\s*3/)).toBeInTheDocument(),
+      );
+      fireEvent.keyDown(window, { key: "ArrowRight" });
+      await waitFor(() =>
+        expect(screen.getByText(/1\s*\/\s*3/)).toBeInTheDocument(),
+      );
+    });
+
     it("explains a loading error in Arabic", async () => {
       vi.mocked(fetch).mockRejectedValue(new Error("down"));
       renderReaderPage();
       expect(await screen.findByText(ar.reader.loadError)).toBeInTheDocument();
     });
+  });
+
+  it("puts English next to a German book when the app is German", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+    renderReaderPage("book-1", "?language=de");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Zwei Sprachen" }),
+    );
+    expect(screen.getByTestId("dual-language-view")).toHaveAttribute(
+      "data-secondary",
+      "en",
+    );
+  });
+
+  it("turns pages with the right arrow key in left-to-right languages", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockBook),
+    } as Response);
+    renderReaderPage();
+    await screen.findByTestId("word-highlighter");
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    await waitFor(() =>
+      expect(screen.getByText(/2\s*\/\s*3/)).toBeInTheDocument(),
+    );
   });
 
   it("keeps an explicit ?language over the app language", async () => {

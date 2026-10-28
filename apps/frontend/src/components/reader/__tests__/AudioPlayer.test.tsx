@@ -38,13 +38,6 @@ describe("AudioPlayer", () => {
     expect(audio?.src).toBe("https://example.com/audio.mp3");
   });
 
-  it("shows language label", () => {
-    render(
-      <AudioPlayer audioUrl="https://example.com/audio.mp3" language="de" />,
-    );
-    expect(screen.getByText("Deutsch")).toBeInTheDocument();
-  });
-
   it("renders speed selector with options", () => {
     render(
       <AudioPlayer audioUrl="https://example.com/audio.mp3" language="de" />,
@@ -105,18 +98,22 @@ describe("AudioPlayer", () => {
     expect(onPlay).toHaveBeenCalledTimes(1);
   });
 
-  it("shows Deutsch for de language", () => {
+  // Die Sprache steht schon in der Sprachwahl darüber — im Player nur noch
+  // für Screenreader, als Name der Gruppe
+  it("names the player by the language it reads aloud", () => {
     render(
       <AudioPlayer audioUrl="https://example.com/audio.mp3" language="de" />,
     );
-    expect(screen.getByText("Deutsch")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Vorlesen auf Deutsch" }),
+    ).toBeInTheDocument();
   });
 
-  it("shows العربية for ar language", () => {
+  it("names Arabic in its own script", () => {
     render(
       <AudioPlayer audioUrl="https://example.com/audio.mp3" language="ar" />,
     );
-    expect(screen.getByText("العربية")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /العربية/ })).toBeInTheDocument();
   });
 });
 
