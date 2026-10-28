@@ -46,6 +46,20 @@ body {
   font-family: var(--font-reader);
 }
 
+/* Naskh braucht Platz über und unter der Zeile (Punkte, Vokalzeichen) */
+.kibuka-reader-text:lang(ar) {
+  line-height: 1.95;
+}
+
+/* Mitlesen beim Vorlesen: das gesprochene Wort leuchtet gelb auf. Der
+   Schatten polstert das Wort, ohne die Zeile zu verschieben. */
+.word-highlight-active {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 0.14em var(--color-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

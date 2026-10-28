@@ -1,13 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { NATIVE_LANGUAGE_NAMES, isLanguage } from "../../lib/locale";
 import { cn } from "../../utils/cn";
-
-const LANGUAGE_LABELS: Record<string, string> = {
-  de: "Deutsch",
-  ar: "العربية",
-  fr: "Français",
-  en: "English",
-};
 
 const SPEED_OPTIONS = [
   { value: 0.75, label: "0.75x" },
@@ -48,7 +42,9 @@ export function AudioPlayer({
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
 
-  const languageLabel = LANGUAGE_LABELS[language] ?? language;
+  const languageName = isLanguage(language)
+    ? NATIVE_LANGUAGE_NAMES[language]
+    : language;
 
   function handlePlayPause() {
     const audio = audioRef.current;
@@ -102,13 +98,13 @@ export function AudioPlayer({
   }
 
   return (
+    // Eine Zeile: Abspielen, Position, Zeit, Tempo. Welche Sprache vorgelesen
+    // wird, zeigt die Sprachwahl — hier nur als Name für Screenreader.
     <div
-      className={cn(
-        "flex flex-col gap-2 p-3 rounded-xl",
-        "bg-[var(--color-surface)] shadow-sm",
-      )}
+      role="group"
+      aria-label={t("audio.label", { language: languageName })}
+      className="flex items-center gap-3 w-full min-w-0"
     >
-      {/* Hidden audio element */}
       <audio
         ref={audioRef}
         src={audioUrl}
@@ -120,33 +116,41 @@ export function AudioPlayer({
         onPause={() => setIsPlaying(false)}
       />
 
-      {/* Language label + speed */}
-      <div className="flex items-center justify-between">
-        <span
-          className="text-xs font-semibold"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          {languageLabel}
-        </span>
+      <button
+        type="button"
+        aria-label={isPlaying ? t("audio.pause") : t("audio.play")}
+        onClick={handlePlayPause}
+        className={cn(
+          "w-12 h-12 shrink-0 rounded-full flex items-center justify-center",
+          "bg-[var(--color-primary)] text-[var(--color-on-primary)]",
+          "transition-colors duration-200 hover:bg-[var(--color-primary-dark)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]",
+        )}
+      >
+        {isPlaying ? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-5 h-5"
+            aria-hidden="true"
+          >
+            <rect x="6" y="4.5" width="4" height="15" rx="1" />
+            <rect x="14" y="4.5" width="4" height="15" rx="1" />
+          </svg>
+        ) : (
+          // Abspielen zeigt auch auf Arabisch nach rechts (Medien-Symbole
+          // spiegelt man nicht); leicht versetzt, damit es mittig wirkt
+          <svg
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-5 h-5 translate-x-px"
+            aria-hidden="true"
+          >
+            <path d="M7 4.5v15l12-7.5z" />
+          </svg>
+        )}
+      </button>
 
-        <select
-          aria-label={t("audio.speed")}
-          value={speed}
-          onChange={handleSpeedChange}
-          className={cn(
-            "text-xs rounded px-1 py-0.5",
-            "bg-[var(--color-surface-raised)] border border-[var(--color-border)]",
-          )}
-        >
-          {SPEED_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Progress bar */}
       <input
         type="range"
         min={0}
@@ -155,52 +159,35 @@ export function AudioPlayer({
         value={currentTime}
         onChange={handleSeek}
         aria-label={t("audio.seek")}
-        className="w-full accent-[var(--color-primary)]"
+        className="flex-1 min-w-0 h-11 cursor-pointer accent-[var(--color-primary)]"
       />
 
-      {/* Controls row */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label={isPlaying ? t("audio.pause") : t("audio.play")}
-          onClick={handlePlayPause}
-          className={cn(
-            "w-9 h-9 rounded-full flex items-center justify-center",
-            "bg-[var(--color-primary)] text-white",
-            "hover:opacity-90 transition-opacity",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-          )}
-        >
-          {isPlaying ? (
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="w-4 h-4"
-              aria-hidden="true"
-            >
-              <rect x="6" y="4" width="4" height="16" />
-              <rect x="14" y="4" width="4" height="16" />
-            </svg>
-          ) : (
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="w-4 h-4"
-              aria-hidden="true"
-            >
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
-          )}
-        </button>
+      <span
+        className="hidden sm:inline text-sm tabular-nums shrink-0"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
 
-        {/* Time display */}
-        <span
-          className="text-xs tabular-nums"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </span>
-      </div>
+      <select
+        aria-label={t("audio.speed")}
+        value={speed}
+        onChange={handleSpeedChange}
+        className={cn(
+          // Schmal und ohne Pfeil: der Regler braucht auf dem Handy den Platz;
+          // auf ganz kleinen Displays (iPhone SE) ganz ohne Tempo-Wahl
+          "max-[359px]:hidden h-10 w-14 shrink-0 appearance-none rounded-xl px-0 text-center text-sm font-bold cursor-pointer",
+          "bg-[var(--color-surface)] text-[var(--color-text-primary)]",
+          "border-[1.5px] border-[var(--color-border)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-text)]",
+        )}
+      >
+        {SPEED_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

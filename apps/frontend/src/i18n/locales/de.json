@@ -155,7 +155,8 @@
     "speed": "Wiedergabegeschwindigkeit",
     "seek": "Position im Hörbuch",
     "play": "Abspielen",
-    "pause": "Pause"
+    "pause": "Pause",
+    "label": "Vorlesen auf {{language}}"
   },
   "reader": {
     "loading": "Lade Buch...",
@@ -164,7 +165,9 @@
     "exit": "Reader verlassen",
     "prevPage": "Zurück",
     "nextPage": "Weiter",
-    "dualMode": "Zwei Sprachen nebeneinander"
+    "dualMode": "Zwei Sprachen",
+    "finish": "Fertig",
+    "progress": "Seite {{page}} von {{total}}"
   },
   "pricing": {
     "toLibrary": "Zur Bibliothek",

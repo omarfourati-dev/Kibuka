@@ -8,6 +8,7 @@ import { BookCard } from "../components/book/BookCard";
 import { LegalFooter } from "../components/legal/LegalFooter";
 import { TopNav } from "../components/layout/TopNav";
 import { useAppLanguage } from "../hooks/useAppLanguage";
+import { useIsSubscriber } from "../hooks/useIsSubscriber";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { dayLabel, formatToday, pickTitle } from "../lib/locale";
 
@@ -41,6 +42,9 @@ export default function HomePage() {
   // /ar, /fr, /en setzen die App-Sprache (DocumentLanguage) — Buchtitel folgen ihr
   const lang = useAppLanguage();
   usePageTitle(t("meta.home"));
+  // Abo-Band nur für Familien ohne Abo — solange der Status lädt, gar nicht
+  // (kein kurzes Aufblitzen für Abonnenten)
+  const isSubscriber = useIsSubscriber();
 
   const [dailyBook, setDailyBook] = useState<BookSummary | null>(null);
   const [books, setBooks] = useState<BookSummary[]>([]);
@@ -332,37 +336,39 @@ export default function HomePage() {
         )}
 
         {/* Abo-Band: bewusst in den Nacht-Farben, in beiden Modi gleich */}
-        <section
-          aria-labelledby="home-subscribe"
-          className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-12 rounded-[28px] p-6 lg:px-11 lg:py-10"
-          style={{ backgroundColor: "#1e2747", color: "#eef1fa" }}
-        >
-          <div className="flex flex-col gap-2.5 flex-1">
-            <h2
-              id="home-subscribe"
-              className="text-[22px] lg:text-[32px] font-bold leading-tight"
-            >
-              {t("home.subscribeTitle")}
-            </h2>
-            <p
-              className="m-0 text-base lg:text-lg leading-relaxed"
-              style={{ color: "#c7cde4" }}
-            >
-              {t("home.subscribeText")}
-            </p>
-          </div>
-          <a
-            href="/pricing"
-            onClick={(e) => {
-              e.preventDefault();
-              history.push("/pricing");
-            }}
-            className="self-start lg:self-center inline-flex items-center h-12 lg:h-14 px-6 rounded-2xl font-bold text-base lg:text-lg transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e2747] focus-visible:ring-[#f2b632]"
-            style={{ backgroundColor: "#f2b632", color: "#1e2747" }}
+        {isSubscriber === false && (
+          <section
+            aria-labelledby="home-subscribe"
+            className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-12 rounded-[28px] p-6 lg:px-11 lg:py-10"
+            style={{ backgroundColor: "#1e2747", color: "#eef1fa" }}
           >
-            {t("home.subscribeCta")}
-          </a>
-        </section>
+            <div className="flex flex-col gap-2.5 flex-1">
+              <h2
+                id="home-subscribe"
+                className="text-[22px] lg:text-[32px] font-bold leading-tight"
+              >
+                {t("home.subscribeTitle")}
+              </h2>
+              <p
+                className="m-0 text-base lg:text-lg leading-relaxed"
+                style={{ color: "#c7cde4" }}
+              >
+                {t("home.subscribeText")}
+              </p>
+            </div>
+            <a
+              href="/pricing"
+              onClick={(e) => {
+                e.preventDefault();
+                history.push("/pricing");
+              }}
+              className="self-start lg:self-center inline-flex items-center h-12 lg:h-14 px-6 rounded-2xl font-bold text-base lg:text-lg transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e2747] focus-visible:ring-[#f2b632]"
+              style={{ backgroundColor: "#f2b632", color: "#1e2747" }}
+            >
+              {t("home.subscribeCta")}
+            </a>
+          </section>
+        )}
       </div>
     );
   }

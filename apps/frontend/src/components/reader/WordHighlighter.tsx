@@ -4,11 +4,12 @@ import { getDir } from "../../lib/rtl";
 import type { Language } from "../../lib/rtl";
 import { cn } from "../../utils/cn";
 
+// Lesegröße für Kinderbücher: groß genug zum Vorlesen auf Armlänge
 const FONT_SIZE_MAP = {
   sm: "text-sm",
   md: "text-base",
-  lg: "text-lg",
-  xl: "text-xl",
+  lg: "text-[19px] lg:text-[21px]",
+  xl: "text-[22px] lg:text-[26px]",
 };
 
 interface WordHighlighterProps {
@@ -34,7 +35,7 @@ export function WordHighlighter({
       dir={getDir(language as Language)}
       lang={language}
       className={cn(
-        "kibuka-reader-text leading-relaxed flex flex-wrap gap-x-1 gap-y-0.5",
+        "kibuka-reader-text m-0 leading-[1.6] flex flex-wrap gap-x-[0.28em] gap-y-1",
         FONT_SIZE_MAP[fontSize],
       )}
     >

@@ -155,7 +155,8 @@
     "speed": "Playback speed",
     "seek": "Playback position",
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "label": "Read aloud in {{language}}"
   },
   "reader": {
     "loading": "Loading book…",
@@ -164,7 +165,9 @@
     "exit": "Close the book",
     "prevPage": "Previous page",
     "nextPage": "Next page",
-    "dualMode": "Two languages side by side"
+    "dualMode": "Two languages",
+    "finish": "Done",
+    "progress": "Page {{page}} of {{total}}"
   },
   "pricing": {
     "toLibrary": "Go to the library",

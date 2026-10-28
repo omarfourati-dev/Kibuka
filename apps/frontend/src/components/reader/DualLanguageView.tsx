@@ -1,8 +1,8 @@
 import type { WordTimestamp } from "../../lib/audio-sync";
+import { NATIVE_LANGUAGE_NAMES, isLanguage } from "../../lib/locale";
 import { getDir } from "../../lib/rtl";
 import type { Language } from "../../lib/rtl";
 import { WordHighlighter } from "./WordHighlighter";
-import { cn } from "../../utils/cn";
 
 interface DualLanguageViewProps {
   primaryLanguage: string;
@@ -13,6 +13,10 @@ interface DualLanguageViewProps {
   currentTimeMs?: number;
 }
 
+/**
+ * Lesesprache oben (mit Mitlese-Markierung), die zweite Sprache darunter,
+ * leiser und mit ihrem Namen — Eltern sehen sofort, welche welche ist.
+ */
 export function DualLanguageView({
   primaryLanguage,
   secondaryLanguage,
@@ -21,44 +25,35 @@ export function DualLanguageView({
   timestamps,
   currentTimeMs = -1,
 }: DualLanguageViewProps) {
-  const primaryDir = getDir(primaryLanguage as Language);
-  const secondaryDir = getDir(secondaryLanguage as Language);
+  const secondaryName = isLanguage(secondaryLanguage)
+    ? NATIVE_LANGUAGE_NAMES[secondaryLanguage]
+    : secondaryLanguage;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Primary language panel — always uses WordHighlighter for per-word rendering */}
-      <div
-        dir={primaryDir}
-        className={cn(
-          "p-4 rounded-xl",
-          "bg-[var(--color-surface)]",
-          "border border-[var(--color-border)]",
-        )}
-      >
+    <div className="flex flex-col gap-5">
+      <div dir={getDir(primaryLanguage as Language)}>
         <WordHighlighter
           text={primaryText}
           timestamps={timestamps ?? []}
           currentTimeMs={currentTimeMs}
           language={primaryLanguage}
-          fontSize="md"
+          fontSize="xl"
         />
       </div>
 
-      {/* Secondary language panel */}
       <div
-        dir={secondaryDir}
-        className={cn(
-          "p-4 rounded-xl",
-          "bg-[var(--color-surface-raised)]",
-          "border border-[var(--color-border)]",
-        )}
+        dir={getDir(secondaryLanguage as Language)}
+        className="flex flex-col gap-1.5 pt-4 border-t-[1.5px] border-[var(--color-border)] text-[var(--color-text-secondary)]"
       >
+        <span lang={secondaryLanguage} className="text-sm font-bold">
+          {secondaryName}
+        </span>
         <WordHighlighter
           text={secondaryText}
           timestamps={[]}
           currentTimeMs={-1}
           language={secondaryLanguage}
-          fontSize="md"
+          fontSize="lg"
         />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation, useHistory } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { IonContent, IonPage } from "@ionic/react";
@@ -13,6 +13,7 @@ import type { WordTimestamp } from "../lib/audio-sync";
 import { pickTitle } from "../lib/locale";
 import { getDir } from "../lib/rtl";
 import type { Language } from "../lib/rtl";
+import { cn } from "../utils/cn";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ interface BookDetail {
 }
 
 const SUPPORTED_LANGUAGES = ["de", "ar", "fr", "en"];
+const NOT_PLAYING = -1;
 
 function isSupportedLanguage(lang: string): lang is Language {
   return (["de", "ar", "fr", "en"] as const).includes(lang as Language);
@@ -62,7 +64,8 @@ export default function ReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage);
-  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  // -1 = nichts wird vorgelesen; 0 wäre schon das erste Wort
+  const [currentTimeMs, setCurrentTimeMs] = useState(NOT_PLAYING);
   const [isDualLanguageMode, setIsDualLanguageMode] = useState(false);
 
   // ── Fetch book data ──────────────────────────────────────────────────────
@@ -120,14 +123,31 @@ export default function ReaderPage() {
     setCurrentPage((p) => Math.max(p - 1, 0));
   }, []);
 
+  // Die Blätter-Knöpfe spiegeln sich mit der Oberfläche — die Pfeiltasten
+  // auch: auf Arabisch blättert ← vorwärts
+  const isRtlUi = getDir(appLanguage) === "rtl";
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "ArrowRight") goNext();
-      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "ArrowRight") (isRtlUi ? goPrev : goNext)();
+      if (e.key === "ArrowLeft") (isRtlUi ? goNext : goPrev)();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goNext, goPrev]);
+  }, [goNext, goPrev, isRtlUi]);
+
+  // Neue Seite beginnt oben — auf dem Handy steht man sonst mitten im Text —
+  // und ohne Markierung, bis wieder vorgelesen wird
+  const contentRef = useRef<HTMLIonContentElement>(null);
+  useEffect(() => {
+    setCurrentTimeMs(NOT_PLAYING);
+    void contentRef.current?.scrollToTop?.(0);
+  }, [currentPage, selectedLanguage]);
+
+  // Nächste Illustration vorladen, damit das Umblättern nicht flackert
+  useEffect(() => {
+    const next = book?.pages[currentPage + 1]?.illustration_url;
+    if (next) new Image().src = next;
+  }, [book, currentPage]);
 
   // ── Sync page into URL ───────────────────────────────────────────────────
   useEffect(() => {
@@ -159,26 +179,29 @@ export default function ReaderPage() {
           <div
             role="status"
             aria-label={t("reader.loading")}
-            className="flex h-screen items-center justify-center"
-            style={{ color: "var(--color-text-secondary)" }}
+            className="min-h-full flex flex-col"
+            style={{ backgroundColor: "var(--color-background)" }}
           >
-            <div className="animate-pulse flex flex-col gap-4 w-full max-w-xl px-6">
+            <div className="h-14" />
+            <div className="animate-pulse w-full max-w-xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-5 lg:py-10">
               <div
-                className="h-6 rounded w-1/3"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
-              />
-              <div
-                className="aspect-video rounded-xl w-full"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
-              />
-              <div
-                className="h-4 rounded w-full"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
-              />
-              <div
-                className="h-4 rounded w-5/6"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
-              />
+                className="overflow-hidden lg:grid lg:grid-cols-2 rounded-[22px]"
+                style={{ backgroundColor: "var(--color-surface)" }}
+              >
+                <div
+                  className="aspect-square"
+                  style={{ backgroundColor: "var(--color-surface-raised)" }}
+                />
+                <div className="flex flex-col gap-3 p-6 lg:p-12 justify-center">
+                  {["w-full", "w-11/12", "w-4/5", "w-2/3"].map((w) => (
+                    <div
+                      key={w}
+                      className={`h-5 rounded-full ${w}`}
+                      style={{ backgroundColor: "var(--color-surface-raised)" }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </IonContent>
@@ -190,24 +213,27 @@ export default function ReaderPage() {
     return (
       <IonPage>
         <IonContent>
-          <div className="flex h-screen flex-col items-center justify-center gap-4 px-6">
+          <div
+            className="flex min-h-full flex-col items-center justify-center gap-5 px-6 text-center"
+            style={{ backgroundColor: "var(--color-background)" }}
+          >
+            <span aria-hidden="true" className="text-6xl select-none">
+              📖
+            </span>
             <p
-              className="text-lg font-semibold"
+              className="m-0 text-xl font-bold"
               style={{ color: "var(--color-text-primary)" }}
             >
               {t("reader.loadError")}
             </p>
-            <p
-              className="text-sm"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              {error}
-            </p>
             <button
               type="button"
-              onClick={() => history.goBack()}
-              className="px-4 py-2 rounded-lg font-medium text-white"
-              style={{ backgroundColor: "var(--color-primary)" }}
+              onClick={() => history.push(`/books/${bookId}`)}
+              className={PRIMARY_BUTTON}
+              style={{
+                backgroundColor: "var(--color-primary)",
+                color: "var(--color-on-primary)",
+              }}
             >
               {t("reader.back")}
             </button>
@@ -226,139 +252,144 @@ export default function ReaderPage() {
   const availableLanguages = SUPPORTED_LANGUAGES.filter((l) =>
     book.pages.some((p) => p.texts[l]),
   );
-  const secondaryLanguage = lang === "de" ? "en" : "de";
+  // Daneben die Sprache der Familie (der App), sonst Englisch bzw. Deutsch
+  const secondaryLanguage =
+    appLanguage !== lang && availableLanguages.includes(appLanguage)
+      ? appLanguage
+      : lang === "en"
+        ? "de"
+        : "en";
   const secondaryText = page?.texts[secondaryLanguage] ?? "";
-
+  const isLastPage = currentPage === totalPages - 1;
   const progress = ((currentPage + 1) / totalPages) * 100;
+  const closeBook = () => history.push(`/books/${bookId}`);
 
   return (
     <IonPage>
-      <IonContent>
+      <IonContent ref={contentRef}>
         <div
-          className="flex flex-col min-h-screen"
-          style={{ backgroundColor: "var(--color-bg)" }}
+          className="flex flex-col min-h-full"
+          style={{ backgroundColor: "var(--color-background)" }}
         >
-          {/* Progress bar */}
-          <div
-            className="h-1 w-full"
-            style={{ backgroundColor: "var(--color-surface-raised)" }}
+          {/* Kopf: Schließen, Titel, Seitenzahl — der Reader ist fullscreen
+              ohne Tab-Bar, ohne Schließen säße man in der App im Buch fest */}
+          <header
+            className="sticky top-0 z-10"
+            style={{ backgroundColor: "var(--color-background)" }}
           >
-            <div
-              className="h-full transition-all duration-300"
-              style={{
-                width: `${progress}%`,
-                backgroundColor: "var(--color-primary)",
-              }}
-            />
-          </div>
-
-          {/* Exit — der Reader ist fullscreen ohne Tab-Bar, ohne diesen
-              Button säße man in der nativen App im Buch fest */}
-          <button
-            type="button"
-            aria-label={t("reader.exit")}
-            onClick={() => history.push(`/books/${bookId}`)}
-            className="absolute top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold shadow-sm transition-all duration-200 hover:opacity-80 active:scale-95"
-            style={{
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text-primary)",
-              insetInlineEnd: "0.75rem",
-            }}
-          >
-            ✕
-          </button>
-
-          {/* Main content */}
-          <main
-            className="flex-1 flex flex-col gap-6 px-4 py-6 max-w-2xl mx-auto w-full"
-            dir={getDir(lang)}
-          >
-            {/* Illustration */}
-            {page?.illustration_url ? (
-              <div className="w-full aspect-video rounded-xl overflow-hidden">
-                <img
-                  src={page.illustration_url}
-                  alt={t("book.pageAlt", { page: currentPage + 1 })}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div
-                className="w-full aspect-video rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
-              >
-                <span className="text-6xl select-none">📖</span>
-              </div>
-            )}
-
-            {/* Text content */}
-            {isDualLanguageMode ? (
-              <DualLanguageView
-                primaryLanguage={selectedLanguage}
-                secondaryLanguage={secondaryLanguage}
-                primaryText={pageText}
-                secondaryText={secondaryText}
-                timestamps={pageTimestamps}
-                currentTimeMs={currentTimeMs}
-              />
-            ) : (
-              <WordHighlighter
-                text={pageText}
-                timestamps={pageTimestamps}
-                currentTimeMs={currentTimeMs}
-                language={selectedLanguage}
-                fontSize="lg"
-              />
-            )}
-          </main>
-
-          {/* Bottom floating control bar */}
-          <footer
-            className="sticky bottom-0 px-4 py-3 border-t flex flex-col gap-3"
-            style={{
-              backgroundColor: "var(--color-surface)",
-              borderColor: "var(--color-border)",
-            }}
-          >
-            {/* Navigation row */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 h-14 px-2 max-w-6xl mx-auto">
               <button
                 type="button"
-                aria-label={t("reader.prevPage")}
-                onClick={goPrev}
-                disabled={currentPage === 0}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-80"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
+                aria-label={t("reader.exit")}
+                onClick={closeBook}
+                className={ICON_BUTTON}
+                style={{ color: "var(--color-text-primary)" }}
               >
-                {/* Pfeile spiegeln sich in RTL mit der Leiste */}
-                <span aria-hidden="true" className="rtl:-scale-x-100">
-                  ◀
-                </span>
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
               </button>
-
+              <h1
+                lang={lang}
+                className="flex-1 min-w-0 m-0 truncate text-[17px] lg:text-xl font-bold"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {bookTitle}
+              </h1>
               <span
-                className="text-sm font-semibold tabular-nums"
+                dir="ltr"
+                className="shrink-0 px-3 text-[15px] font-bold tabular-nums"
                 style={{ color: "var(--color-text-secondary)" }}
               >
                 {currentPage + 1} / {totalPages}
               </span>
-
-              <button
-                type="button"
-                aria-label={t("reader.nextPage")}
-                onClick={goNext}
-                disabled={currentPage === totalPages - 1}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-80"
-                style={{ backgroundColor: "var(--color-surface-raised)" }}
-              >
-                <span aria-hidden="true" className="rtl:-scale-x-100">
-                  ▶
-                </span>
-              </button>
             </div>
+            <div
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={totalPages}
+              aria-valuenow={currentPage + 1}
+              aria-label={t("reader.progress", {
+                page: currentPage + 1,
+                total: totalPages,
+              })}
+              className="h-1 w-full"
+              style={{ backgroundColor: "var(--color-border)" }}
+            >
+              <div
+                className="h-full transition-[width] duration-300 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: "var(--color-accent)",
+                }}
+              />
+            </div>
+          </header>
 
-            {/* Secondary controls row */}
-            <div className="flex items-center gap-3 flex-wrap justify-between">
+          <main className="flex-1 w-full max-w-xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-5 lg:py-10 flex flex-col gap-6">
+            {/* Die Seite: Bild und Text wie im Buch — am Desktop aufgeschlagen */}
+            <article
+              className="overflow-hidden lg:grid lg:grid-cols-2 rounded-[22px]"
+              style={{
+                backgroundColor: "var(--color-surface)",
+                boxShadow: "var(--shadow-lg)",
+              }}
+            >
+              {page?.illustration_url ? (
+                <img
+                  src={page.illustration_url}
+                  alt={t("book.pageAlt", { page: currentPage + 1 })}
+                  className="block w-full aspect-square object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full aspect-square flex items-center justify-center"
+                  style={{ backgroundColor: "var(--color-surface-raised)" }}
+                >
+                  <span aria-hidden="true" className="text-6xl select-none">
+                    📖
+                  </span>
+                </div>
+              )}
+
+              <div
+                lang={lang}
+                dir={getDir(lang)}
+                className="flex flex-col justify-center p-6 sm:p-8 lg:p-12"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {isDualLanguageMode ? (
+                  <DualLanguageView
+                    primaryLanguage={selectedLanguage}
+                    secondaryLanguage={secondaryLanguage}
+                    primaryText={pageText}
+                    secondaryText={secondaryText}
+                    timestamps={pageTimestamps}
+                    currentTimeMs={currentTimeMs}
+                  />
+                ) : (
+                  <WordHighlighter
+                    text={pageText}
+                    timestamps={pageTimestamps}
+                    currentTimeMs={currentTimeMs}
+                    language={selectedLanguage}
+                    fontSize="xl"
+                  />
+                )}
+              </div>
+            </article>
+
+            {/* Lesesprache — ändert man selten, darum nicht in der festen Leiste */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <LanguagePicker
                 availableLanguages={availableLanguages}
                 selectedLanguage={selectedLanguage}
@@ -368,37 +399,126 @@ export default function ReaderPage() {
               <button
                 type="button"
                 aria-pressed={isDualLanguageMode}
-                aria-label={t("reader.dualMode")}
-                title={t("reader.dualMode")}
                 onClick={() => setIsDualLanguageMode((v) => !v)}
-                className="px-3 py-1 rounded-lg text-xs font-semibold border-2 transition-all duration-150"
-                style={
+                className={cn(
+                  "self-start sm:self-auto inline-flex items-center gap-2 h-12 px-5 rounded-2xl font-bold text-[16px]",
+                  "transition-colors duration-200",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]",
                   isDualLanguageMode
-                    ? {
-                        backgroundColor: "var(--color-primary)",
-                        borderColor: "var(--color-primary)",
-                        color: "#fff",
-                      }
-                    : {
-                        borderColor: "var(--color-border)",
-                        color: "var(--color-text-secondary)",
-                      }
-                }
+                    ? "border-2 border-[var(--color-text-primary)] bg-[var(--color-text-primary)] text-[var(--color-background)]"
+                    : "border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)]",
+                )}
               >
-                A|B
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 7h16M4 12h10M4 17h16" />
+                </svg>
+                {t("reader.dualMode")}
+              </button>
+            </div>
+          </main>
+
+          {/* Feste Leiste: blättern und vorlesen, mit dem Daumen erreichbar */}
+          <footer
+            className="sticky bottom-0 z-10 border-t-[1.5px]"
+            style={{
+              backgroundColor: "var(--color-surface)",
+              borderColor: "var(--color-border)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
+            <div className="flex items-center gap-3 max-w-6xl mx-auto px-3 lg:px-8 py-3">
+              <button
+                type="button"
+                aria-label={t("reader.prevPage")}
+                onClick={goPrev}
+                disabled={currentPage === 0}
+                className={cn(
+                  PAGE_BUTTON,
+                  "border-2 border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)]",
+                )}
+              >
+                <Chevron back />
               </button>
 
-              {audioUrl && (
-                <AudioPlayer
-                  audioUrl={audioUrl}
-                  language={selectedLanguage}
-                  onTimeUpdate={setCurrentTimeMs}
-                />
+              <div className="flex-1 min-w-0">
+                {audioUrl && (
+                  <AudioPlayer
+                    // Neue Seite, neuer Player: Position und Play-Status zurück
+                    key={audioUrl}
+                    audioUrl={audioUrl}
+                    language={selectedLanguage}
+                    onTimeUpdate={setCurrentTimeMs}
+                  />
+                )}
+              </div>
+
+              {isLastPage ? (
+                <button
+                  type="button"
+                  onClick={closeBook}
+                  className={cn(PRIMARY_BUTTON, "shrink-0 h-14")}
+                  style={{
+                    backgroundColor: "var(--color-primary)",
+                    color: "var(--color-on-primary)",
+                  }}
+                >
+                  {t("reader.finish")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={t("reader.nextPage")}
+                  onClick={goNext}
+                  className={cn(
+                    PAGE_BUTTON,
+                    "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-dark)]",
+                  )}
+                >
+                  <Chevron />
+                </button>
               )}
             </div>
           </footer>
         </div>
       </IonContent>
     </IonPage>
+  );
+}
+
+const ICON_BUTTON =
+  "shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-colors duration-200 hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-text)]";
+
+const PAGE_BUTTON =
+  "shrink-0 w-14 h-14 rounded-full flex items-center justify-center transition-colors duration-200 active:scale-95 disabled:opacity-35 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]";
+
+const PRIMARY_BUTTON =
+  "h-12 px-6 rounded-2xl font-bold text-[17px] transition-colors duration-200 hover:bg-[var(--color-primary-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary-text)]";
+
+/** Pfeil vor/zurück — spiegelt sich in RTL mit der Leiste */
+function Chevron({ back = false }: { back?: boolean }) {
+  return (
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="rtl:-scale-x-100"
+    >
+      <path d={back ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
   );
 }

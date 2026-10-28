@@ -156,7 +156,8 @@
     "speed": "Vitesse de lecture",
     "seek": "Position de lecture",
     "play": "Écouter",
-    "pause": "Pause"
+    "pause": "Pause",
+    "label": "Lecture à voix haute en {{language}}"
   },
   "reader": {
     "loading": "Chargement du livre…",
@@ -165,7 +166,9 @@
     "exit": "Quitter la lecture",
     "prevPage": "Page précédente",
     "nextPage": "Page suivante",
-    "dualMode": "Deux langues côte à côte"
+    "dualMode": "Deux langues",
+    "finish": "Terminé",
+    "progress": "Page {{page}} sur {{total}}"
   },
   "pricing": {
     "toLibrary": "Vers la bibliothèque",
